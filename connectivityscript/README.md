@@ -1,4 +1,4 @@
-# All kind of connectivity scripts
+# All kinds of connectivity scripts
 
 1.Test-dns.ps1
 1.Test-Https.ps1
