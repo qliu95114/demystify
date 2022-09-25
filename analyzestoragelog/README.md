@@ -15,8 +15,8 @@
 # Put into Action
 
 1. Generate traffic to access your storage account
-1. You will see below in Storage Explorer , create SAS token at container $log level, 
-   ![Storage Explorer view logs](https://github.com/qliu95114/demystify/blob/main/analyzestoragelog/.image/image1.png?raw=true)
+1. You will see below in Storage Explorer , create SAS token at container $logs level, 
+   ![Storage Explorer view logs](/.image/image1.png?raw=true)
 1. Use Notepadd++ or any TEXT Editor, generate a list of SAS URL point to the log file
 ```
 https://<StorageAccountURL>/$log/xxx/000001.log?sv=2021-04-10&st=2022-09-21T13%3A56%3A59Z&se=2022-09-30T13%3A56%3A00Z&sr=c&sp=rl&sig=xxxxxxxxxxxxxxxxxxxxxxxxxx%3D'
