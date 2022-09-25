@@ -7,7 +7,7 @@
 1. Download and Install [Azure Storage Explorer](https://azure.microsoft.com/en-us/products/storage/storage-explorer/)
 1. Install OneClick Application [Kusto Explorer](https://aka.ms/ke)
 
-# Knowledge requireed
+# Knowledge required
 
 1. Azure Storage Account basic, How to create SAS token
 1. Kusto Explorer basic
@@ -28,7 +28,7 @@ https://<StorageAccountURL>/$log/xxx/00000x.log?sv=2021-04-10&st=2022-09-21T13%3
 # Import Log to Kusto Cluster
 
 1. Use **Kusto Explorer**, and add Kusto Cluster URL from **Prepare the enviornment** , **1. Register [ADX FreeCluster](https://aka.ms/kustofree)** 
-1. In **Kusto Explorer**, Action Command to import storage analytics log as table (for example, 'storagelog' as below)
+1. In **Kusto Explorer**, Action Command to import storage analytics log as table (for example, 'storagelog' below)
 
 ```
 .drop table storagelog   //not 100% need just in case
