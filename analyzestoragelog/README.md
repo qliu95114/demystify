@@ -7,7 +7,7 @@
 1. Download and Install [Azure Storage Explorer](https://azure.microsoft.com/en-us/products/storage/storage-explorer/)
 1. Install OneClick Application [Kusto Explorer](https://aka.ms/ke)
 
-# Pre Knowledge 
+# Knowledge requireed
 
 1. Azure Storage Account basic, How to create SAS token
 1. Kusto Explorer basic
