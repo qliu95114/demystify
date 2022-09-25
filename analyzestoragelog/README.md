@@ -104,3 +104,8 @@ storagelog
 
 ```
 
+
+# Reference lins & future work
+
+1. [AzureStorageLogReader](https://github.com/nunogabrielmonteiro/AzureStorageLogReader)
+2. (To be researched) [Use local Kusto Emulator](https://learn.microsoft.com/en-us/azure/data-explorer/kusto-emulator-overview)
