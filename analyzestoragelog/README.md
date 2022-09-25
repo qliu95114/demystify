@@ -25,11 +25,10 @@ https://<StorageAccountURL>/$log/xxx/000002.log?sv=2021-04-10&st=2022-09-21T13%3
 https://<StorageAccountURL>/$log/xxx/00000x.log?sv=2021-04-10&st=2022-09-21T13%3A56%3A59Z&se=2022-09-30T13%3A56%3A00Z&sr=c&sp=rl&sig=xxxxxxxxxxxxxxxxxxxxxxxxxx%3D'
 ```
 
-# Data Import to Kusto
+# Import Log to Kusto Cluster
 
 1. Use **Kusto Explorer**, and add Kusto Cluster URL from **Prepare the enviornment** , **1. Register [ADX FreeCluster](https://aka.ms/kustofree)** 
-
-# Kusto Explorer action command to import storage analytics log as table (for example, 'storagelog' as below)
+1. In **Kusto Explorer**, Action Command to import storage analytics log as table (for example, 'storagelog' as below)
 
 ```
 .drop table storagelog   //not 100% need just in case
