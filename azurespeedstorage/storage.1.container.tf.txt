@@ -1,0 +1,17 @@
+resource "azurerm_storage_container" "private" {
+  for_each             = toset(var.locations)
+  name                 = "private"
+  storage_account_name = "${var.storagename}${each.key}"
+}
+
+resource "azurerm_storage_container" "public" {
+  for_each             = toset(var.locations)
+  name                 = "public"
+  storage_account_name = "${var.storagename}${each.key}"
+}
+
+resource "azurerm_storage_container" "upload" {
+  for_each             = toset(var.locations)
+  name                 = "upload"
+  storage_account_name = "${var.storagename}${each.key}" 
+}

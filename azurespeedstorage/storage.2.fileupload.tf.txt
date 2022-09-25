@@ -1,0 +1,17 @@
+resource "azurerm_storage_blob" "upload_test_100mb_file" {
+  for_each               = toset(var.locations)
+  name                   = "100MB.bin"
+  storage_account_name   = "${var.storagename}${each.key}"
+  storage_container_name = "private"
+  type                   = "Block"
+  source                 = "private/100MB.bin"
+}
+
+resource "azurerm_storage_blob" "latency_json" {
+  for_each               = toset(var.locations)
+  name                   = "latest.json"
+  storage_account_name   = "${var.storagename}${each.key}"
+  storage_container_name = "public"
+  type                   = "Block"
+  source                 = "public/latency-test.json"
+}
