@@ -2,7 +2,7 @@
 
 ## Things are related to Azure Platform 
 
-1. How Packet passthrough Internet to Azure VM (not started)
+1. How Network Packet travel bidirection between Internet to Azure VM, between Azure VM to Azure VM, between Azure VM to OnPrem Network (not started)
 1. azurespeedstorage : terraform sample of create storage account in different region
 1. ps_azure : random powershell script 
 1. How to use ADX to analyze Storage Analytis Log in a few clicks (get logs from customer and other without config LA)
