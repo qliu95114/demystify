@@ -1,6 +1,6 @@
 # Use Kusto to analyze the Linux secure log 
 
-Today I receive a secure log which indidcate password guess attack from internal ip address 
+Today I receive a secure log which indidcate password guess attack from internal ip addresses 
 
 ```
 Oct 31 17:28:43 iedi-prd-vm-001 sshd[9619]: Bad protocol version identification 'GET / HTTP/1.1' from 10.114.160.169 port 46988
@@ -17,7 +17,7 @@ Oct 31 17:28:44 iedi-prd-vm-001 sshd[9606]: Connection closed by 10.114.160.70 p
 
 I ask myself 
   1. How to find all source ip address that involved the attack, 
-  2. How to count those ip adresss. 
+  2. How to count those ip adressses. 
 
 The obvious way is using any TEXT Editor software or grep, search by IP address by Regular Expression "([0-9]{1,3}[.][0-9]{1,3}[.][0-9]{1,3}[.][0-9]{1,3})" and export to a file and count it by Excel.
 
