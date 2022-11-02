@@ -3,16 +3,16 @@
 Today I receive a secure log which indidcate password guess attack from internal ip addresses 
 
 ```
-Oct 31 17:28:43 iedi-prd-vm-001 sshd[9619]: Bad protocol version identification 'GET / HTTP/1.1' from 10.114.160.169 port 46988
-Oct 31 17:28:43 iedi-prd-vm-001 sshd[9595]: Failed password for invalid user deploy from 10.114.160.83 port 56434 ssh2
-Oct 31 17:28:43 iedi-prd-vm-001 sshd[9595]: Connection closed by 10.114.160.83 port 56434 [preauth]
-Oct 31 17:28:43 iedi-prd-vm-001 sshd[9599]: Failed password for invalid user deploy from 10.114.160.79 port 56850 ssh2
-Oct 31 17:28:43 iedi-prd-vm-001 sshd[9606]: Failed password for invalid user dev from 10.114.160.70 port 57682 ssh2
-Oct 31 17:28:43 iedi-prd-vm-001 sshd[9616]: reprocess config line 50: Deprecated option RSAAuthentication
-Oct 31 17:28:43 iedi-prd-vm-001 sshd[9616]: Invalid user developer from 10.114.160.83 port 58930
-Oct 31 17:28:43 iedi-prd-vm-001 sshd[9616]: input_userauth_request: invalid user developer [preauth]
-Oct 31 17:28:44 iedi-prd-vm-001 sshd[9599]: Connection closed by 10.114.160.79 port 56850 [preauth]
-Oct 31 17:28:44 iedi-prd-vm-001 sshd[9606]: Connection closed by 10.114.160.70 port 57682 [preauth]
+Oct 31 17:28:43 my-vm-001 sshd[9619]: Bad protocol version identification 'GET / HTTP/1.1' from 10.114.160.169 port 46988
+Oct 31 17:28:43 my-vm-001 sshd[9595]: Failed password for invalid user deploy from 10.114.160.83 port 56434 ssh2
+Oct 31 17:28:43 my-vm-001 sshd[9595]: Connection closed by 10.114.160.83 port 56434 [preauth]
+Oct 31 17:28:43 my-vm-001 sshd[9599]: Failed password for invalid user deploy from 10.114.160.79 port 56850 ssh2
+Oct 31 17:28:43 my-vm-001 sshd[9606]: Failed password for invalid user dev from 10.114.160.70 port 57682 ssh2
+Oct 31 17:28:43 my-vm-001 sshd[9616]: reprocess config line 50: Deprecated option RSAAuthentication
+Oct 31 17:28:43 my-vm-001 sshd[9616]: Invalid user developer from 10.114.160.83 port 58930
+Oct 31 17:28:43 my-vm-001 sshd[9616]: input_userauth_request: invalid user developer [preauth]
+Oct 31 17:28:44 my-vm-001 sshd[9599]: Connection closed by 10.114.160.79 port 56850 [preauth]
+Oct 31 17:28:44 my-vm-001 sshd[9606]: Connection closed by 10.114.160.70 port 57682 [preauth]
 ```
 
 I ask myself 
