@@ -1,4 +1,4 @@
-#Use Kusto to analyze the Linux secure log 
+# Use Kusto to analyze the Linux secure log 
 
 Today I receive a secure log which indidcate password guess attack from internal ip address 
 
@@ -23,7 +23,7 @@ The obvious way is using any TEXT Editor software or grep, search by IP address 
 
 Let's use Azure Data Explorer to make it work in one shot, assume you already setup [KustoFree](https://aka.ms/kustofree)
 
-#Steps 
+# Steps 
 1. Create table securelogdemo , attribute message: string
   ```
   .create table securelog(message:string)
