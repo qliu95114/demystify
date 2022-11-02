@@ -1,4 +1,4 @@
-Use Kusto to analyze the Linux secure log 
+#Use Kusto to analyze the Linux secure log 
 
 Today I receive a secure log which indidcate password guess attack from internal ip address 
 
@@ -16,54 +16,55 @@ Oct 31 17:28:44 iedi-prd-vm-001 sshd[9606]: Connection closed by 10.114.160.70 p
 ```
 
 I ask myself 
-1. How to find all source ip address that involved the attack, 
-2. How to count those ip adresss. 
+  1. How to find all source ip address that involved the attack, 
+  2. How to count those ip adresss. 
 
 The obvious way is using any TEXT Editor software or grep, search by IP address by Regular Expression "([0-9]{1,3}[.][0-9]{1,3}[.][0-9]{1,3}[.][0-9]{1,3})" and export to a file and count it by Excel.
 
 Let's use Azure Data Explorer to make it work in one shot, assume you already setup [KustoFree](https://aka.ms/kustofree)
 
+#Steps 
 1. Create table securelogdemo , attribute message: string
-```
-.create table securelog(message:string)
-```
-1. Upload secure log to storage account, container. Create Storage SAS token
-1. Ingress secure log into table securelog 
-```
-.ingest into table securelog(h'<replace with storage sas token>' 'with (format='psv')
-```
-1. Query 
-```
-securelog 
-| where message contains "Failed Password"
-| extend sourceip=tostring(extractall(@"([0-9]{1,3}[.][0-9]{1,3}[.][0-9]{1,3}[.][0-9]{1,3})",message))
-| extend port =tostring(extractall(@"port ([0-9]{3,5})",message))
-| summarize count() by sourceip
+  ```
+  .create table securelog(message:string)
+  ```
+2. Upload secure log to storage account, container. Create Storage SAS token
+3. Inject secure log into table securelog from storage account
+  ```
+  .ingest into table securelog(h'<replace with storage sas token>' 'with (format='psv')
+  ```
+4. Write query & Run
+  ```
+  securelog 
+  | where message contains "Failed Password"
+  | extend sourceip=tostring(extractall(@"([0-9]{1,3}[.][0-9]{1,3}[.][0-9]{1,3}[.][0-9]{1,3})",message))
+  | extend port =tostring(extractall(@"port ([0-9]{3,5})",message))
+  | summarize count() by sourceip
 
-  Result Set: (Name=Table_0)
-        ----------------------------
-        sourceip           | count_
-        ----------------------------
-        ["10.114.160.69"]  | 19
-        ["10.114.160.72"]  | 17
-        ["10.114.160.74"]  | 16
-        ["10.114.160.77"]  | 13
-        ["10.114.160.78"]  | 12
-        ["10.114.160.71"]  | 12
-        ["10.114.160.76"]  | 15
-        ["10.114.160.85"]  | 16
-        ["10.114.160.81"]  | 14
-        ["10.114.160.80"]  | 16
-        ["10.114.160.84"]  | 15
-        ["10.114.160.75"]  | 16
-        ["10.114.160.82"]  | 12
-        ["10.114.160.73"]  | 10
-        ["10.114.160.86"]  | 16
-        ["10.114.160.79"]  | 16
-        ["10.114.160.83"]  | 14
-        ["10.114.160.70"]  | 15
-        ----------------------------
-```
+    Result Set: (Name=Table_0)
+          ----------------------------
+          sourceip           | count_
+          ----------------------------
+          ["10.114.160.69"]  | 19
+          ["10.114.160.72"]  | 17
+          ["10.114.160.74"]  | 16
+          ["10.114.160.77"]  | 13
+          ["10.114.160.78"]  | 12
+          ["10.114.160.71"]  | 12
+          ["10.114.160.76"]  | 15
+          ["10.114.160.85"]  | 16
+          ["10.114.160.81"]  | 14
+          ["10.114.160.80"]  | 16
+          ["10.114.160.84"]  | 15
+          ["10.114.160.75"]  | 16
+          ["10.114.160.82"]  | 12
+          ["10.114.160.73"]  | 10
+          ["10.114.160.86"]  | 16
+          ["10.114.160.79"]  | 16
+          ["10.114.160.83"]  | 14
+          ["10.114.160.70"]  | 15
+          ----------------------------
+  ```
 
 
 
