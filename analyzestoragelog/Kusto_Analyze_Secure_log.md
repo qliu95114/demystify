@@ -27,14 +27,11 @@ Let's use Azure Data Explorer to make it work in one shot, assume you already se
 ```
 .create table securelog(message:string)
 ```
-
 1. Upload secure log to storage account, container. Create Storage SAS token
-
 1. Ingress secure log into table securelog 
 ```
 .ingest into table securelog(h'<replace with storage sas token>' 'with (format='psv')
 ```
-
 1. Query 
 ```
 securelog 
