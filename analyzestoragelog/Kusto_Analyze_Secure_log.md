@@ -38,7 +38,7 @@ Let's use Azure Data Explorer to make it work in oneshot, assume you already set
   .ingest into table securelog(h'<replace with storage sas token>' 'with (format='psv')
   ```
 4. Write query & Run
-  ```
+  ``` sql
   securelog 
   | where message contains "Failed Password"
   | extend sourceip=tostring(extractall(@"([0-9]{1,3}[.][0-9]{1,3}[.][0-9]{1,3}[.][0-9]{1,3})",message))
@@ -75,7 +75,7 @@ Let's use Azure Data Explorer to make it work in oneshot, assume you already set
 
 How do I covert the timestamp in secure log to DATATIME field , then we can use inside Kusto Search. Here is my way, of course there are better way, please feel free to comment and share
 
-```
+``` sql
 securelog 
 | where message contains "Failed Password"
 | extend message1=replace_regex(message,'  ',' ')
