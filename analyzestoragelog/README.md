@@ -43,7 +43,7 @@ https://<StorageAccountURL>/$log/xxx/00000x.log?sv=2021-04-10&st=2022-09-21T13%3
 
 # Play with the Data in Kusto Explorer 
 
-```
+``` kql
 //get log start /end time
 storagelog | summarize starttime=min(['request-start-time']), endtime=max(['request-start-time'])
 
