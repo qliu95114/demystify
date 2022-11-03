@@ -88,7 +88,7 @@ securelog
 | project-away message1, month, day, times
 | project timestamp, sourceip, port, message
 
-timestamp	sourceip	port	message
+timestamp	                  sourceip	        port	    message
 2022-10-30 08:45:54.0000000	["10.114.160.69"]	["38873"]	Oct 30 08:45:54 iedi-prd-vm-001 sshd[8020]: Failed password for invalid user admin from 10.114.160.69 port 38873 ssh2
 2022-10-31 04:34:03.0000000	["10.114.160.72"]	["14371"]	Oct 31 04:34:03 iedi-prd-vm-001 sshd[30378]: Failed password for invalid user internet from 10.114.160.72 port 14371 ssh2
 2022-10-31 10:01:38.0000000	["10.114.160.72"]	["60254"]	Oct 31 10:01:38 iedi-prd-vm-001 sshd[20621]: Failed password for root from 10.114.160.72 port 60254 ssh2
