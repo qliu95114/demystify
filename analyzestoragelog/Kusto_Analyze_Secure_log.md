@@ -1,6 +1,6 @@
 # Use Kusto to analyze the Linux secure log 
 
-Today I receive one secure log which indidcates password guess attack from a group of internal ip addresses 
+Today I receive one secure log which indidcates password guess attack from a group of internal IP addresses 
 
 ```
 Oct 31 17:28:43 my-vm-001 sshd[9619]: Bad protocol version identification 'GET / HTTP/1.1' from 10.114.160.169 port 46988
