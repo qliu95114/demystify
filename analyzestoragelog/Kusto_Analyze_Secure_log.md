@@ -16,7 +16,7 @@ Oct 31 17:28:44 my-vm-001 sshd[9606]: Connection closed by 10.114.160.70 port 57
 ```
 
 I ask myself 
-  1. How to find all source IP addresses that are involved the attack
+  1. How to find all source IP addresses that are involved in this attack
   2. How to count by IP adressses
 
 The obvious approach is 
