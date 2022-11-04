@@ -73,7 +73,7 @@ Let's use Azure Data Explorer to make it work in oneshot, assume you already set
           
 # Next challenge is 
 
-How do I covert the timestamp in secure log to DATATIME field , then we can use inside Kusto Search. Here is my way, of course there are better way, please feel free to comment and share
+How do I covert the timestamp in secure log to DATETIME field , then we can use it like datetime field. Here is my way, of course there are better ways, please feel free to comment and share
 
 ``` kql
 securelog 
