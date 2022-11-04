@@ -7,52 +7,45 @@ Today, i would like to introduce how to use tshark to dump the packet details as
 ## Sample One - Expand TCP Details only of one specific Frame
 
 ```
-C:\Program Files\Wireshark>tshark -r d:\temp\mytrace.pcapng -V -O tcp frame.number == 2
-Frame 2: 256 bytes on wire (2048 bits), 256 bytes captured (2048 bits) on interface unknown, id 0
-Ethernet II, Src: Dell_ab:fa:a2 (d8:9e:f3:ab:fa:a2), Dst: Mellanox_cb:c9:ec (ec:0d:9a:cb:c9:ec)
-Internet Protocol Version 4, Src: 25.86.198.43, Dst: 10.1.214.138
-Generic Routing Encapsulation (ERSPAN)
-Encapsulated Remote Switch Packet ANalysis Type I
-Ethernet II, Src: AristaNe_6c:70:a8 (28:99:3a:6c:70:a8), Dst: AristaNe_a3:5e:75 (74:83:ef:a3:5e:75)
-Internet Protocol Version 4, Src: 100.76.102.30, Dst: 10.67.88.91
-Internet Protocol Version 4, Src: 52.168.28.222, Dst: 23.102.239.134
-Transmission Control Protocol, Src Port: 4825, Dst Port: 16877, Seq: 2783611832, Ack: 2420665927, Len: 144
-    Source Port: 4825
-    Destination Port: 16877
-    [Stream index: 1]
-    [Conversation completeness: Incomplete (0)]
-    [TCP Segment Len: 144]
-    Sequence Number: 2783611832
-    [Next Sequence Number: 2783611976]
-    Acknowledgment Number: 2420665927
+C:\Program Files\Wireshark>tshark -r d:\temp\mytrace.pcapng -V -O tcp frame.number == 5
+Frame 5: 54 bytes on wire (432 bits), 54 bytes captured (432 bits) on interface \Device\NPF_{5E9AC1A3-4E57-4A03-A87B-3A41C71B859F}, id 0
+Ethernet II, Src: 82:04:5f:c1:42:64 (82:04:5f:c1:42:64), Dst: IntelCor_7a:90:b8 (40:1c:83:7a:90:b8)
+Internet Protocol Version 4, Src: 100.45.55.66, Dst: 172.20.10.5
+Transmission Control Protocol, Src Port: 443, Dst Port: 51336, Seq: 1732514733, Ack: 1176144938, Len: 0
+    Source Port: 443
+    Destination Port: 51336
+    [Stream index: 0]
+    [Conversation completeness: Complete, NO_DATA (23)]
+    [TCP Segment Len: 0]
+    Sequence Number: 1732514733
+    [Next Sequence Number: 1732514733]
+    Acknowledgment Number: 1176144938
     0101 .... = Header Length: 20 bytes (5)
-    Flags: 0x018 (PSH, ACK)
+    Flags: 0x010 (ACK)
         000. .... .... = Reserved: Not set
-        ...0 .... .... = Nonce: Not set
-        .... 0... .... = Congestion Window Reduced (CWR): Not set
+        ...0 .... .... = Accurate ECN: Not set
+        .... 0... .... = Congestion Window Reduced: Not set
         .... .0.. .... = ECN-Echo: Not set
         .... ..0. .... = Urgent: Not set
         .... ...1 .... = Acknowledgment: Set
-        .... .... 1... = Push: Set
+        .... .... 0... = Push: Not set
         .... .... .0.. = Reset: Not set
         .... .... ..0. = Syn: Not set
         .... .... ...0 = Fin: Not set
-        [TCP Flags: ·······AP···]
-    Window: 1028
-    [Calculated window size: 1028]
-    [Window size scaling factor: -1 (unknown)]
-    Checksum: 0x8de9 [unverified]
+        [TCP Flags: ·······A····]
+    Window: 63
+    [Calculated window size: 64512]
+    [Window size scaling factor: 1024]
+    Checksum: 0x37fa [unverified]
     [Checksum Status: Unverified]
     Urgent Pointer: 0
     [Timestamps]
-        [Time since first frame in this TCP stream: 0.000000000 seconds]
-        [Time since previous frame in this TCP stream: 0.000000000 seconds]
+        [Time since first frame in this TCP stream: 0.143940000 seconds]
+        [Time since previous frame in this TCP stream: 0.074449000 seconds]
     [SEQ/ACK analysis]
-        [Bytes in flight: 144]
-        [Bytes sent since last PSH flag: 144]
-    TCP payload (144 bytes)
-    TCP segment data (144 bytes)
-Transport Layer Security
+        [This is an ACK to the segment in frame: 4]
+        [The RTT to ACK the segment was: 0.074449000 seconds]
+        [iRTT: 0.068990000 seconds]
 ```
 
 ## Sample Two - list conversation view by ip 
