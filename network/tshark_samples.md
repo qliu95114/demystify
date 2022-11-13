@@ -102,9 +102,9 @@ Filter:<No Filter>
 
 ## Sample Four - dump PCAP to CSV , import to ADX (Kusto)
 
-For big trace analyze, we like to export trace to CSV then we can import ADX for fast analyze, using Tshark we can "convert" pcap to csv. here is my favorites fields commonly used to analyze the trace. 
+For big trace analyze, export trace to CSV then import ADX for fast analyze is nature for speeding up tracing reading. Using Tshark we can "convert" pcap to csv. here is my favorites fields commonly used when analyze TCP/UDP network trace. 
 
-tshark covert to csv , select fields 
+TSHARK covert to csv , Fields selected
 ``` cmd 
 "c:\program files\wireshark\tshark" -r my.pcapng -T fields -e frame.number -e frame.time_epoch -e frame.time_delta_displayed -e ip.src -e ip.dst -e ip.id -e ip.proto -e tcp.seq -e tcp.ack -e frame.len -e tcp.srcport -e tcp.dstport -e udp.srcport -e udp.dstport -e tcp.analysis.ack_rtt -e frame.protocols -e _ws.col.Info -e eth.src -e eth.dst -E header=y -E separator=, -E quote=d > my.pcapng.csv
 ```
