@@ -4,7 +4,7 @@ Everyday while I am working with Network trace, want to share the trace analyze 
 
 Today, i would like to introduce how to use tshark to dump the packet details as. 
 
-## Sample One - Expand TCP Details only of one specific Frame
+## Sample One - Expand TCP Details of one specific Frame
 
 ```
 C:\Program Files\Wireshark>tshark -r d:\temp\mytrace.pcapng -V -O tcp frame.number == 5
