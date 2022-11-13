@@ -98,3 +98,44 @@ Filter:<No Filter>
 10.240.38.72:51298         <-> 172.29.59.138:8002            1013 192 kB       1058 205 kB       2071 398 kB      145.155329000       202.7795
 ================================================================================
 
+```
+
+## Sample Four - dump PCAP to CSV , import to ADX (Kusto)
+
+For big trace analyze, we like to export trace to CSV then we can import ADX for fast analyze, using Tshark we can "convert" pcap to csv. here is my favorites fields commonly used to analyze the trace. 
+
+tshark covert to csv , select fields 
+``` cmd 
+"c:\program files\wireshark\tshark" -r my.pcapng -T fields -e frame.number -e frame.time_epoch -e frame.time_delta_displayed -e ip.src -e ip.dst -e ip.id -e ip.proto -e tcp.seq -e tcp.ack -e frame.len -e tcp.srcport -e tcp.dstport -e udp.srcport -e udp.dstport -e tcp.analysis.ack_rtt -e frame.protocols -e _ws.col.Info -e eth.src -e eth.dst -E header=y -E separator=, -E quote=d > my.pcapng.csv
+```
+
+ADX (Kusto) create table and import from CSV,
+``` kql
+.drop table trace
+
+.create table trace (framenumber:long,frametime:string,DeltaDisplayed:string,Source:string,Destination:string,ipid:string,Protocol:int,tcpseq:string,tcpack:string,Length:int,tcpsrcport:int,tcpdstport:int,udpsrcport:int,udpdstport:int,tcpackrtt:string,frameprotocol:string,Info:string,ethsrc:string,ethdst:string)
+
+.ingest into table trace (@"d:\temp\my.pcapng.csv") with (format='csv',ignoreFirstRecord=true)
+```
+
+Sample query and covert Epoch time to UTC readable format 
+``` kql
+//convert epoch time to UTC display time with Seconds
+trace 
+| extend aa=tolong(replace_string(frametime,'.',''))/1000
+| extend TT=unixtime_microseconds_todatetime(aa)
+| project framenumber,TT,DeltaDisplayed, Source, Destination, ipid, Protocol,tcpseq, tcpack, Length, Info, tcpsrcport, tcpdstport, udpdstport, udpsrcport,ethsrc, ethdst, frameprotocol
+| take 20
+
+framenumber	TT	DeltaDisplayed	Source	Destination	ipid	Protocol	tcpseq	tcpack	Length	Info	tcpsrcport	tcpdstport	udpdstport	udpsrcport	ethsrc	ethdst	frameprotocol
+1	2022-11-04 06:13:53.6285160	0.000000000	10.115.68.111	122.111.111.111	0xb3f6	6	3443987890	0	66	54010 → 443 [SYN] Seq=3443987890 Win=64240 Len=0 MSS=1460 WS=256 SACK_PERM	54010	443			c0:fb:f9:c6:dc:bc	68:3a:1e:74:ee:a0	eth:ethertype:ip:tcp
+2	2022-11-04 06:13:53.6692370	0.040721000	122.111.111.111	10.115.68.111	0x0000	6	3280391636	3443987891	66	443 → 54010 [SYN, ACK] Seq=3280391636 Ack=3443987891 Win=64240 Len=0 MSS=1360 SACK_PERM WS=1024	443	54010			68:3a:1e:74:ee:a0	c0:fb:f9:c6:dc:bc	eth:ethertype:ip:tcp
+3	2022-11-04 06:13:53.6694950	0.000258000	10.115.68.111	122.111.111.111	0xb3f7	6	3443987891	3280391637	54	54010 → 443 [ACK] Seq=3443987891 Ack=3280391637 Win=131840 Len=0	54010	443			c0:fb:f9:c6:dc:bc	68:3a:1e:74:ee:a0	eth:ethertype:ip:tcp
+4	2022-11-04 06:13:53.6805270	0.011032000	10.115.68.111	122.111.111.111	0xb3f8	6	3443987891	3280391637	571	Client Hello	54010	443			c0:fb:f9:c6:dc:bc	68:3a:1e:74:ee:a0	eth:ethertype:ip:tcp:tls
+5	2022-11-04 06:13:53.7203860	0.039859000	122.111.111.111	10.115.68.111	0x71f7	6	3280391637	3443988408	62	443 → 54010 [ACK] Seq=3280391637 Ack=3443988408 Win=64512 Len=0	443	54010			68:3a:1e:74:ee:a0	c0:fb:f9:c6:dc:bc	eth:ethertype:ip:tcp
+6	2022-11-04 06:13:53.7224630	0.002077000	122.111.111.111	10.115.68.111	0x71f8	6	3280391637	3443988408	1384	Server Hello	443	54010			68:3a:1e:74:ee:a0	c0:fb:f9:c6:dc:bc	eth:ethertype:ip:tcp:tls
+
+```
+
+
+
