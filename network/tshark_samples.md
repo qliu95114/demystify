@@ -138,4 +138,51 @@ framenumber	TT	DeltaDisplayed	Source	Destination	ipid	Protocol	tcpseq	tcpack	Len
 ```
 
 
+### Tips
+If you have a list of *.cap under folder, I create one batch file to process all files one-by-one
 
+```
+for /f "delims=" %a in ('dir /b /o *.cap') do "c:\program files\wireshark\tshark" -r %a -T fields -e frame.number -e frame.time_epoch -e frame.time_delta_displayed -e ip.src -e ip.dst -e ip.id -e ip.proto -e tcp.seq -e tcp.ack -e frame.len -e tcp.srcport -e tcp.dstport -e udp.srcport -e udp.dstport -e tcp.analysis.ack_rtt -e frame.protocols -e _ws.col.Info -e eth.src -e eth.dst -E header=y -E separator=, -E quote=d > %a.csv
+
+before process
+D:\temp>dir *.cap
+ Volume in drive D is 1-DATA
+ Volume Serial Number is DE8A-D932
+
+ Directory of D:\temp
+
+2022-11-09  11:33 AM       209,708,373 NetworkTraces(1).cap
+2022-11-09  11:33 AM       209,702,450 NetworkTraces(2).cap
+2022-11-09  11:33 AM       209,710,439 NetworkTraces(3).cap
+2022-11-09  11:33 AM       209,715,136 NetworkTraces(4).cap
+2022-11-09  11:33 AM       209,714,430 NetworkTraces(5).cap
+2022-11-09  11:33 AM        29,736,420 NetworkTraces(6).cap
+2022-11-09  11:33 AM       209,702,622 NetworkTraces.cap
+               7 File(s)  1,287,989,870 bytes
+               0 Dir(s)  569,877,078,016 bytes free
+
+After process
+D:\temp>dir NetworkTrace*.*
+ Volume in drive D is 1-DATA
+ Volume Serial Number is DE8A-D932
+
+ Directory of D:\temp
+
+2022-11-09  11:33 AM       209,708,373 NetworkTraces(1).cap
+2022-11-13  10:11 PM        73,217,373 NetworkTraces(1).cap.csv
+2022-11-09  11:33 AM       209,702,450 NetworkTraces(2).cap
+2022-11-13  10:12 PM        69,142,598 NetworkTraces(2).cap.csv
+2022-11-09  11:33 AM       209,710,439 NetworkTraces(3).cap
+2022-11-13  10:12 PM        75,541,769 NetworkTraces(3).cap.csv
+2022-11-09  11:33 AM       209,715,136 NetworkTraces(4).cap
+2022-11-13  10:12 PM        75,263,490 NetworkTraces(4).cap.csv
+2022-11-09  11:33 AM       209,714,430 NetworkTraces(5).cap
+2022-11-13  10:12 PM        73,566,784 NetworkTraces(5).cap.csv
+2022-11-09  11:33 AM        29,736,420 NetworkTraces(6).cap
+2022-11-13  10:12 PM        10,937,967 NetworkTraces(6).cap.csv
+2022-11-09  11:33 AM       209,702,622 NetworkTraces.cap
+2022-11-13  10:13 PM        72,236,137 NetworkTraces.cap.csv
+              14 File(s)  1,737,895,988 bytes
+               0 Dir(s)  569,877,078,016 bytes free
+
+```
