@@ -115,7 +115,7 @@ ADX (Kusto) create table and import from CSV,
 
 .create table trace (framenumber:long,frametime:string,DeltaDisplayed:string,Source:string,Destination:string,ipid:string,Protocol:int,tcpseq:string,tcpack:string,Length:int,tcpsrcport:int,tcpdstport:int,udpsrcport:int,udpdstport:int,tcpackrtt:string,frameprotocol:string,Info:string,ethsrc:string,ethdst:string)
 
-.ingest into table trace (@"d:\temp\my.pcapng.csv") with (format='csv',ignoreFirstRecord=true)
+.ingest into table trace (@"c:\temp\my.pcapng.csv") with (format='csv',ignoreFirstRecord=true)
 ```
 
 Sample query and covert Epoch time to UTC readable format 
