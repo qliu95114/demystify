@@ -14,6 +14,11 @@ The source folder where NSGFLOWlogs PT1H.json are located.
 
 <#
 author: qliu
+
+.create table nsgflowlog (timestamp:datetime,macAddress:string,category:string,Version:string,rule:string,mac:string,epochtime:string,sourceip:string,destip:string,sourceport:int,destport:int,Protocol:string,TrafficFlow:string,TrafficDecision:string,FlowState:string,PacketsS2D:int,BytesSentS2D:int,PacketsD2S:int,BytesSentD2S:int)
+
+.ingest into table nsgflowlog (@"D:\temp\nsgflowlogs_merge.csv") with (format='csv',ignoreFirstRecord=true)
+
 #>
 
 Param (
