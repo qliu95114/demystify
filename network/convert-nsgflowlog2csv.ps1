@@ -71,6 +71,70 @@ Function PT1H2CSV ([string]$srcpt1h,[string]$csvfile)  #FlatJSON
     }
 }
 
+
+Function PT1H2CSV_Memory ([string]$srcpt1h,[string]$csvfile)  #FlatJSON Using Memory and Flush CSV 
+{
+    Write-UTCLog "processing... $($srcpt1h) in Memoory"
+    #Write-UTCLog "processing... $($csvfile)"
+    $json=(Get-Content $srcpt1h)|ConvertFrom-Json
+    $flowtable = New-Object -TypeName 'System.Collections.ArrayList';
+    foreach ($record in $json.records)
+    {
+        $line=""
+        $time=$record.time
+        #$systemId=$record.systemId
+        $macAddress=$record.macAddress
+        $category=$record.category
+        #$resourceId=$record.resourceId
+        #$operationName=$record.operationName
+        foreach ($properties in $record.properties)
+        {
+            $version=$properties.Version
+            foreach ($flow in $properties.flows)
+            {
+                $rule=$flow.rule
+                #Write-UTCLog "[Debug]$($line)" -color "White"
+                foreach ($flow2 in $flow.flows)
+                {
+                    $mac=$flow2.mac
+                    #Write-UTCLog "[Debug]$($line)" -color "White"
+                    foreach ($flowTuple in $flow2.flowTuples)
+                    {
+                        $Tuple=$flowTuple
+                        #$line="$($time),$($systemId),$($macAddress),$($category),$($resourceId),$($operationName),$($version),$($rule),$($mac),$($Tuple)"
+                        #$line="$($time),$($macAddress),$($category),$($version),$($rule),$($mac),$($Tuple)"
+                        $flow = New-Object PSObject -Property @{
+                            time = $time;
+                            macAddress = $macAddress;
+                            category = $category;
+                            Version = $version;
+                            rule = $rule;
+                            mac = $mac;
+                            epochtime = $Tuple.split(',')[0];
+                            sourceip = $Tuple.split(',')[1];
+                            destip = $Tuple.split(',')[2];
+                            sourceport = $Tuple.split(',')[3];
+                            destport = $Tuple.split(',')[4];
+                            Protocol = $Tuple.split(',')[5];
+                            TrafficFlow = $Tuple.split(',')[6];
+                            TrafficDecision = $Tuple.split(',')[7];
+                            FlowState = $Tuple.split(',')[8];
+                            PacketsS2D = $Tuple.split(',')[9];
+                            BytesSentS2D = $Tuple.split(',')[10];
+                            PacketsD2S = $Tuple.split(',')[11];
+                            BytesSentD2S = $Tuple.split(',')[12];
+                        }
+                        $flowtable+=$flow
+                        #$line|Out-File $csvfile -Encoding utf8 -Append
+                    }
+                }
+            }
+        }
+    }
+    $flowtable.count
+    $flowtable|Export-Csv $csvfile -Encoding utf8 -NoClobber
+}
+
 #get list of PT1h.Json
 if (Test-Path $srcpath) 
 {
@@ -80,6 +144,7 @@ if (Test-Path $srcpath)
     if ($nsgfilelist.count -ne 0)
     {
         $destfile="$($srcpath.TrimEnd('\'))\nsgflowlogs_merge.csv"
+        #$destfile2="$($srcpath.TrimEnd('\'))\nsgflowlogs_merge_memory.csv"
         $header="time,macAddress,category,Version,rule,mac,epochtime,sourceip,destip,sourceport,destport,Protocol,TrafficFlow,TrafficDecision,FlowState,PacketsS2D,BytesSentS2D,PacketsD2S,BytesSentD2S"
         $header|Out-File $destfile -Encoding utf8
         #Write-UTCLog "nsgflowlogs Total : $($nsgfilelist.count) File(s)" "Yellow"
@@ -94,8 +159,8 @@ if (Test-Path $srcpath)
         foreach ($nsgfile in $nsgfilelist)
         {
             PT1H2CSV -srcpt1h $nsgfile.FullName -csvfile $destfile
+            #PT1H2CSV_Memory -srcpt1h $nsgfile.FullName -csvfile $destfile2
         }
-       
         Write-UTCLog " nsgflowlogs CSV file : $($destfile)" "Yellow"
         
     }
