@@ -6,7 +6,7 @@ echo $learningbash
 # installation
 sudo apt update -y
 sudo apt upgrade -y
-sudo apt install netfilter-persistent net-tools iptables tcpdump nano vim iputils-ping cron -y
+sudo apt install netfilter-persistent net-tools iptables tcpdump nano vim iputils-ping cron inetutils-traceroute -y
 
 # allow probe work on eth1
 #sudo arp -i eth1 -s 168.63.129.16 12:34:56:78:9a:bc  
@@ -35,7 +35,8 @@ echo "===end of /etc/init.d/allow-probe===="
 sudo bash /etc/init.d/allow-probe
 
 #make it auto run on every start
-sudo crontab - <<< "@reboot /etc/init.d/allow-probe"
+sudo crontab -l | { cat; echo "@reboot /etc/init.d/allow-probe"; } | crontab -
+#sudo crontab - <<< "@reboot /etc/init.d/allow-probe"
 
 #sudo echo "@reboot /etc/init.d/allow-probe" > /var/spool/cron/crontabs/root  # this won't work, the file should not be modified directly 
 #sudo echo "" >> /var/spool/cron/crontabs/root

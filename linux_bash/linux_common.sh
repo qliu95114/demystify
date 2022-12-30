@@ -6,5 +6,5 @@ echo $learningbash
 # installation
 sudo apt update -y
 sudo apt upgrade -y
-sudo apt install netfilter-persistent net-tools iptables tcpdump nano vim iputils-ping cron -y
+sudo apt install netfilter-persistent net-tools iptables tcpdump nano vim iputils-ping cron inetutils-traceroute -y
 
