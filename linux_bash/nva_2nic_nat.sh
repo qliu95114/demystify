@@ -35,7 +35,8 @@ echo "===end of /etc/init.d/allow-probe===="
 sudo bash /etc/init.d/allow-probe
 
 #make it auto run on every start
-sudo crontab - <<< '@reboot /etc/init.d/allow-probe'
+sudo crontab - <<< "@reboot /etc/init.d/allow-probe"
+
 #sudo echo "@reboot /etc/init.d/allow-probe" > /var/spool/cron/crontabs/root  # this won't work, the file should not be modified directly 
 #sudo echo "" >> /var/spool/cron/crontabs/root
 
