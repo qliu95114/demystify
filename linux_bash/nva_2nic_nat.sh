@@ -1,4 +1,5 @@
-# author  qliu@microsoft.com
+#!/bin/bash
+# author  qliu
 
 learningbash="this script config NVA with two nics, NAT"
 echo $learningbash
@@ -6,7 +7,7 @@ echo $learningbash
 # installation
 sudo apt update -y
 sudo apt upgrade -y
-sudo apt install netfilter-persistent net-tools iptables tcpdump nano vim iputils-ping cron inetutils-traceroute -y
+sudo apt install netfilter-persistent net-tools iptables tcpdump nano vim iputils-ping cron inetutils-traceroute iotop iftop -y
 
 # allow probe work on eth1
 #sudo arp -i eth1 -s 168.63.129.16 12:34:56:78:9a:bc  
