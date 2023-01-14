@@ -187,3 +187,39 @@ D:\temp>dir NetworkTrace*.*
                0 Dir(s)  569,877,078,016 bytes free
 
 ```
+
+## Sample Five - detect 1s delay TCP SYN - TCP SYN/ACK for port 6379 traffic from 1000+ trace file 
+Today I get into a situation need to harvest 1000+ trace file to detect a problem whether TCP 3-way handshake is taking longer than 1 second
+
+To detect TCP 3-way handshake is taking longer than 1 second
+```
+tcp.analysis.ack_rtt >1 and tcp.flags.syn == 1 and tcp.flags.ack ==1
+```
+
+To make the detect works for 1000+ files, this works on Windows 
+
+```
+for /f "delims=" %a in ('dir /b /o d:\tracefile\*.pcap') do "c:\program files\wireshark\tshark" -r "d:\tracefile\%a" "tcp.analysis.ack_rtt >1 and tcp.flags.syn == 1 and tcp.flags.ack ==1 and tcp.srcport == 6379"
+
+C:\Windows\System32>"c:\program files\wireshark\tshark" -r "c:\tracefile\file_16_43_00.pcap" "tcp.analysis.ack_rtt >1 and tcp.flags.syn == 1 and tcp.flags.ack ==1 and tcp.srcport == 6379"
+
+C:\Windows\System32>"c:\program files\wireshark\tshark" -r "c:\tracefile\file_16_44_00.pcap" "tcp.analysis.ack_rtt >1 and tcp.flags.syn == 1 and tcp.flags.ack ==1 and tcp.srcport == 6379"
+22808 2023-01-13 16:44:47.160183 0.000000 10.227.8.192 → 10.227.6.87  0x0000 (0),0x0100 (256),0x0000 (0) TCP 2945986252 1537613497 1.035904000 154 6379 → 41990 [SYN, ACK] Seq=2945986252 Ack=1537613497 Win=43440 Len=0 MSS=1418 SACK_PERM TSval=2115729317 TSecr=842724217 WS=512
+22810 2023-01-13 16:44:47.160438 0.000255 10.227.4.160 → 10.227.6.87  0x0000 (0),0x0100 (256),0x0000 (0) TCP 1741601663 3024541421 1.036066000 154 6379 → 38444 [SYN, ACK] Seq=1741601663 Ack=3024541421 Win=43440 Len=0 MSS=1418 SACK_PERM TSval=3755097511 TSecr=3102397576 WS=512
+
+C:\Windows\System32>"c:\program files\wireshark\tshark" -r "c:\tracefile\file_16_45_00.pcap" "tcp.analysis.ack_rtt >1 and tcp.flags.syn == 1 and tcp.flags.ack ==1 and tcp.srcport == 6379"
+
+C:\Windows\System32>"c:\program files\wireshark\tshark" -r "c:\tracefile\file_16_46_00.pcap" "tcp.analysis.ack_rtt >1 and tcp.flags.syn == 1 and tcp.flags.ack ==1 and tcp.srcport == 6379"
+
+C:\Windows\System32>"c:\program files\wireshark\tshark" -r "c:\tracefile\file_16_47_00.pcap" "tcp.analysis.ack_rtt >1 and tcp.flags.syn == 1 and tcp.flags.ack ==1 and tcp.srcport == 6379"
+```
+
+We can conclude  in c:\tracefile\file_16_44_00.pcap,  there are two streams 
+```
+10.227.8.192 → 10.227.6.87   6379 → 41990 [SYN, ACK] is taking 1.03590400 to response
+10.227.4.160 → 10.227.6.87   6379 → 38444 [SYN, ACK] is taking 1.03606600 to response 
+```
+Then we can open that file c:\tracefile\file_16_44_00.pcap to review 
+
+
+
