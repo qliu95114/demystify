@@ -191,16 +191,18 @@ D:\temp>dir NetworkTrace*.*
 ## Sample Five - detect 1s delay TCP SYN - TCP SYN/ACK for port 6379 traffic from 1000+ trace file 
 Today I get into a situation need to harvest 1000+ trace file to detect a problem whether TCP 3-way handshake is taking longer than 1 second
 
-To detect TCP 3-way handshake is taking longer than 1 second
+To detect TCP 3-way handshake is taking longer than 1 second, I use Wireshark filter 
 ```
 tcp.analysis.ack_rtt >1 and tcp.flags.syn == 1 and tcp.flags.ack ==1
 ```
 
-To make the detect works for 1000+ files, this works on Windows 
-
+To make the detect works for 1000+ files, let's write batch on Windows. 
 ```
 for /f "delims=" %a in ('dir /b /o d:\tracefile\*.pcap') do "c:\program files\wireshark\tshark" -r "d:\tracefile\%a" "tcp.analysis.ack_rtt >1 and tcp.flags.syn == 1 and tcp.flags.ack ==1 and tcp.srcport == 6379"
+```
 
+Output
+```
 C:\Windows\System32>"c:\program files\wireshark\tshark" -r "c:\tracefile\file_16_43_00.pcap" "tcp.analysis.ack_rtt >1 and tcp.flags.syn == 1 and tcp.flags.ack ==1 and tcp.srcport == 6379"
 
 C:\Windows\System32>"c:\program files\wireshark\tshark" -r "c:\tracefile\file_16_44_00.pcap" "tcp.analysis.ack_rtt >1 and tcp.flags.syn == 1 and tcp.flags.ack ==1 and tcp.srcport == 6379"
@@ -214,12 +216,12 @@ C:\Windows\System32>"c:\program files\wireshark\tshark" -r "c:\tracefile\file_16
 C:\Windows\System32>"c:\program files\wireshark\tshark" -r "c:\tracefile\file_16_47_00.pcap" "tcp.analysis.ack_rtt >1 and tcp.flags.syn == 1 and tcp.flags.ack ==1 and tcp.srcport == 6379"
 ```
 
-We can conclude  in c:\tracefile\file_16_44_00.pcap,  there are two streams 
+We can conclude  in c:\tracefile\file_16_44_00.pcap,  there are two streams, let's open it and check further.
 ```
 10.227.8.192 → 10.227.6.87   6379 → 41990 [SYN, ACK] is taking 1.03590400 to response
 10.227.4.160 → 10.227.6.87   6379 → 38444 [SYN, ACK] is taking 1.03606600 to response 
 ```
-Then we can open that file c:\tracefile\file_16_44_00.pcap to review 
+
 
 
 
