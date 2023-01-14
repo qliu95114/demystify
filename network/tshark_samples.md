@@ -1,11 +1,13 @@
 # Using Tshark to dump Packet details into TEXT format
 
-Everyday while I am working with Network trace, want to share the trace analyze details with colleage, use screenshot (PrtScr or FastStone capture) is one way, but not very friend for email or MarkDown edit. 
+Everyday while I am working with Network trace, there are many scenerios
+- Share the trace analyze details with colleage, use screenshot (PrtScr or FastStone capture) is one way, but not very friend for email or MarkDown edit. 
+- Work with super large PCAP file to get useful insight, but filter in Wireshark is very slow
+- Work with many(1000+) PCAP files to apply same filter to get useful insight, combine pcap into one file could help but will hit the second limitation above. 
 
-Today, i would like to introduce how to use tshark to dump the packet details as. 
+Today, I introduce some ideas to leverage tshark work with PCAP file(s). 
 
 ## Sample One - Expand TCP Details of one specific Frame
-
 ```
 C:\Program Files\Wireshark>tshark -r d:\temp\mytrace.pcapng -V -O tcp frame.number == 5
 Frame 5: 54 bytes on wire (432 bits), 54 bytes captured (432 bits) on interface \Device\NPF_{5E9AC1A3-4E57-4A03-A87B-3A41C71B859F}, id 0
@@ -49,7 +51,6 @@ Transmission Control Protocol, Src Port: 443, Dst Port: 51336, Seq: 1732514733, 
 ```
 
 ## Sample Two - list conversation view by ip 
-
 ```
 C:\Program Files\Wireshark>tshark -r d:\temp\mytrace.pcapng -qzconv,ip
 ================================================================================
@@ -76,7 +77,6 @@ Filter:<No Filter>
 ``` 
 
 ## Sample Three - list conversation view by tcp
-
 ```
 C:\Program Files\Wireshark>tshark -r d:\temp\mytrace.pcapng -qzconv,tcp
 ================================================================================
@@ -100,9 +100,8 @@ Filter:<No Filter>
 
 ```
 
-## Sample Four - dump PCAP to CSV , import to ADX (Kusto)
-
-For big trace analyze, export trace to CSV then import ADX for fast analyze is nature for speeding up tracing reading. Using Tshark we can "convert" pcap to csv. here is my favorites fields commonly used when analyze TCP/UDP network trace. 
+## Sample Four - dump PCAP to CSV , use ADX (Kusto) to analyze trace in fast fashion
+For big trace analyze, export trace to CSV then import ADX for fast analyze is nature way to speed-up analyze. Using Tshark we can "convert" pcap to csv, here is my favorite fields commonly used when analyze TCP/UDP network trace. 
 
 TSHARK covert to csv , Fields selected
 ``` cmd 
@@ -139,9 +138,9 @@ framenumber	TT	DeltaDisplayed	Source	Destination	ipid	Protocol	tcpseq	tcpack	Len
 
 
 ### Tips
-If you have a list of cap or pcap files under folder, I create one batch file to process all files one-by-one  
+While work with a lot of pcap files, let's create one batch file 
 
-```
+```cmd
 * following command must run Windows Command Prompt not Powershell
 for /f "delims=" %a in ('dir /b /o *.cap') do "c:\program files\wireshark\tshark" -r "%a" -T fields -e frame.number -e frame.time_epoch -e frame.time_delta_displayed -e ip.src -e ip.dst -e ip.id -e ip.proto -e tcp.seq -e tcp.ack -e frame.len -e tcp.srcport -e tcp.dstport -e udp.srcport -e udp.dstport -e tcp.analysis.ack_rtt -e frame.protocols -e _ws.col.Info -e eth.src -e eth.dst -E header=y -E separator=, -E quote=d > "%a.csv"
 
@@ -189,20 +188,20 @@ D:\temp>dir NetworkTrace*.*
 ```
 
 ## Sample Five - detect 1s delay TCP SYN - TCP SYN/ACK for port 6379 traffic from 1000+ trace file 
-Today I get into a situation need to harvest 1000+ trace file to detect a problem whether TCP 3-way handshake is taking longer than 1 second
+Today I get into a situation that need to look into 1000+ pcap files to detect a problem whether TCP 3-way handshake is longer than 1 second
 
-To detect TCP 3-way handshake is taking longer than 1 second, I use Wireshark filter 
+To detect TCP 3-way handshake is longer than 1 second, let's use Wireshark filter
 ```
 tcp.analysis.ack_rtt >1 and tcp.flags.syn == 1 and tcp.flags.ack ==1
 ```
 
-To make the detect works for 1000+ files, let's write batch on Windows. 
-```
+To make the detection works for 1000+ files, let's use Windows Batch file
+```cmd
 for /f "delims=" %a in ('dir /b /o d:\tracefile\*.pcap') do "c:\program files\wireshark\tshark" -r "d:\tracefile\%a" "tcp.analysis.ack_rtt >1 and tcp.flags.syn == 1 and tcp.flags.ack ==1 and tcp.srcport == 6379"
 ```
 
-Output
-```
+Result is promising....
+```cmd
 C:\Windows\System32>"c:\program files\wireshark\tshark" -r "c:\tracefile\file_16_43_00.pcap" "tcp.analysis.ack_rtt >1 and tcp.flags.syn == 1 and tcp.flags.ack ==1 and tcp.srcport == 6379"
 
 C:\Windows\System32>"c:\program files\wireshark\tshark" -r "c:\tracefile\file_16_44_00.pcap" "tcp.analysis.ack_rtt >1 and tcp.flags.syn == 1 and tcp.flags.ack ==1 and tcp.srcport == 6379"
@@ -216,8 +215,8 @@ C:\Windows\System32>"c:\program files\wireshark\tshark" -r "c:\tracefile\file_16
 C:\Windows\System32>"c:\program files\wireshark\tshark" -r "c:\tracefile\file_16_47_00.pcap" "tcp.analysis.ack_rtt >1 and tcp.flags.syn == 1 and tcp.flags.ack ==1 and tcp.srcport == 6379"
 ```
 
-We can conclude  in c:\tracefile\file_16_44_00.pcap,  there are two streams, let's open it and check further.
-```
+We can conclude  in c:\tracefile\file_16_44_00.pcap,  there are two streams, let's find the exact PCAP file and check further in Wirehsark. 
+```cmd
 10.227.8.192 → 10.227.6.87   6379 → 41990 [SYN, ACK] is taking 1.03590400 to response
 10.227.4.160 → 10.227.6.87   6379 → 38444 [SYN, ACK] is taking 1.03606600 to response 
 ```
