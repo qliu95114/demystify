@@ -29,16 +29,16 @@ Let's use Azure Data Explorer to make it work in oneshot, assume you already set
 
 # Steps 
 1. Create table [securelog], with only one attribute message: string
-  ```
+  ```kql
   .create table securelog(message:string)
   ```
 2. Upload secure log to storage account, container. Create Storage SAS token
 3. Inject secure log into table securelog from storage account
-  ```
-  .ingest into table securelog(h'<replace with storage sas token>' 'with (format='psv')
+  ```kql
+  .ingest into table securelog(h'<replace with storage sas token>') with (format='psv')
   ```
 4. Write query & Run
-  ``` kql
+  ```kql
   securelog 
   | where message contains "Failed Password"
   | extend sourceip=tostring(extractall(@"([0-9]{1,3}[.][0-9]{1,3}[.][0-9]{1,3}[.][0-9]{1,3})",message))
