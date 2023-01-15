@@ -140,7 +140,7 @@ framenumber	TT	DeltaDisplayed	Source	Destination	ipid	Protocol	tcpseq	tcpack	Len
 ### Tips
 While work with a lot of pcap files, let's create one batch file 
 
-```cmd
+```
 * following command must run Windows Command Prompt not Powershell
 for /f "delims=" %a in ('dir /b /o *.cap') do "c:\program files\wireshark\tshark" -r "%a" -T fields -e frame.number -e frame.time_epoch -e frame.time_delta_displayed -e ip.src -e ip.dst -e ip.id -e ip.proto -e tcp.seq -e tcp.ack -e frame.len -e tcp.srcport -e tcp.dstport -e udp.srcport -e udp.dstport -e tcp.analysis.ack_rtt -e frame.protocols -e _ws.col.Info -e eth.src -e eth.dst -E header=y -E separator=, -E quote=d > "%a.csv"
 
@@ -196,12 +196,12 @@ tcp.analysis.ack_rtt >1 and tcp.flags.syn == 1 and tcp.flags.ack ==1
 ```
 
 To make the detection works for 1000+ files, let's use Windows Batch file
-```cmd
+```
 for /f "delims=" %a in ('dir /b /o d:\tracefile\*.pcap') do "c:\program files\wireshark\tshark" -r "d:\tracefile\%a" "tcp.analysis.ack_rtt >1 and tcp.flags.syn == 1 and tcp.flags.ack ==1 and tcp.srcport == 6379"
 ```
 
 Result is promising....
-```cmd
+```
 C:\Windows\System32>"c:\program files\wireshark\tshark" -r "c:\tracefile\file_16_43_00.pcap" "tcp.analysis.ack_rtt >1 and tcp.flags.syn == 1 and tcp.flags.ack ==1 and tcp.srcport == 6379"
 
 C:\Windows\System32>"c:\program files\wireshark\tshark" -r "c:\tracefile\file_16_44_00.pcap" "tcp.analysis.ack_rtt >1 and tcp.flags.syn == 1 and tcp.flags.ack ==1 and tcp.srcport == 6379"
@@ -216,7 +216,7 @@ C:\Windows\System32>"c:\program files\wireshark\tshark" -r "c:\tracefile\file_16
 ```
 
 We can conclude  in c:\tracefile\file_16_44_00.pcap,  there are two streams, let's find the exact PCAP file and check further in Wirehsark. 
-```cmd
+```
 10.227.8.192 → 10.227.6.87   6379 → 41990 [SYN, ACK] is taking 1.03590400 to response
 10.227.4.160 → 10.227.6.87   6379 → 38444 [SYN, ACK] is taking 1.03606600 to response 
 ```
