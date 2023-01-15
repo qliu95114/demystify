@@ -125,7 +125,9 @@ trace
 | extend TT=unixtime_microseconds_todatetime(aa)
 | project framenumber,TT,DeltaDisplayed, Source, Destination, ipid, Protocol,tcpseq, tcpack, Length, Info, tcpsrcport, tcpdstport, udpdstport, udpsrcport,ethsrc, ethdst, frameprotocol
 | take 20
-
+```
+Result:
+```
 framenumber	TT	DeltaDisplayed	Source	Destination	ipid	Protocol	tcpseq	tcpack	Length	Info	tcpsrcport	tcpdstport	udpdstport	udpsrcport	ethsrc	ethdst	frameprotocol
 1	2022-11-04 06:13:53.6285160	0.000000000	10.115.68.111	122.111.111.111	0xb3f6	6	3443987890	0	66	54010 → 443 [SYN] Seq=3443987890 Win=64240 Len=0 MSS=1460 WS=256 SACK_PERM	54010	443			c0:fb:f9:c6:dc:bc	68:3a:1e:74:ee:a0	eth:ethertype:ip:tcp
 2	2022-11-04 06:13:53.6692370	0.040721000	122.111.111.111	10.115.68.111	0x0000	6	3280391636	3443987891	66	443 → 54010 [SYN, ACK] Seq=3280391636 Ack=3443987891 Win=64240 Len=0 MSS=1360 SACK_PERM WS=1024	443	54010			68:3a:1e:74:ee:a0	c0:fb:f9:c6:dc:bc	eth:ethertype:ip:tcp
@@ -139,7 +141,6 @@ framenumber	TT	DeltaDisplayed	Source	Destination	ipid	Protocol	tcpseq	tcpack	Len
 
 ### Tips
 While work with a lot of pcap files, let's create one batch file 
-
 ```
 * following command must run Windows Command Prompt not Powershell
 for /f "delims=" %a in ('dir /b /o *.cap') do "c:\program files\wireshark\tshark" -r "%a" -T fields -e frame.number -e frame.time_epoch -e frame.time_delta_displayed -e ip.src -e ip.dst -e ip.id -e ip.proto -e tcp.seq -e tcp.ack -e frame.len -e tcp.srcport -e tcp.dstport -e udp.srcport -e udp.dstport -e tcp.analysis.ack_rtt -e frame.protocols -e _ws.col.Info -e eth.src -e eth.dst -E header=y -E separator=, -E quote=d > "%a.csv"
