@@ -122,6 +122,7 @@ total 5000+ lines and timestamp is AEDT UTC+11
 
 (Same approach), To better analyze the log, I use ADX to deal with DNS Log. Here is the query.
 
+Convert timestamp to UTC and get part of the message for dnsname. 
 ```kql
 dnslog
 | extend dns=split(message,' ')[5]
@@ -135,7 +136,23 @@ dnslog
 | extend CTIME_UTC=todatetime(strcat(day,'-',month,'-',year,' ',hourtime,' AEDT')) // AST is UTC+3, ADET is UTC+11
 | project CTIME_UTC, dnsname, TYPE, DNSSERVER, message
 | where CTIME_UTC > datetime(2023-01-19 03:31:00.8480000) and CTIME_UTC < datetime(2023-01-19 03:32:00.8480000)
- 
 ```
 ![image](./.image/dnslog_kusto.png?raw=true)
+
+Analyze fail rate per minute
+```kql
+dnslog
+| extend dns=split(message,' ')[5]
+| extend dnsname=trim_start("'",tostring(split(dns,'/')[0]))
+| extend TYPE=trim_start("'",tostring(split(dns,'/')[1]))
+| extend DNSSERVER=split(message,' ')[6]
+| extend year=trim_start('20',tostring(split(split(message,' ')[0],'-')[2]))
+| extend month=split(split(message,' ')[0],'-')[1]
+| extend day=split(split(message,' ')[0],'-')[0]
+| extend hourtime=split(message,' ')[1]
+| extend CTIME_UTC=todatetime(strcat(day,'-',month,'-',year,' ',hourtime,' AEDT')) // AST is UTC+3, ADET is UTC+11
+| project CTIME_UTC, dnsname, TYPE, DNSSERVER, message
+| summarize count() by bin(CTIME_UTC,1m) | render timechart //summarize by 1 minute
+```
+![image](./.image/dnslog_kusto_2.png?raw=true)
 
