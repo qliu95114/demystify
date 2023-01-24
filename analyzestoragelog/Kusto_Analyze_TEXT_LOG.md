@@ -1,6 +1,9 @@
-# Use Kusto to analyze the Linux secure log 
+Everyday, I am dealing with different log format but with similar pattern **TIMESTAMP**,**MESSAGE**. Logs are in RAW format. 
+I collect a few samples analyze TEXT LOGs with the power of Azure Data Explorer(ADX). To understand the following, I assume you already complete [AnalyzeStorageLog]
 
-Today I receive one secure log which indidcates password guess attack from a group of internal IP addresses 
+# Use ADX to analyze the Linux secure log 
+
+Linux Secure log which indicates password guess attack from a group of internal IP addresses 
 
 ```
 Oct 31 17:28:43 my-vm-001 sshd[9619]: Bad protocol version identification 'GET / HTTP/1.1' from 10.114.160.169 port 46988
@@ -25,17 +28,17 @@ The obvious approach is
   3. Export to a file 
   4. Count it by Excel. need import in EXCEL first. (too much clicking... option to select)
 
-Let's use Azure Data Explorer to make it work in oneshot, assume you already setup [KustoFree](https://aka.ms/kustofree)
+Let's use ADX to make it work in one-shot. 
 
-# Steps 
+# Steps
 1. Create table [securelog], with only one attribute message: string
   ```kql
   .create table securelog(message:string)
   ```
-2. Upload secure log to storage account, container. Create Storage SAS token
-3. Inject secure log into table securelog from storage account
+2. Upload secure log to storage account and container. Create Storage SAS token. 
+3. Ingest secure log into table securelog from SAS token. 
   ```kql
-  .ingest into table securelog(h'<replace with storage sas token>') with (format='psv')
+  .ingest into table securelog(h'<replace with storage sas token in step 2>') with (format='psv')
   ```
 4. Write query & Run
   ```kql
@@ -71,7 +74,7 @@ Let's use Azure Data Explorer to make it work in oneshot, assume you already set
 ```          
           
           
-# Next challenge is 
+## Next challenge is 
 
 How do I covert the timestamp in secure log to DATETIME field , then we can use it like datetime field. Here is my way, of course there are better ways, please feel free to comment and share
 
@@ -99,5 +102,40 @@ timestamp	                  sourceip	        port	    message
 ```
 
 
+# Use Kusto to analyze random DNS log
 
+Today, receive one DNS log which indicates DNS resolution time out, I want to convert the TIMESTAMP from AEDT to UTC and also get all DNS name list to create a DNSnamelist.txt to make a reproduce. 
+
+```
+19-Jan-2023 14:31:11.848 timed out resolving 'onedscolprdjpe03.japaneast.cloudapp.azure.com/A/IN': 168.63.129.16#53
+19-Jan-2023 14:31:26.873 timed out resolving '4316b.wpc.azureedge.net/A/IN': 168.63.129.16#53
+19-Jan-2023 14:31:28.670 timed out resolving 'onedscolprdjpe04.japaneast.cloudapp.azure.com/A/IN': 168.63.129.16#53
+19-Jan-2023 14:31:37.812 timed out resolving 'vmss-proxy-prod-australiaeast.australiaeast.cloudapp.azure.com/A/IN': 168.63.129.16#53
+19-Jan-2023 14:31:49.625 timed out resolving 'waws-prod-ml1-029-fca6.australiasoutheast.cloudapp.azure.com/A/IN': 168.63.129.16#53
+19-Jan-2023 14:31:52.045 timed out resolving 'api-cc-geo-skype.trafficmanager.net/A/IN': 168.63.129.16#53
+19-Jan-2023 14:31:53.370 timed out resolving 'agl-customer-mel-pt-api.azurewebsites.net/A/IN': 168.63.129.16#53
+19-Jan-2023 14:31:56.683 timed out resolving 'a-ups-presence9-prod-azsc.australiaeast.cloudapp.azure.com/A/IN': 168.63.129.16#53
+19-Jan-2023 14:31:58.905 timed out resolving 'tm-aue-prod-adms-fe.trafficmanager.net/A/IN': 168.63.129.16#53
+
+total 5000+ lines and timestamp is AEDT UTC+11
+```
+
+(Same approach), To better analyze the log, I use ADX to deal with DNS Log. Here is the query.
+
+```kql
+dnslog
+| extend dns=split(message,' ')[5]
+| extend dnsname=trim_start("'",tostring(split(dns,'/')[0]))
+| extend TYPE=trim_start("'",tostring(split(dns,'/')[1]))
+| extend DNSSERVER=split(message,' ')[6]
+| extend year=trim_start('20',tostring(split(split(message,' ')[0],'-')[2]))
+| extend month=split(split(message,' ')[0],'-')[1]
+| extend day=split(split(message,' ')[0],'-')[0]
+| extend hourtime=split(message,' ')[1]
+| extend CTIME_UTC=todatetime(strcat(day,'-',month,'-',year,' ',hourtime,' AEDT')) // AST is UTC+3, ADET is UTC+11
+| project CTIME_UTC, dnsname, TYPE, DNSSERVER, message
+| where CTIME_UTC > datetime(2023-01-19 03:31:00.8480000) and CTIME_UTC < datetime(2023-01-19 03:32:00.8480000)
+ 
+```
+![image](./.image/dnslog_kusto.png?raw=true)
 
