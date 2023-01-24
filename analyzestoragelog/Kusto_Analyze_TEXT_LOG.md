@@ -102,7 +102,7 @@ timestamp	                  sourceip	        port	    message
 ```
 
 
-# Use Kusto to analyze random DNS log
+# Use ADX to analyze random DNS log
 
 Today, receive one DNS log which indicates DNS resolution time out, I want to convert the TIMESTAMP from AEDT to UTC and also get all DNS name list to create a DNSnamelist.txt to make a reproduce. 
 
