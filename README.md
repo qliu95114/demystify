@@ -3,16 +3,17 @@
 ## Things are related to Azure Platform 
 
 1. How Network Packet travel bidirection between Internet to Azure VM, between Azure VM to Azure VM, between Azure VM to OnPrem Network (not started)
-1. azurespeedstorage : terraform sample of create storage account in different region
+1. azurespeedstorage : Terraform sample of creating storage accounts in different Azure regions
 1. ps_azure : random powershell script 
 1. How to use ADX to analyze Storage Analytis Log in a few clicks (get logs from customer and other without config LA)
 1. How to use ADX to analyze Wireshark Pcap (get network trace from customer)
 1. How to use ADX to analyze NSGFlowLogV2 (get RAW JSON logs from customer and other without config LA)
-1. Linux_bash : linux script for Azure VM post setup
+1. How to use ADX to analyze Random TEXT log (linux secure log, random dns fail log and ...)
+1. Linux_bash : Post-boot script for Azure VM 
 
 ## Things are NOT related to Azure Platform 
 
-1. connectivityscript : script of connectivity testing
+1. connectivityscript : script library of connectivity testing
 1. ps_mediaencoder : powershell script with ffmpeg 
 1. how to install Windows Terminal on Windows Server 2022/2019
    1. go to [MS STORE link](https://store.rg-adguard.net/)
