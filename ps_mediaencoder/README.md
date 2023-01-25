@@ -12,7 +12,7 @@
 1. screencapture_sample.txt : sample command of archiving "Playing Video" to local MP4 video file
 1. getExtendedFileProperties.ps1 : Function Get-ExtendedProperties to read file meta data
 
-## Sample usage 
+## Sample 
 
 Get Video Duration (length)
 ```
@@ -51,7 +51,7 @@ set filename="D:\videocapture\morningtraining.mp4"
 ffmpeg -f gdigrab -framerate 30 -offset_x 145 -offset_y 116 -video_size 1628x916 -show_region 1 -i desktop -f dshow -i audio="CABLE Output (VB-Audio Virtual Cable)" %filename%
 
 
-Full Screen 1920x108
+Full Screen 1920x1080
 set filename="D:\videocapture\training.mp4"
 ffmpeg -f gdigrab -framerate 30 -offset_x 0 -offset_y 0 -video_size 1920x1080 -show_region 1 -i desktop -f dshow -i audio="CABLE Output (VB-Audio Virtual Cable)" %filename%
 ```
