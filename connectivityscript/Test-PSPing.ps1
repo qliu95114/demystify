@@ -57,7 +57,7 @@
     ./paping -p 3389 -c 10 192.168.3.5 | while read pong; do echo "$(date -u +'%F %H:%M:%S'): $pong";done >"tcpping_$HOSTNAME_192.168.3.5.log"
 
     # linux command nc
-    while `sleep 1` ; do time echo "`date -u +'%F %H:%M:%S'` - `nc -vvzw 2 192.168.10.2 3389 2>&1`" ; done
+    while true ; do echo -n "$(date -u +'%F %H:%M:%S'):" ; nc -zv -w 1 10.224.0.4 443 ;sleep 1 ;done
     while `sleep 1` ; do time echo "`date -u +'%F %H:%M:%S'` - `nc -vvzw 2 192.168.10.2 3389 2>&1`" ; done >"tcpping_$HOSTNAME_192.168.3.5.log"
     
 #>
