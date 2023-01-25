@@ -13,26 +13,33 @@ Use FFMPG to remove header/trail of an video file
 Use FFMPG to remove header/trail of an video file 
 
 .PARAMETER filename
-The name of the file to retrieve the properties of
+The name of the file to be converted, please include full path of the file , wildchar is not supported. 
 
 .PARAMETER startsecs
-How much seconds we will cut from the beginning
+Starting Seconds we will cut from the beginning, Default 0
 
 .PARAMETER lastsecs
-How much seconds we will cut from the end
+Ending Seconds we will cut from the ending, Default 0
 
 .PARAMETER outputfolder
-The Target folder we will save the cutted file
+The Target folder we will save the cutted file, Default \\192.168.3.17\g$\DOWNLOADS\transfer\ffmpeg
 
-.PARAMETER lastsecs
-How much seconds we will cut from the end
+.PARAMETER logfolder
+The Log folder we will save the FFMPEG log file, Default \\192.168.3.17\g$\DOWNLOADS\ffmpeg_log\cut
+
+.PARAMETER bitrate
+Bitrate control if you want to change , default is 2000, (=2000Kbps)
+
 
 .EXAMPLE
+.\Video_Header_Trail_remove.ps1 -filename G:\DOWNLOADS\transfer\ffmpeg\video.23.1080p.HD.mp4 -outputfolder "E:\TV.Asia" -startsecs 105  -lastsecs 145 -logfolder E:\TV.Asia
 #>
 
 Param (
     [Parameter(Mandatory=$true)][string]$filename,
-    [string]$outputfolder="g:\DOWNLOADS\transfer\ffmpeg",
+    [string]$outputfolder="\\192.168.3.17\g$\DOWNLOADS\transfer\ffmpeg",
+    [string]$logfolder="\\192.168.3.17\g$\DOWNLOADS\ffmpeg_log\cut",
+    [int]$bitrate=2000,
     [int]$startsecs=0,
     [int]$lastsecs=0
 )
@@ -108,7 +115,6 @@ Function Write-UTCLog ([string]$message,[string]$color="green")
     	$logdate = ((get-date).ToUniversalTime()).ToString("yyyy-MM-dd HH:mm:ss")
     	$logstamp = "["+$logdate + "]," + $message
         Write-Host $logstamp -ForegroundColor $color
-#    	Write-Output $logstamp | Out-File $logfile -Encoding ASCII -append
 }
 
 if (($startsecs -ge 86400) -or ($lastsecs -ge 86400)) {Write-UTCLog "Start / Last Seconds cannot be greater than 86400 (1day)" "Red"; exit}
@@ -124,7 +130,7 @@ If ((Test-Path $filename) -and (Test-Path $outputfolder))
 
     $truename=$filename.split("\")[$filename.split("\").count-1]
     $outputfile=$outputfolder.TrimEnd("\")+"\"+$truename
-    $logfile=$outputfolder.TrimEnd("\")+"\"+$truename.TrimEnd($truename.split(".")[$truename.split(".").count-1])+"cut.log" # remove file extension and append "cut.log"
+    $logfile=$logfolder.TrimEnd("\")+"\"+$truename.TrimEnd($truename.split(".")[$truename.split(".").count-1])+"cut.log" # remove file extension and append "cut.log"
 
     Write-UTCLog "Cut Start Seconds from the begin : $($startsecs)  -   Cut Last Seconds at the end : $($lastsecs)"  "Green"
     Write-UTCLog "Source Video ($($fileName)) : $($VideoLength) - $($videoduration) seconds"  "Green"
@@ -134,9 +140,9 @@ If ((Test-Path $filename) -and (Test-Path $outputfolder))
     $endtime = ([timespan]::fromseconds($endsecs)).ToString().split(".")[0]
     Write-UTCLog "Target Video ($($outputfile)): $($starttime) - $($endtime)  ; $($startsecs) - $($endsecs)"  "Green"
 
-    #ffmpeg -y -i "D:\temp\xyz.s02e12.720p.mp4" -ss 00:01:54.000 -to 00:16:10.000 -c:v copy -map 0:v:0? -c:a copy -map 0:a? -c:s copy -map 0:s? -map_chapters 0 -map_metadata 0 -f mp4 -threads 0 "D:\temp\s02\元龙.s02e12.720p_cut.mp4" 
-
-    $ffcmd="ffmpeg.exe -y -i ""$($filename)"" -ss $($starttime).000 -to $($endtime).000  -c:v copy -map 0:v:0? -c:a copy -map 0:a? -c:s copy -map 0:s? -map_chapters 0 -map_metadata 0 -f mp4 -threads 0 ""$($outputfile)"" 2> ""$($logfile)"""
+    #direct cut without encoding, this will cause a few seconds black screen for target file. 
+    #$ffcmd="ffmpeg.exe -y -i ""$($filename)"" -ss $($starttime).000 -to $($endtime).000  -c:v copy -map 0:v:0? -c:a copy -map 0:a? -c:s copy -map 0:s? -map_chapters 0 -map_metadata 0 -f mp4 -threads 0 ""$($outputfile)"" 2> ""$($logfile)"""
+    $ffcmd="ffmpeg.exe -y -i ""$($filename)"" -ss $($starttime).000 -to $($endtime).000  -c:v h264_nvenc -b:v $($bitrate)k -pix_fmt yuv420p -vf ""scale=1920:-2"" -map 0:v:0? -c:a copy -map 0:1 -c:a ac3 -b:a 128k -map 0:s? -map_chapters 0 -map_metadata 0 -f mp4 -threads 0 ""$($outputfile)"" 2> ""$($logfile)"""
     Write-UTCLog "CMD: $($ffcmd)" "Yellow"
     Write-UTCLog "Begining Cut $($filename) " "Cyan"
     $st=Get-date

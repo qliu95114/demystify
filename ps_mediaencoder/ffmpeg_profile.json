@@ -100,6 +100,11 @@
         "commandline":"-c:v h264_nvenc -b:v 2000k -pix_fmt yuv420p -vf \"scale=1920:-2\" -map 0:v:0? -c:a copy -map 0:1 -c:a ac3 -b:a 128k -map 0:s? -map_chapters 0 -map_metadata 0 -f mp4 -threads 0 "
     },
     {
+        "name":"v_x264_3840_bv_4500k_nvidia-a_ac3_128k-s_copy",
+        "suffix":"x264_(3840_bv_4500k)_nvidia-a(ac3_128k)-s(copy)",
+        "commandline":"-c:v h264_nvenc -b:v 4500k -pix_fmt yuv420p -vf \"scale=3840:-2\" -map 0:v:0? -c:a copy -map 0:1 -c:a ac3 -b:a 128k -map 0:s? -map_chapters 0 -map_metadata 0 -f mp4 -threads 0 "
+    },
+    {
         "name":"v_x264_1280_bv_1250k_nvidia-a_copy-s_copy",
         "suffix":"x264_(1280_bv_1250k)_nvidia-a(copy)-s(copy)",
         "commandline":"-c:v h264_nvenc -b:v 1250k -pix_fmt yuv420p -vf \"scale=1280:-2\" -map 0:v:0? -c:a copy -map 0:a? -c:s copy -map 0:s? -map_chapters 0 -map_metadata 0 -f mp4 -threads 0 "
@@ -120,6 +125,11 @@
         "commandline":"-c:v h264_nvenc -b:v 1000k -pix_fmt yuv420p -vf \"scale=1280:-2\" -map 0:v:0? -c:a copy -map 0:a? -c:a ac3 -b:a 128k -map 0:s? -map_chapters 0 -map_metadata 0 -f mp4 -threads 0 "
     },
     {
+        "name":"v_x264_1920_bv_1000k_nvidia-a_ac3_128k-s_copy",
+        "suffix":"x264_(1920_bv_1000k)_nvidia-a(ac3_128k)-s(copy)",
+        "commandline":"-c:v h264_nvenc -b:v 1000k -pix_fmt yuv420p -vf \"scale=1920:-2\" -map 0:v:0? -c:a copy -map 0:a? -c:a ac3 -b:a 128k -map 0:s? -map_chapters 0 -map_metadata 0 -f mp4 -threads 0 "
+    },
+    {
         "name":"v_x264_1280_bv_450k_nvidia-a_ac3_64k-s_copy_Cartoon",
         "suffix":"x264_(1280_bv_450k)_nvidia-a(ac3_64k)-s(copy)",
         "commandline":"-c:v h264_nvenc -b:v 450k -pix_fmt yuv420p -vf \"scale=1280:-2\" -map 0:v:0? -c:a copy -map 0:a? -c:a ac3 -b:a 64k -map 0:s? -map_chapters 0 -map_metadata 0 -f mp4 -threads 0 "
@@ -128,6 +138,11 @@
         "name":"v_x264_1280_bv_550k_nvidia-a_ac3_64k-s_copy_rmvb",
         "suffix":"x264_(1280_bv_550k)_nvidia-a(ac3_64k)-s(copy)",
         "commandline":"-c:v h264_nvenc -b:v 550k -pix_fmt yuv420p -vf \"scale=1280:-2\" -map 0:v:0? -c:a copy -map 0:a? -c:a ac3 -b:a 64k -map 0:s? -map_chapters 0 -map_metadata 0 -f mp4 -threads 0 "
+    },	
+    {
+        "name":"v_x264_source_bv_550k_nvidia-a_ac3_64k-s_movtext",
+        "suffix":"x264_(source_bv_550k)_nvidia-a(ac3_64k)-s(movtext)",
+        "commandline":"-c:v h264_nvenc -b:v 550k -pix_fmt yuv420p -vf \"scale=trunc(iw/2)*2:trunc(ih/2)*2\" -map 0:v:0? -c:a copy -map 0:a? -c:s mov_text -map 0:s? -map_chapters 0 -map_metadata 0 -f mp4 -threads 0 "
     },	
     {
         "name":"v_x264_source_crf_25_intelqsv-a_copy-s_copy",
