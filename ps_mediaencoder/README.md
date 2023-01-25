@@ -1,12 +1,58 @@
-# Script sample covert Movie by FFMPEG
+# Script to covert Video by FFMPEG
 
 ## Requirements
 
-1. Install FFMPEG , best encoding tool
-1. Install VB-CABLE Virtual Audio Device. https://vb-audio.com/Cable/  , Screenrecording with audio
+1. **Install FFMPEG** : Best video/audio encoding tool on the planet. 
+1. [**Install VB-CABLE Virtual Audio Device**](https://vb-audio.com/Cable/) : Screen-Recording with audio
 
 ## Scripts
-1. ffmpeg.powershell.ps1 : batch file encoding from source folder to dest folder with select profile (defined in ffmpeg_profile.json)
-2. ffmpeg_wav2mp3.ps1 : convert *.wav to *.mp3 from source folder. 
-3. video_header_trail_remove.ps1 : remove vidoe head/trail x seconds to save disk space. 
-4. screencapture_sample.txt : sample command of archive playing video to local *.mp4 file
+1. ffmpeg.powershell.ps1 : batch file encoding from source folder to destination folder with selected profile (defined in ffmpeg_profile.json)
+1. ffmpeg_wav2mp3.ps1 : convert *.wav to *.mp3 from source folder. 
+1. video_header_trail_remove.ps1 : remove vidoe head/trail x seconds to save disk space, to avoid blank screen problem. It will re-encoding the file. 
+1. screencapture_sample.txt : sample command of archiving "Playing Video" to local MP4 video file
+1. getExtendedFileProperties.ps1 : Function Get-ExtendedProperties to read file meta data
+
+## Sample usage 
+
+Get Video Duration (length)
+```
+.\getExtendedFileProperties.ps1 
+((Get-ExtendedProperties .\xyz.h264-ggez.chs.eng.mp4)| where {$_.Property -eq "Length"}).Value
+```
+
+Get Video Duration (length) from *.mp4 in z:\Downloads\TV 
+```
+.\getExtendedFileProperties.ps1 
+foreach ($i in (dir Z:\DOWNLOADS\tv\*.mp4)) {write-host "$($i.FullName),$(((Get-ExtendedProperties $i.FullName)| where {$_.Property -eq "Length"}).Value)" }
+```
+
+ScreenCapture Sample
+```
+ffmpeg -f gdigrab -framerate 30 -offset_x 2780 -offset_y 376 -video_size 1460x815 -show_region 1 -i desktop -f dshow -i audio="Microphone (Jabra Link 370)" output.mkv 
+
+ffmpeg -f gdigrab -framerate 30 -offset_x 2780 -offset_y 376 -video_size 1460x815 -show_region 1 -i desktop -f dshow -i audio="CABLE Output (VB-Audio Virtual Cable)" output_realtek.mkv 
+
+ffmpeg -list_devices true -f dshow -i dummy_rea
+
+rem on screensize 1920x1080, edge full screen theater mode
+set filename="D:\videocapture\Tech Talk.mp4"
+ffmpeg -f gdigrab -framerate 30 -offset_x 365 -offset_y 210 -video_size 1170x665 -show_region 1 -i desktop -f dshow -i audio="Stereo Mix (Realtek High Definition Audio (Extension INF Test))" %filename%
+
+#msit Play in 1920x1080 display 
+ffmpeg -f gdigrab -framerate 30 -offset_x 365 -offset_y 210 -video_size 1170x665 -show_region 1 -i desktop -f dshow -i audio="CABLE Output (VB-Audio Virtual Cable)" %filename%
+
+#OneDrive Play in 1920x1080 display Full Screen
+set filename="D:\videocapture\Training.mp4"
+ffmpeg -f gdigrab -framerate 30 -offset_x 200 -offset_y 182 -video_size 1515x848 -show_region 1 -i desktop -f dshow -i audio="CABLE Output (VB-Audio Virtual Cable)" %filename%
+
+ffmpeg -f gdigrab -framerate 30 -offset_x 0 -offset_y 185 -video_size 2000x1200 -show_region 1 -i desktop -f dshow -i audio="CABLE Output (VB-Audio Virtual Cable)" %filename%
+
+set filename="D:\videocapture\morningtraining.mp4"
+ffmpeg -f gdigrab -framerate 30 -offset_x 145 -offset_y 116 -video_size 1628x916 -show_region 1 -i desktop -f dshow -i audio="CABLE Output (VB-Audio Virtual Cable)" %filename%
+
+
+Full Screen 1920x108
+set filename="D:\videocapture\training.mp4"
+ffmpeg -f gdigrab -framerate 30 -offset_x 0 -offset_y 0 -video_size 1920x1080 -show_region 1 -i desktop -f dshow -i audio="CABLE Output (VB-Audio Virtual Cable)" %filename%
+```
+
