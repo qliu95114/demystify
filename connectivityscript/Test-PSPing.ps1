@@ -162,7 +162,7 @@ Write-Host "`nRunning PSPING TCP test to $IPAddress : $port every $Interval seco
 $logpath = (Get-Item $logpath).FullName
 
 # Set log file to $logpath, name with current time.
-$logfile= Join-Path  $logpath $($env:COMPUTERNAME+"_PING_"+$IPAddress+"_"+$port+"_"+((get-date).ToUniversalTime()).ToString("yyyyMMddTHHmmss")+".log")
+$logfile= Join-Path  $logpath $($env:COMPUTERNAME+"_PSPING_"+$IPAddress+"_"+$port+"_"+((get-date).ToUniversalTime()).ToString("yyyyMMddTHHmmss")+".log")
 Write-host "Log File : "$logfile -Fo Cyan 
 
 $killswitch=1
