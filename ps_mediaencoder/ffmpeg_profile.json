@@ -20,34 +20,34 @@
         "commandline":"-c:v libx264 -preset veryslow -crf 26 -pix_fmt yuv420p -vf \"scale=trunc(iw/2)*2:trunc(ih/2)*2\" -map 0:v:0? -c:a copy -map 0:a? -c:s copy -map 0:s? -map_chapters 0 -map_metadata 0 -f mp4 -threads 0 "
     },    
     {
-        "name":"v_x264_source_crf_23-a_ac3_512k-s_mov_text",
-        "suffix":"x264(source_crf23)-a(ac3_512k)-s(mov_text)",
-        "commandline":"-c:v libx264 -preset veryslow -crf 23 -pix_fmt yuv420p -vf \"scale=trunc(iw/2)*2:trunc(ih/2)*2\" -map 0:v:0? -c:a ac3 -b:a 512k -map 0:a? -c:s mov_text -map 0:s? -map_chapters 0 -map_metadata 0 -f mp4 -threads 0 "
+        "name":"v_x264_source_crf_23-a_aac_512k-s_mov_text",
+        "suffix":"x264(source_crf23)-a(aac_512k)-s(mov_text)",
+        "commandline":"-c:v libx264 -preset veryslow -crf 23 -pix_fmt yuv420p -vf \"scale=trunc(iw/2)*2:trunc(ih/2)*2\" -map 0:v:0? -c:a aac -b:a 512k -map 0:a? -c:s mov_text -map 0:s? -map_chapters 0 -map_metadata 0 -f mp4 -threads 0 "
     },
     {
-        "name":"v_x264_source_crf_25-a_ac3_192k-s_copy",
-        "suffix":"x264(source_crf25)_a(ac3_192k)_s(copy)",
-        "commandline":"-c:v libx264 -preset veryslow -crf 25 -pix_fmt yuv420p -vf \"scale=trunc(iw/2)*2:trunc(ih/2)*2\" -map 0:v:0? -c:a ac3 -b:a 192k -map 0:a? -c:s copy -map 0:s? -map_chapters 0 -map_metadata 0 -f mp4 -threads 0 "
+        "name":"v_x264_source_crf_25-a_aac_192k-s_copy",
+        "suffix":"x264(source_crf25)_a(aac_192k)_s(copy)",
+        "commandline":"-c:v libx264 -preset veryslow -crf 25 -pix_fmt yuv420p -vf \"scale=trunc(iw/2)*2:trunc(ih/2)*2\" -map 0:v:0? -c:a aac -b:a 192k -map 0:a? -c:s copy -map 0:s? -map_chapters 0 -map_metadata 0 -f mp4 -threads 0 "
     },    
     {
-        "name":"v_x264_source_crf_25-a_ac3_192k-s_movtext",
-        "suffix":"x264(source_crf25)_a(ac3_192k)_s(movtext)",
-        "commandline":" -c:v libx264 -preset veryslow -crf 25 -pix_fmt yuv420p -vf \"scale=trunc(iw/2)*2:trunc(ih/2)*2\" -map 0:v:0? -c:a ac3 -b:a 192k -map 0:a? -c:s mov_text -map 0:s? -map_chapters 0 -map_metadata 0 -f mp4 -threads 0 "
+        "name":"v_x264_source_crf_25-a_aac_192k-s_movtext",
+        "suffix":"x264(source_crf25)_a(aac_192k)_s(movtext)",
+        "commandline":" -c:v libx264 -preset veryslow -crf 25 -pix_fmt yuv420p -vf \"scale=trunc(iw/2)*2:trunc(ih/2)*2\" -map 0:v:0? -c:a aac -b:a 192k -map 0:a? -c:s mov_text -map 0:s? -map_chapters 0 -map_metadata 0 -f mp4 -threads 0 "
     },
     {
-        "name":"v_x264_source_crf_26-a_ac3_96k-s_movtext",
-        "suffix":"x264(source_crf26)_a(ac3_96k)_s(movtext)",
-        "commandline":" -c:v libx264 -preset veryslow -crf 26 -pix_fmt yuv420p -vf \"scale=trunc(iw/2)*2:trunc(ih/2)*2\" -map 0:v:0? -c:a ac3 -b:a 96k -map 0:a? -c:s mov_text -map 0:s? -map_chapters 0 -map_metadata 0 -f mp4 -threads 0 "
+        "name":"v_x264_source_crf_26-a_aac_96k-s_movtext",
+        "suffix":"x264(source_crf26)_a(aac_96k)_s(movtext)",
+        "commandline":" -c:v libx264 -preset veryslow -crf 26 -pix_fmt yuv420p -vf \"scale=trunc(iw/2)*2:trunc(ih/2)*2\" -map 0:v:0? -c:a aac -b:a 96k -map 0:a? -c:s mov_text -map 0:s? -map_chapters 0 -map_metadata 0 -f mp4 -threads 0 "
     },
     {
-        "name":"v_x264_source_crf_26-a_ac3_64k-s_movtext",
-        "suffix":"x264(source_crf26)_a(ac3_64k)_s(movtext)",
-        "commandline":" -c:v libx264 -preset veryslow -crf 26 -pix_fmt yuv420p -vf \"scale=trunc(iw/2)*2:trunc(ih/2)*2\" -map 0:v:0? -c:a ac3 -b:a 64k -map 0:a? -c:s mov_text -map 0:s? -map_chapters 0 -map_metadata 0 -f mp4 -threads 0 "
+        "name":"v_x264_source_crf_26-a_aac_64k-s_movtext",
+        "suffix":"x264(source_crf26)_a(aac_64k)_s(movtext)",
+        "commandline":" -c:v libx264 -preset veryslow -crf 26 -pix_fmt yuv420p -vf \"scale=trunc(iw/2)*2:trunc(ih/2)*2\" -map 0:v:0? -c:a aac -b:a 64k -map 0:a? -c:s mov_text -map 0:s? -map_chapters 0 -map_metadata 0 -f mp4 -threads 0 "
     },
     {
-        "name":"v_x264_1280_crf_25-a_ac3_64k-s_copy",
-        "suffix":"x264(1280-crf25)_ac3(64k)_s(copy)",
-        "commandline":"-c:v libx264 -preset veryslow -crf 25 -pix_fmt yuv420p -vf \"scale=1280:-2\" -map 0:v:0? -c:a ac3 -b:a 64.1k -map 0:a? -c:s copy -map 0:s? -map_chapters 0 -map_metadata 0 -f mp4 -threads 0 "
+        "name":"v_x264_1280_crf_25-a_aac_64k-s_copy",
+        "suffix":"x264(1280-crf25)_aac(64k)_s(copy)",
+        "commandline":"-c:v libx264 -preset veryslow -crf 25 -pix_fmt yuv420p -vf \"scale=1280:-2\" -map 0:v:0? -c:a aac -b:a 64.1k -map 0:a? -c:s copy -map 0:s? -map_chapters 0 -map_metadata 0 -f mp4 -threads 0 "
     },
     {
         "name":"v_x264_1280_crf_25-a_copy-s_copy",
@@ -75,14 +75,14 @@
         "commandline":"-c:v h264_nvenc -preset:v p7 -tune:v hq -rc:v vbr -cq:v 30 -pix_fmt yuv420p -vf \"scale=trunc(iw/2)*2:trunc(ih/2)*2\" -map 0:v:0? -c:a copy -map 0:a? -c:s mov_text -map 0:s? -map_chapters 0 -map_metadata 0 -f mp4 -threads 0 "
     },
     {
-        "name":"v_x264_source_cq_30_nvidia-a_ac3_64k-s_movtext",
-        "suffix":"x264_(source_cq_30)_nvidia_a(ac3_164k)_s(movtext)",
-        "commandline":" -c:v h264_nvenc -preset:v p7 -tune:v hq -rc:v vbr -cq:v 30 -pix_fmt yuv420p -vf \"scale=trunc(iw/2)*2:trunc(ih/2)*2\" -map 0:v:0? -c:a ac3 -b:a 64k -map 0:a? -c:s mov_text -map 0:s? -map_chapters 0 -map_metadata 0 -f mp4 -threads 0 "
+        "name":"v_x264_source_cq_30_nvidia-a_aac_64k-s_movtext",
+        "suffix":"x264_(source_cq_30)_nvidia_a(aac_164k)_s(movtext)",
+        "commandline":" -c:v h264_nvenc -preset:v p7 -tune:v hq -rc:v vbr -cq:v 30 -pix_fmt yuv420p -vf \"scale=trunc(iw/2)*2:trunc(ih/2)*2\" -map 0:v:0? -c:a aac -b:a 64k -map 0:a? -c:s mov_text -map 0:s? -map_chapters 0 -map_metadata 0 -f mp4 -threads 0 "
     },	
     {
-        "name":"v_x264_source_bv_1000k_nvidia-a_ac3_64k-s_copy",
-        "suffix":"x264_(source_bv_1000k)_nvidia_a(ac3_64k)_s(copy)",
-        "commandline":" -c:v h264_nvenc -b:v 1000k -vf \"scale=trunc(iw/2)*2:trunc(ih/2)*2\" -map 0:v:0? -c:a ac3 -b:a 64k -map 0:a? -c:s copy -map 0:s? -map_chapters 0 -map_metadata 0 -f mp4 -threads 0 "
+        "name":"v_x264_source_bv_1000k_nvidia-a_aac_64k-s_copy",
+        "suffix":"x264_(source_bv_1000k)_nvidia_a(aac_64k)_s(copy)",
+        "commandline":" -c:v h264_nvenc -b:v 1000k -vf \"scale=trunc(iw/2)*2:trunc(ih/2)*2\" -map 0:v:0? -c:a aac -b:a 64k -map 0:a? -c:s copy -map 0:s? -map_chapters 0 -map_metadata 0 -f mp4 -threads 0 "
     },	
     {
         "name":"v_x264_1920_cq_30_nvidia-a_copy-s_copy",
@@ -90,19 +90,19 @@
         "commandline":"-c:v h264_nvenc -preset:v p7 -tune:v hq -rc:v vbr -cq:v 30 -pix_fmt yuv420p -vf \"scale=1920:-2\" -map 0:v:0? -c:a copy -map 0:a? -c:s copy -map 0:s? -map_chapters 0 -map_metadata 0 -f mp4 -threads 0 "
     },
     {
-        "name":"v_x264_1920_bv_2500k_nvidia-a_ac3_128k-s_copy",
-        "suffix":"x264_(1920_bv_2500k)_nvidia-a(ac3_128k)-s(copy)",
-        "commandline":"-c:v h264_nvenc -b:v 2500k -pix_fmt yuv420p -vf \"scale=1920:-2\" -map 0:v:0? -c:a copy -map 0:1 -c:a ac3 -b:a 128k -map 0:s? -map_chapters 0 -map_metadata 0 -f mp4 -threads 0 "
+        "name":"v_x264_1920_bv_2500k_nvidia-a_aac_128k-s_copy",
+        "suffix":"x264_(1920_bv_2500k)_nvidia-a(aac_128k)-s(copy)",
+        "commandline":"-c:v h264_nvenc -b:v 2500k -pix_fmt yuv420p -vf \"scale=1920:-2\" -map 0:v:0? -c:a copy -map 0:1 -c:a aac -b:a 128k -map 0:s? -map_chapters 0 -map_metadata 0 -f mp4 -threads 0 "
     },
     {
-        "name":"v_x264_1920_bv_2000k_nvidia-a_ac3_128k-s_copy",
-        "suffix":"x264_(1920_bv_2000k)_nvidia-a(ac3_128k)-s(copy)",
-        "commandline":"-c:v h264_nvenc -b:v 2000k -pix_fmt yuv420p -vf \"scale=1920:-2\" -map 0:v:0? -c:a copy -map 0:1 -c:a ac3 -b:a 128k -map 0:s? -map_chapters 0 -map_metadata 0 -f mp4 -threads 0 "
+        "name":"v_x264_1920_bv_2000k_nvidia-a_aac_128k-s_copy",
+        "suffix":"x264_(1920_bv_2000k)_nvidia-a(aac_128k)-s(copy)",
+        "commandline":"-c:v h264_nvenc -b:v 2000k -pix_fmt yuv420p -vf \"scale=1920:-2\" -map 0:v:0? -c:a copy -map 0:1 -c:a aac -b:a 128k -map 0:s? -map_chapters 0 -map_metadata 0 -f mp4 -threads 0 "
     },
     {
-        "name":"v_x264_3840_bv_4500k_nvidia-a_ac3_128k-s_copy",
-        "suffix":"x264_(3840_bv_4500k)_nvidia-a(ac3_128k)-s(copy)",
-        "commandline":"-c:v h264_nvenc -b:v 4500k -pix_fmt yuv420p -vf \"scale=3840:-2\" -map 0:v:0? -c:a copy -map 0:1 -c:a ac3 -b:a 128k -map 0:s? -map_chapters 0 -map_metadata 0 -f mp4 -threads 0 "
+        "name":"v_x264_3840_bv_4500k_nvidia-a_aac_128k-s_copy",
+        "suffix":"x264_(3840_bv_4500k)_nvidia-a(aac_128k)-s(copy)",
+        "commandline":"-c:v h264_nvenc -b:v 4500k -pix_fmt yuv420p -vf \"scale=3840:-2\" -map 0:v:0? -c:a copy -map 0:1 -c:a aac -b:a 128k -map 0:s? -map_chapters 0 -map_metadata 0 -f mp4 -threads 0 "
     },
     {
         "name":"v_x264_1280_bv_1250k_nvidia-a_copy-s_copy",
@@ -110,38 +110,38 @@
         "commandline":"-c:v h264_nvenc -b:v 1250k -pix_fmt yuv420p -vf \"scale=1280:-2\" -map 0:v:0? -c:a copy -map 0:a? -c:s copy -map 0:s? -map_chapters 0 -map_metadata 0 -f mp4 -threads 0 "
     },
     {
-        "name":"v_x264_1280_bv_1250k_nvidia-a_ac3_128k-s_copy",
-        "suffix":"x264_(1280_bv_1250k)_nvidia-a(ac3_128k)-s(copy)",
-        "commandline":"-c:v h264_nvenc -b:v 1250k -pix_fmt yuv420p -vf \"scale=1280:-2\" -map 0:v:0? -c:a copy -map 0:a? -c:a ac3 -b:a 128k -map 0:s? -map_chapters 0 -map_metadata 0 -f mp4 -threads 0 "
+        "name":"v_x264_1280_bv_1250k_nvidia-a_aac_128k-s_copy",
+        "suffix":"x264_(1280_bv_1250k)_nvidia-a(aac_128k)-s(copy)",
+        "commandline":"-c:v h264_nvenc -b:v 1250k -pix_fmt yuv420p -vf \"scale=1280:-2\" -map 0:v:0? -c:a copy -map 0:a? -c:a aac -b:a 128k -map 0:s? -map_chapters 0 -map_metadata 0 -f mp4 -threads 0 "
     },
     {
-        "name":"v_x264_1280_bv_1250k_nvidia-a_ac3_128k-s_movtext",
-        "suffix":"x264_(1280_bv_1250k)_nvidia-a(ac3_128k)-s(movtext)",
-        "commandline":"-c:v h264_nvenc -b:v 1250k -pix_fmt yuv420p -vf \"scale=1280:-2\" -map 0:v:0? -c:a copy -map 0:a? -c:a ac3 -b:a 128k -c:s mov_text -map 0:s? -map_chapters 0 -map_metadata 0 -f mp4 -threads 0 "
+        "name":"v_x264_1280_bv_1250k_nvidia-a_aac_128k-s_movtext",
+        "suffix":"x264_(1280_bv_1250k)_nvidia-a(aac_128k)-s(movtext)",
+        "commandline":"-c:v h264_nvenc -b:v 1250k -pix_fmt yuv420p -vf \"scale=1280:-2\" -map 0:v:0? -c:a copy -map 0:a? -c:a aac -b:a 128k -c:s mov_text -map 0:s? -map_chapters 0 -map_metadata 0 -f mp4 -threads 0 "
     },
     {
-        "name":"v_x264_1280_bv_1000k_nvidia-a_ac3_128k-s_copy",
-        "suffix":"x264_(1280_bv_1000k)_nvidia-a(ac3_128k)-s(copy)",
-        "commandline":"-c:v h264_nvenc -b:v 1000k -pix_fmt yuv420p -vf \"scale=1280:-2\" -map 0:v:0? -c:a copy -map 0:a? -c:a ac3 -b:a 128k -map 0:s? -map_chapters 0 -map_metadata 0 -f mp4 -threads 0 "
+        "name":"v_x264_1280_bv_1000k_nvidia-a_aac_128k-s_copy",
+        "suffix":"x264_(1280_bv_1000k)_nvidia-a(aac_128k)-s(copy)",
+        "commandline":"-c:v h264_nvenc -b:v 1000k -pix_fmt yuv420p -vf \"scale=1280:-2\" -map 0:v:0? -c:a copy -map 0:a? -c:a aac -b:a 128k -map 0:s? -map_chapters 0 -map_metadata 0 -f mp4 -threads 0 "
     },
     {
-        "name":"v_x264_1920_bv_1000k_nvidia-a_ac3_128k-s_copy",
-        "suffix":"x264_(1920_bv_1000k)_nvidia-a(ac3_128k)-s(copy)",
-        "commandline":"-c:v h264_nvenc -b:v 1000k -pix_fmt yuv420p -vf \"scale=1920:-2\" -map 0:v:0? -c:a copy -map 0:a? -c:a ac3 -b:a 128k -map 0:s? -map_chapters 0 -map_metadata 0 -f mp4 -threads 0 "
+        "name":"v_x264_1920_bv_1000k_nvidia-a_aac_128k-s_copy",
+        "suffix":"x264_(1920_bv_1000k)_nvidia-a(aac_128k)-s(copy)",
+        "commandline":"-c:v h264_nvenc -b:v 1000k -pix_fmt yuv420p -vf \"scale=1920:-2\" -map 0:v:0? -c:a copy -map 0:a? -c:a aac -b:a 128k -map 0:s? -map_chapters 0 -map_metadata 0 -f mp4 -threads 0 "
     },
     {
-        "name":"v_x264_1280_bv_450k_nvidia-a_ac3_64k-s_copy_Cartoon",
-        "suffix":"x264_(1280_bv_450k)_nvidia-a(ac3_64k)-s(copy)",
-        "commandline":"-c:v h264_nvenc -b:v 450k -pix_fmt yuv420p -vf \"scale=1280:-2\" -map 0:v:0? -c:a copy -map 0:a? -c:a ac3 -b:a 64k -map 0:s? -map_chapters 0 -map_metadata 0 -f mp4 -threads 0 "
+        "name":"v_x264_1280_bv_450k_nvidia-a_aac_64k-s_copy_Cartoon",
+        "suffix":"x264_(1280_bv_450k)_nvidia-a(aac_64k)-s(copy)",
+        "commandline":"-c:v h264_nvenc -b:v 450k -pix_fmt yuv420p -vf \"scale=1280:-2\" -map 0:v:0? -c:a copy -map 0:a? -c:a aac -b:a 64k -map 0:s? -map_chapters 0 -map_metadata 0 -f mp4 -threads 0 "
     },
     {
-        "name":"v_x264_1280_bv_550k_nvidia-a_ac3_64k-s_copy_rmvb",
-        "suffix":"x264_(1280_bv_550k)_nvidia-a(ac3_64k)-s(copy)",
-        "commandline":"-c:v h264_nvenc -b:v 550k -pix_fmt yuv420p -vf \"scale=1280:-2\" -map 0:v:0? -c:a copy -map 0:a? -c:a ac3 -b:a 64k -map 0:s? -map_chapters 0 -map_metadata 0 -f mp4 -threads 0 "
+        "name":"v_x264_1280_bv_550k_nvidia-a_aac_64k-s_copy_rmvb",
+        "suffix":"x264_(1280_bv_550k)_nvidia-a(aac_64k)-s(copy)",
+        "commandline":"-c:v h264_nvenc -b:v 550k -pix_fmt yuv420p -vf \"scale=1280:-2\" -map 0:v:0? -c:a copy -map 0:a? -c:a aac -b:a 64k -map 0:s? -map_chapters 0 -map_metadata 0 -f mp4 -threads 0 "
     },	
     {
-        "name":"v_x264_source_bv_550k_nvidia-a_ac3_64k-s_movtext",
-        "suffix":"x264_(source_bv_550k)_nvidia-a(ac3_64k)-s(movtext)",
+        "name":"v_x264_source_bv_550k_nvidia-a_aac_64k-s_movtext",
+        "suffix":"x264_(source_bv_550k)_nvidia-a(aac_64k)-s(movtext)",
         "commandline":"-c:v h264_nvenc -b:v 550k -pix_fmt yuv420p -vf \"scale=trunc(iw/2)*2:trunc(ih/2)*2\" -map 0:v:0? -c:a copy -map 0:a? -c:s mov_text -map 0:s? -map_chapters 0 -map_metadata 0 -f mp4 -threads 0 "
     },	
     {
