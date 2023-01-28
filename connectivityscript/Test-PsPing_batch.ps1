@@ -8,7 +8,8 @@
 
 param(
     [string]$filename="D:\temp\target.txt",
-    [string]$logpath="$($env:temp)"
+    [string]$logpath="$($env:temp)",
+    [string]$aikey
 )
 
 Function Write-Log ([string]$message,[string]$color="white")
@@ -95,7 +96,7 @@ if (Test-path $filename)
         Write-Log "create test thread : $($target) ..." 
         $server=$target.split(':')[0]
         $port=$target.split(':')[1]
-        Start-Process "C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe" -ArgumentList @("-NoProfile","-file","$(split-path($mypath))\Test-PSPing.ps1","-ipaddr","$($server)","-port","$($port)","-interval","5","-logpath","$($logpath)")
+        Start-Process "C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe" -ArgumentList @("-NoProfile","-file","$(split-path($mypath))\Test-PSPing.ps1","-ipaddr","$($server)","-port","$($port)","-interval","5","-logpath","$($logpath)","-aikey","$($aikey)")
     }
 }
 else {

@@ -123,10 +123,71 @@ Param (
 	[string]$logpath=$env:temp,
     
     [int32]$Interval = 10,
-
+    [string]$aikey,
+   
     [Switch]$AsJob
 )
 
+Function SendEvent{
+    param (
+                [Guid]$piKey,
+                [String]$pEventName,
+                [Hashtable]$pCustomProperties
+    )
+        $appInsightsEndpoint = "https://dc.services.visualstudio.com/v2/track"        
+        
+        if ([string]::IsNullOrEmpty($env:USERNAME)) {$uname=($env:USERPROFILE).split('\')[2]} else {$uname=$env:USERNAME}
+        if ([string]::IsNullOrEmpty($env:USERDOMAIN)) {$domainname=$env:USERDOMAIN_ROAMINGPROFILE} else {$domainname=$env:USERDOMAIN}
+            
+        $body = (@{
+                name = "Microsoft.ApplicationInsights.$iKey.Event"
+                time = [DateTime]::UtcNow.ToString("o")
+                iKey = $piKey
+                tags = @{
+                    "ai.device.id" = $env:COMPUTERNAME
+                    "ai.device.locale" = $domainname
+                    "ai.user.id" = $uname
+                    "ai.user.authUserId" = "$($domainname)\$($uname)"
+                    "ai.cloud.roleInstance" = $env:COMPUTERNAME
+          }
+            "data" = @{
+                    baseType = "EventData"
+                    baseData = @{
+                        ver = "2"
+                        name = $pEventName
+                        properties = ($pCustomProperties | ConvertTo-Json -Depth 10 | ConvertFrom-Json)
+                    }
+                }
+            }) | ConvertTo-Json -Depth 10 -Compress
+    
+        $temp = $ProgressPreference
+        $ProgressPreference = "SilentlyContinue"
+
+        $attempt=1
+        do {
+            try {
+                Invoke-WebRequest -Method POST -Uri $appInsightsEndpoint -Headers @{"Content-Type"="application/x-json-stream"} -Body $body -TimeoutSec 4 -UseBasicParsing| Out-Null 
+                return    
+            }
+            catch {
+                $PreciseTimeStamp=($timeStart.ToUniversalTime()).ToString("yyyy-MM-dd HH:mm:ss")
+                if ($attempt -ge 3)
+                {
+                    Write-Output "retry 3 failure..." 
+                    $sendaimessage =$PreciseTimeStamp+",Fail to send AI message after 3 attemps, message lost"
+                    $sendaimessage | Out-File "$($logpath)\aimessage.log" -Append -Encoding utf8
+                    return $null
+                }
+                Write-Output "Attempt($($attempt)): send aievent failure, retry" 
+                $sendaimessage =$PreciseTimeStamp+", Attempt($($attempt)) , wait 1 second, resend AI message"
+                $sendaimessage | Out-File "$($logpath)\aimessage.log" -Append -Encoding utf8
+                Start-Sleep -Seconds 1
+            }
+            $attempt++
+        } until ($success)
+        $ProgressPreference = $temp
+    }
+    
 
 # Start main scription
 
@@ -168,7 +229,7 @@ Write-host "Log File : "$logfile -Fo Cyan
 $killswitch=1
 $failcount=0
 
-$headline="TIMESTAMP,RESULT,DestIP,DestPort,Message,FailCount"
+$headline="TIMESTAMP,RESULT,DestIP,DestPort,Message,FailCount,HOSTNAME"
 $headline |Out-File $logfile -Encoding utf8 
 
 # PSPing.exe/PSPing64.exe local path. 
@@ -255,20 +316,30 @@ while ($killswitch -ne 0)
         $failcount++
         $lastline="Connecting to "+$IPAddress+":"+$port+":"
         $result = $o|select-string $lastline 
-        #$result = ((get-date).ToUniversalTime()).ToString("yyyy-MM-dd HH:mm:ss")+",ERROR"+","+$IPAddress+","+$port+","+$result +","+$failcount+",times"
-        $result = ($timeStart.ToUniversalTime()).ToString("yyyy-MM-dd HH:mm:ss")+",ERROR"+","+$IPAddress+","+$port+","+$result +","+$failcount+",times"
-        $result |Out-File $logfile -Encoding utf8 -Append
-        Write-Host $result -Fo Red
+        $PreciseTimeStamp=($timeStart.ToUniversalTime()).ToString("yyyy-MM-dd HH:mm:ss")
+        $line = $PreciseTimeStamp+",ERROR"+","+$IPAddress+","+$port+","+$result +","+$failcount+","+$env:COMPUTERNAME
+        $line |Out-File $logfile -Encoding utf8 -Append
+        Write-Host $line -Fo Red
+        if ([string]::IsNullOrEmpty($aikey)) {} 
+        else 
+        {
+            #$headline="TIMESTAMP,RESULT,DestIP,DestPort,Message,FailCount,HOSTNAME"
+            SendEvent -piKey $aikey -pEventName "test-psping" -pCustomProperties @{PreciseTimeStamp=$PreciseTimeStamp;RESULT="ERROR";DestIP=$ipaddress;DestPort=$port;Message=$result.ToString();FailCount=$failcount} 
+        }
     }
     else 
     {
         $lastline="Connecting to "+$IPAddress+":"+$port+":"
         $result = $o|select-string $lastline
-        #$result =((get-date).ToUniversalTime()).ToString("yyyy-MM-dd HH:mm:ss")+",SUCCESS"+","+$IPAddress+","+$port+","+$result +",0"
-        $result =($timeStart.ToUniversalTime()).ToString("yyyy-MM-dd HH:mm:ss")+",SUCCESS"+","+$IPAddress+","+$port+","+$result +",0"
-        $result |Out-File $logfile -Encoding utf8 -Append
-        Write-Host $result -Fo Green
-
+        $PreciseTimeStamp=($timeStart.ToUniversalTime()).ToString("yyyy-MM-dd HH:mm:ss")
+        $line =$PreciseTimeStamp+",SUCCESS"+","+$IPAddress+","+$port+","+$result +",0,"+$env:COMPUTERNAME
+        $line |Out-File $logfile -Encoding utf8 -Append
+        Write-Host $line -Fo Green
+        if ([string]::IsNullOrEmpty($aikey)) {} 
+        else 
+        {
+            SendEvent -piKey $aikey -pEventName "test-psping" -pCustomProperties @{PreciseTimeStamp=$PreciseTimeStamp;RESULT="SUCCESS";DestIP=$ipaddress;DestPort=$port;Message=$result.ToString();FailCount=$failcount} 
+        }
         $failcount=0
     }
 
