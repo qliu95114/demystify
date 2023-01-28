@@ -142,7 +142,7 @@ If ((Test-Path $filename) -and (Test-Path $outputfolder))
 
     #direct cut without encoding, this will cause a few seconds black screen for target file. 
     #$ffcmd="ffmpeg.exe -y -i ""$($filename)"" -ss $($starttime).000 -to $($endtime).000  -c:v copy -map 0:v:0? -c:a copy -map 0:a? -c:s copy -map 0:s? -map_chapters 0 -map_metadata 0 -f mp4 -threads 0 ""$($outputfile)"" 2> ""$($logfile)"""
-    $ffcmd="ffmpeg.exe -y -i ""$($filename)"" -ss $($starttime).000 -to $($endtime).000  -c:v h264_nvenc -b:v $($bitrate)k -pix_fmt yuv420p -vf ""scale=1920:-2"" -map 0:v:0? -c:a copy -map 0:1 -c:a ac3 -b:a 128k -map 0:s? -map_chapters 0 -map_metadata 0 -f mp4 -threads 0 ""$($outputfile)"" 2> ""$($logfile)"""
+    $ffcmd="ffmpeg.exe -y -i ""$($filename)"" -ss $($starttime).000 -to $($endtime).000  -c:v h264_nvenc -b:v $($bitrate)k -pix_fmt yuv420p -vf ""scale=1920:-2"" -map 0:v:0? -c:a copy -map 0:1 -c:a aac -b:a 128k -map 0:s? -map_chapters 0 -map_metadata 0 -f mp4 -threads 0 ""$($outputfile)"" 2> ""$($logfile)"""
     Write-UTCLog "CMD: $($ffcmd)" "Yellow"
     Write-UTCLog "Begining Cut $($filename) " "Cyan"
     $st=Get-date
