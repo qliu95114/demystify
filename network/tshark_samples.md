@@ -1,3 +1,5 @@
+ [[_TOC_]]
+
 # Using Tshark to dump Packet details into TEXT format
 
 Everyday while I am working with Network trace, there are many scenerios
@@ -222,6 +224,25 @@ We can conclude  in c:\tracefile\file_16_44_00.pcap,  there are two streams, let
 10.227.4.160 → 10.227.6.87   6379 → 38444 [SYN, ACK] is taking 1.03606600 to response 
 ```
 
+
+
+## Reduce file size - Truncate packet lengths
+
+If you have a massive Wireshark capture, and you are struggling to process it due to its sheer size, you can use editcap.exe (which lives in your `C:\Program Files\Wireshark` folder) to truncate the individual packets, leaving only the necessary header data. Note that this is *generally* 64 bytes for general TCP/UDP traffic, but can be more if you are looking at encapsulated packets, etc. 
+
+The `-s` parameter allows you to select your snaplength. Here is the format:
+
+`editcap.exe -s <snaplength> <infile> <outfile>`
+
+Real world example:
+
+``` cmd
+PS C:\Program Files\Wireshark> .\editcap.exe -s 128 C:\Downloads\mycap.pcap C:\Downloads\mycap-snaplen128.pcap
+```
+
+This turned a 3.6GB file (C:\Downloads\mycap.pcap) (3,850,030 total packets) into a 350MB file (C:\Downloads\mycap-snaplen128.pcap).
+
+More on editcap.exe can be found here: [editcap(1) Manual Page](https://www.wireshark.org/docs/man-pages/editcap.html)
 
 
 
