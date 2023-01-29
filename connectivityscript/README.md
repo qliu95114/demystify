@@ -1,15 +1,15 @@
 # All kinds of connectivity scripts
 
-1. Test-dns.ps1
-1. Test-Https.ps1
-1. Test-ICMP.ps1
-1. Test-IpInRange.ps1
-1. Test-PSPing.ps1
-1. Test-PSping_batch.ps1
-1. Test_tcpping.sh
-1. UdpPing.ps1
-1. UdpSend.ps1
-1. UdpSend_batch.ps1
+1. [Test-dns.ps1](Test-dns.ps1)
+1. [Test-Https.ps1](Test-Https.ps1)
+1. [Test-ICMP.ps1](Test-ICMP.ps1)
+1. [Test-IpInRange.ps1](Test-IpInRange.ps1)
+1. [Test-PSPing.ps1](Test-PSPing.ps1))
+1. [Test-PSping_batch.ps1](Test-PsPing_batch.ps1)
+1. [Test_tcpping.sh](Test_tcpping.sh)
+1. [UdpPing.ps1](UdpPing.ps1))
+1. [UdpSend.ps1](UdpSend.ps1)
+1. [UdpSend_batch.ps1](UdpSend_batch.ps1)
 
 
 # One Line Script (Windows & Linux)
