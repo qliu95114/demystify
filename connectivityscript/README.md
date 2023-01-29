@@ -5,6 +5,7 @@
 1. Test-ICMP.ps1
 1. Test-IpInRange.ps1
 1. Test-PSPing.ps1
+1. Test-PSping_batch.ps1
 1. Test_tcpping.sh
 1. UdpPing.ps1
 1. UdpSend.ps1
@@ -87,7 +88,7 @@ Console
 ping.exe -t 25.7.24.10 | Foreach{"{0} - {1}" -f (Get-Date).ToUniversalTime(),$_}
 ```
 
-## Linux - Scripting (TCP - paping)
+## Linux - Script (TCP - paping)
 
 Install paping
 ```
@@ -107,7 +108,7 @@ paping [-c count]
 
 ```
 
-## Linux - Scripting (TCP - netcat(nc))
+## Linux - Script (TCP - netcat(nc))
 
 Output paping result with UTC timestamp
 Console & LogFile : "$(hostname -s)_nc.log"
