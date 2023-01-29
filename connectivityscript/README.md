@@ -19,8 +19,8 @@
 psping -t sha-qliu-01 |find /v ""|cmd /q /v:on /c "for /l %a in (0) do (set "data="&set /p "data="&if defined data echo(!date! !time! !data!)">%temp%\%computername%_psping.txt
 
 # add timezone details at begining %temp%\%computername%_psping.txt 
-systeminfo | findstr /L "Zone:"  > c:\%computername%_psping.txt
-psping -t www.bing.com:443 |cmd /q /v /c "(pause&pause)>nul & for /l %a in () do (set /p "data=" && echo(!date! !time! !data!)&ping -n 2 www.bing.com >nul)" >> c:\%computername%_psping.txt
+systeminfo | findstr /L "Zone:"  > %temp%\%computername%_psping.txt
+psping -t www.bing.com:443 |cmd /q /v /c "(pause&pause)>nul & for /l %a in () do (set /p "data=" && echo(!date! !time! !data!)&ping -n 2 www.bing.com >nul)" >> %temp%\%computername%_psping.txt
 ```
 
 ## Windows - Powershell
