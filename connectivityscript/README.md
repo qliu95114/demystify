@@ -81,7 +81,7 @@ ping.exe -t 25.7.24.10 | Foreach{"{0} - {1}" -f (Get-Date).ToUniversalTime(),$_;
 LogFile : %temp%\%computername%_ping.log
 ```
 ping.exe -t 25.7.24.10 | Foreach{"{0} - {1}" -f (Get-Date).ToUniversalTime(),$_|Out-File "$($env:temp)\$($env:computername)_ping.log" -append -encoding utf8}
-
+```
 Console  
 ```
 ping.exe -t 25.7.24.10 | Foreach{"{0} - {1}" -f (Get-Date).ToUniversalTime(),$_}
