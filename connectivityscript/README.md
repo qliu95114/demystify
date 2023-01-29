@@ -15,30 +15,27 @@
 
 ## Windows - Command Prompt 
 ```
-# output psping result to %temp%\%computername%_psping.txt 
-psping -t sha-qliu-01 |find /v ""|cmd /q /v:on /c "for /l %a in (0) do (set "data="&set /p "data="&if defined data echo(!date! !time! !data!)">%temp%\%computername%_psping.txt
+# output psping result to %temp%\%computername%_psping.log
+psping.exe -t sha-qliu-01 |find /v ""|cmd /q /v:on /c "for /l %a in (0) do (set "data="&set /p "data="&if defined data echo(!date! !time! !data!)">%temp%\%computername%_psping.log
 
-# add timezone details at begining %temp%\%computername%_psping.txt 
-systeminfo | findstr /L "Zone:"  > %temp%\%computername%_psping.txt
-psping -t www.bing.com:443 |cmd /q /v /c "(pause&pause)>nul & for /l %a in () do (set /p "data=" && echo(!date! !time! !data!)&ping -n 2 www.bing.com >nul)" >> %temp%\%computername%_psping.txt
+# add timezone details at begining %temp%\%computername%_psping.log 
+systeminfo | findstr /L "Zone:"  > %temp%\%computername%_psping.log
+psping.exe -t www.bing.com:443 |cmd /q /v /c "(pause&pause)>nul & for /l %a in () do (set /p "data=" && echo(!date! !time! !data!)&ping -n 2 www.bing.com >nul)" >> %temp%\%computername%_psping.txt
 ```
 
 ## Windows - Powershell
 ```
-# output with local time - console only
-.\psping -t www.bing.com:80|Foreach{"{0} - {1}" -f (Get-Date).ToUniversalTime(),$_}
+# **highly recommended** output with UTC timestamp - console & file %temp%\%computername%_psping.log
+psping.exe -t www.bing.com:80 /Accepteula|Foreach{"{0} - {1}" -f (Get-Date).ToUniversalTime(),$_;"{0} - {1}" -f (Get-Date).ToUniversalTime(),$_|Out-File "$($env:temp)\$($env:computername)_psping.log" -append -encoding utf8}
 
-# output with UTC timestamp - console only 
-.\psping.exe -t www.bing.com:80|Foreach{"{0} - {1}" -f (Get-Date).ToUniversalTime(),$_}
+# output with local timestamp - console only
+psping.exe -t www.bing.com:80 /Accepteula|Foreach{"{0} - {1}" -f (Get-Date).ToUniversalTime(),$_}
 
 # output with UTC timestamp - file %temp%\%computername%_psping.log
-.\psping.exe -t www.bing.com:80|Foreach{"{0} - {1}" -f (Get-Date).ToUniversalTime(),$_}|Out-File $env:temp"\"$env:computername"_psping.log" -append
+psping.exe -t www.bing.com:80 /Accepteula|Foreach{"{0} - {1}" -f (Get-Date).ToUniversalTime(),$_}|Out-File "$($env:temp)\$($env:computername)_psping.log" -append  -encoding utf8
 
-# output with UTC timestamp - console & file %temp%\%computername%_psping.log
-.\psping.exe -t www.bing.com:80|Foreach{"{0} - {1}" -f (Get-Date).ToUniversalTime(),$_;"{0} - {1}" -f (Get-Date).ToUniversalTime(),$_|Out-File $env:temp"\"$env:computername"_psping.log" -append}
-
-# output with UTC /acceteula - console & file %temp%\%computername%_psping.log (Encoding: utf8)  
-.\psping.exe -t -i 3 -w 60 www.bing.com:80 /Accepteula|Foreach{"{0} - {1}" -f (Get-Date).ToUniversalTime(),$_;"{0} - {1}" -f (Get-Date).ToUniversalTime(),$_|Out-File "C:\log\$env:computername-psping_www.bing.com_80.log" -append -Encoding utf8}
+# output with UTC timestamp - console & file %temp%\%computername%_psping.log (Encoding: utf8) , [-i interval] [-w count] -4 or -6
+psping.exe -4 -t -i 3 -w 10 www.bing.com:80 /Accepteula|Foreach{"{0} - {1}" -f (Get-Date).ToUniversalTime(),$_;"{0} - {1}" -f (Get-Date).ToUniversalTime(),$_|Out-File "$($env:temp)\$($env:computername)_psping.log" -append -encoding utf8}
 ```
 
 ## Linux - Scripting
