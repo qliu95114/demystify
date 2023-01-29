@@ -32,11 +32,13 @@ $url="www.bing.com";$interval=3;while ($true) {curl.exe -w "dns_resolution: %{ti
 ```
 
 ## Windows - Command Prompt (TCP)
-```
-# output psping result to LogFile : %temp%\%computername%_psping.log)
-psping.exe -t sha-qliu-01 |find /v ""|cmd /q /v:on /c "for /l %a in (0) do (set "data="&set /p "data="&if defined data echo(!date! !time! !data!)">%temp%\%computername%_psping.log
 
-# add timezone details at LogFile : %temp%\%computername%_psping.log 
+### output psping result to LogFile : %temp%\%computername%_psping.log)
+```
+psping.exe -t sha-qliu-01 |find /v ""|cmd /q /v:on /c "for /l %a in (0) do (set "data="&set /p "data="&if defined data echo(!date! !time! !data!)">%temp%\%computername%_psping.log
+```
+### add timezone details at LogFile : %temp%\%computername%_psping.log 
+```
 systeminfo | findstr /L "Zone:"  > %temp%\%computername%_psping.log
 psping.exe -t www.bing.com:443 |cmd /q /v /c "(pause&pause)>nul & for /l %a in () do (set /p "data=" && echo(!date! !time! !data!)&ping -n 2 www.bing.com >nul)" >> %temp%\%computername%_psping.txt
 ```
