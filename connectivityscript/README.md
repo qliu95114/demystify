@@ -39,6 +39,11 @@ Sample output
 
 ```
 
+## Windows - Powershell (HTTP/HTTPS iwr (invoke-webrequest), same source port, continoue traffic)
+```
+$url="https://www.bing.com";while ($true) {$iwr=invoke-webrequest $url -UseBasicParsing -TimeoutSec 30;"{0},{1},{2},{3},{4}" -f (Get-Date).ToUniversalTime(),$($url),$iwr.StatusCode,$iwr.StatusDescription,$iwr.RawContentLength; sleep 1}
+```
+
 ## Windows - Command Prompt (TCP - PSPING)
 
 Result to LogFile : %temp%\%computername%_psping.log
