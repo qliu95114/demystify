@@ -110,7 +110,11 @@ TSHARK covert to csv , Fields selected
 "c:\program files\wireshark\tshark" -r my.pcapng -T fields -e frame.number -e frame.time_epoch -e frame.time_delta_displayed -e ip.src -e ip.dst -e ip.id -e ip.proto -e tcp.seq -e tcp.ack -e frame.len -e tcp.srcport -e tcp.dstport -e udp.srcport -e udp.dstport -e tcp.analysis.ack_rtt -e frame.protocols -e _ws.col.Info -e eth.src -e eth.dst -E header=y -E separator=, -E quote=d > my.pcapng.csv
 ```
 
-ADX (Kusto) create table and import from CSV,
+ADX (Kusto) create table and import from CSV, 
+
+Import ADX might failure due to Wirehsark parser, need disable a few protocols to get clean output in Field "Info" 
+Recommended Protocol to disable, IRC , RESP (Redis)
+
 ``` kql
 .drop table trace
 
@@ -125,7 +129,10 @@ Sample query and covert Epoch time to UTC readable format
 trace 
 | extend aa=tolong(replace_string(frametime,'.',''))/1000
 | extend TT=unixtime_microseconds_todatetime(aa)
-| project framenumber,TT,DeltaDisplayed, Source, Destination, ipid, Protocol,tcpseq, tcpack, Length, Info, tcpsrcport, tcpdstport, udpdstport, udpsrcport,ethsrc, ethdst, frameprotocol
+| extend SourceCA=split(Source,',')[countof(Source,',')]//if this is encap traffic, get inner ip addres only
+| extend DestCA=split(Destination,',')[countof(Destination,',')]//if this is encap traffic, get inner ip addres only
+| extend ipidinnner=split(ipid,',')[countof(ipid,',')] //if this is encap traffic, get inner ipid only
+| project TT,DeltaDisplayed, SourceCA, DestCA, ipidinnner, Protocol,tcpseq, tcpack, Length, Info, tcpsrcport, tcpdstport, udpdstport, udpsrcport//,ethsrc, ethdst, frameprotocol
 | take 20
 ```
 Result:
@@ -139,7 +146,6 @@ framenumber	TT	DeltaDisplayed	Source	Destination	ipid	Protocol	tcpseq	tcpack	Len
 6	2022-11-04 06:13:53.7224630	0.002077000	122.111.111.111	10.115.68.111	0x71f8	6	3280391637	3443988408	1384	Server Hello	443	54010			68:3a:1e:74:ee:a0	c0:fb:f9:c6:dc:bc	eth:ethertype:ip:tcp:tls
 
 ```
-
 
 ### Tips
 While work with a lot of pcap files, let's create one batch file 
