@@ -252,3 +252,13 @@ More on editcap.exe can be found here: [editcap(1) Manual Page](https://www.wire
 
 
 
+## Split based on number of packets
+```
+editcap.exe -c <number of packets per file> C:\path-to\OriginalFile.pcapng C:\path-to\NewFile.pcapng
+editcap.exe -c 1500000 C:\path-to\OriginalFile.pcapng C:\path-to\NewFile.pcapng
+```
+
+Wireshark will append a suffix in the format of -nnnnn_YYYYMMDDHHMMSS.
+
+nnnnn starts at 00000 and increments for each file
+YYYYMMDDHHMMSS is the timestamp of the first packet in the new file
