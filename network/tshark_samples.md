@@ -255,7 +255,12 @@ More on editcap.exe can be found here: [editcap(1) Manual Page](https://www.wire
 ## Split based on number of packets
 ```
 editcap.exe -c <number of packets per file> C:\path-to\OriginalFile.pcapng C:\path-to\NewFile.pcapng
+
+rem split one file
 editcap.exe -c 1500000 C:\path-to\OriginalFile.pcapng C:\path-to\NewFile.pcapng
+
+rem split all files under one folder
+for /f "delims=" %a in ('dir /b /o c:\temp\batch2\*.pcap') do "F:\wireshark\editcap" -c 1500000 "C:\temp\batch2\%a" "C:\temp\batch2\split\%a"
 ```
 
 Wireshark will append a suffix in the format of -nnnnn_YYYYMMDDHHMMSS.
