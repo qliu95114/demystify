@@ -107,7 +107,7 @@ For big trace analyze, export trace to CSV then import ADX for fast analyze is n
 
 TSHARK covert to csv , Fields selected
 ``` cmd 
-"c:\program files\wireshark\tshark" -r my.pcapng -T fields -e frame.number -e frame.time_epoch -e frame.time_delta_displayed -e ip.src -e ip.dst -e ip.id -e ip.proto -e tcp.seq -e tcp.ack -e frame.len -e tcp.srcport -e tcp.dstport -e udp.srcport -e udp.dstport -e tcp.analysis.ack_rtt -e frame.protocols -e _ws.col.Info -e eth.src -e eth.dst -E header=y -E separator=, -E quote=d > my.pcapng.csv
+"c:\program files\wireshark\tshark" -r my.pcapng -T fields -e frame.number -e frame.time_epoch -e frame.time_delta_displayed -e ip.src -e ip.dst -e ip.id -e _ws.col.Protocol -e tcp.seq -e tcp.ack -e frame.len -e tcp.srcport -e tcp.dstport -e udp.srcport -e udp.dstport -e tcp.analysis.ack_rtt -e frame.protocols -e _ws.col.Info -e eth.src -e eth.dst -e ipv6.src -e ipv6.dst -e ip.proto -E header=y -E separator=, -E quote=d > my.pcapng.csv
 ```
 
 ADX (Kusto) create table and import from CSV, 
@@ -118,7 +118,7 @@ Recommended Protocol to disable, IRC , RESP (Redis)
 ``` kql
 .drop table trace
 
-.create table trace (framenumber:long,frametime:string,DeltaDisplayed:string,Source:string,Destination:string,ipid:string,Protocol:int,tcpseq:string,tcpack:string,Length:int,tcpsrcport:int,tcpdstport:int,udpsrcport:int,udpdstport:int,tcpackrtt:string,frameprotocol:string,Info:string,ethsrc:string,ethdst:string)
+.create table trace (framenumber:long,frametime:string,DeltaDisplayed:string,Source:string,Destination:string,ipid:string,Protocol:string,tcpseq:string,tcpack:string,Length:int,tcpsrcport:int,tcpdstport:int,udpsrcport:int,udpdstport:int,tcpackrtt:string,frameprotocol:string,Info:string,ethsrc:string,ethdst:string,SourceV6:string,DestinationV6:string,ipProtocol:string)
 
 .ingest into table trace (@"c:\temp\my.pcapng.csv") with (format='csv',ignoreFirstRecord=true)
 ```
@@ -151,7 +151,7 @@ framenumber	TT	DeltaDisplayed	Source	Destination	ipid	Protocol	tcpseq	tcpack	Len
 While work with a lot of pcap files, let's create one batch file 
 ```
 * following command must run Windows Command Prompt not Powershell
-for /f "delims=" %a in ('dir /b /o *.cap') do "c:\program files\wireshark\tshark" -r "%a" -T fields -e frame.number -e frame.time_epoch -e frame.time_delta_displayed -e ip.src -e ip.dst -e ip.id -e ip.proto -e tcp.seq -e tcp.ack -e frame.len -e tcp.srcport -e tcp.dstport -e udp.srcport -e udp.dstport -e tcp.analysis.ack_rtt -e frame.protocols -e _ws.col.Info -e eth.src -e eth.dst -E header=y -E separator=, -E quote=d > "%a.csv"
+for /f "delims=" %a in ('dir /b /o *.cap') do "c:\program files\wireshark\tshark" -r "%a" -T fields -e frame.number -e frame.time_epoch -e frame.time_delta_displayed -e ip.src -e ip.dst -e ip.id -e ip.proto -e tcp.seq -e tcp.ack -e frame.len -e tcp.srcport -e tcp.dstport -e udp.srcport -e udp.dstport -e tcp.analysis.ack_rtt -e frame.protocols -e _ws.col.Info -e eth.src -e eth.dst  -e ipv6.src -e ipv6.dst -E header=y -E separator=, -E quote=d > "%a.csv"
 
 before process
 D:\temp>dir *.cap
