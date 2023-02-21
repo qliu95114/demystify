@@ -80,7 +80,7 @@ Filter:<No Filter>
 
 ## Sample Three - list conversation view by tcp
 ```
-C:\Program Files\Wireshark>tshark -r d:\temp\mytrace.pcapng -qzconv,tcp
+C:\Program Files\Wireshark>tshark -r d:\temp\mytrace.pcapng -qz conv,tcp
 ================================================================================
 TCP Conversations
 Filter:<No Filter>
