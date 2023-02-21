@@ -54,7 +54,7 @@ Transmission Control Protocol, Src Port: 443, Dst Port: 51336, Seq: 1732514733, 
 
 ## Sample Two - list conversation view by ip 
 ```
-C:\Program Files\Wireshark>tshark -r d:\temp\mytrace.pcapng -qzconv,ip
+C:\Program Files\Wireshark>tshark -r d:\temp\mytrace.pcapng -qz conv,ip
 ================================================================================
 IPv4 Conversations
 Filter:<No Filter>
