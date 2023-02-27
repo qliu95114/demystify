@@ -131,3 +131,11 @@ while true; do ping 192.168.3.5 -w 3 -c 1 -i 3| while read pong; do echo "$(date
 ping 192.168.3.5| while read pong; do echo "$(date -u +'%F %H:%M:%S') - $pong"; done 2>&1 | tee "$(hostname -s)_ping.log"
 ping 192.168.3.5| while read pong; do echo "$(date -u +'%F %H:%M:%S') - $pong"; done 
 ```
+
+## Linux - Script (HTTPS - curl)
+
+Output Curl output with UTC timstamp
+Console & LogFile : "$(hostname -s)_curl.log"
+```
+while true; do curl -o /dev/null -s -w "dns_resolution: %{time_namelookup}, tcp_established: %{time_connect}, ssl_handshake_done: %{time_appconnect}, TTFB: %{time_starttransfer}\n" https://www.google.com | while read pong; do echo "$(date -u +'%F %H:%M:%S') - $pong"; done; sleep 1; done 2>&1 | tee "$(hostname -s)_curl.log"
+```
