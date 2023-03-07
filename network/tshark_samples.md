@@ -231,6 +231,38 @@ We can conclude  in c:\tracefile\file_16_44_00.pcap,  there are two streams, let
 10.227.4.160 → 10.227.6.87   6379 → 38444 [SYN, ACK] is taking 1.03606600 to response 
 ```
 
+## Sample Six － could we trust AB(AppacheBench) requests per second? 
+
+Today  I try to compare AB requests per second with OS level TCP connection
+ab is saying 
+
+```
+root@mymachine:~# ab -n 5000000 -c 500 -H "connection:close" http://10.6.0.4:80/
+
+Time taken for tests:   280.039 seconds
+Complete requests:      5000000
+Requests per second:    17854.66 [#/sec] (mean) 
+Time per request:       28.004 [ms] (mean) 
+```
+Review AB source code this is simply Complete requests divide Time taken for tests (5000000 / 280 = 17857) , it won't be able to tell in every seconds, how many requests was send out. 
+In a modern environment, use AB RPS cannot describe the real world workload 
+
+I requests team to do tcpdump and it ends with 4GB files, convert to CSV and we get 12GB csv, send to ADX, pretty good, we can query the details
+
+```
+trace
+| extend aa=tolong(replace_string(frametime,'.',''))/1000
+| extend TT=unixtime_microseconds_todatetime(aa)
+| extend SourceCA=tostring(split(Source,',')[-1])//if this is encap traffic, get inner ip addres only
+| extend DestCA=tostring(split(Destination,',')[-1])//if this is encap traffic, get inner ip addres only
+| extend ipidinnner=tostring(split(ipid,',')[-1]) //if this is encap traffic, get inner ipid only
+| where tcpdstport == "80"
+| where Source == "10.6.0.8"
+| where tcpack == 0
+| project TT,DeltaDisplayed, SourceCA, DestCA, ipidinnner, Protocol,tcpseq, tcpack, Length, Info, tcpsrcport, tcpdstport, udpdstport, udpsrcport//,ethsrc, ethdst, frameprotocol
+| summarize count() by bin(TT,1s) | render timechart  
+```
+
 
 
 ## Reduce file size - Truncate packet lengths
