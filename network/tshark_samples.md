@@ -293,7 +293,7 @@ rem split one file
 editcap.exe -c 1500000 C:\path-to\OriginalFile.pcapng C:\path-to\NewFile.pcapng
 
 rem split all files under one folder
-for /f "delims=" %a in ('dir /b /o c:\temp\batch2\*.pcap') do "F:\wireshark\editcap" -c 1500000 "C:\temp\batch2\%a" "C:\temp\batch2\split\%a"
+for /f "delims=" %a in ('dir /b /o *.pcap') do "C:\program files\wireshark\editcap" -c 1500000 "%a" "split\%a"
 ```
 
 Wireshark will append a suffix in the format of -nnnnn_YYYYMMDDHHMMSS.
