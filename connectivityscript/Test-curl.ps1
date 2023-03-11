@@ -25,7 +25,7 @@ Provide Logfile path and filename
 CURL timeout in seconds, default 3.  --connect-timeout  (default:15) 
 
 .PARAMETER count 
-Total execution of $url or $urlfile (Default: 10)
+Total execution of $url or $urlfile (Default: 10) , 0 - Forever
 
 .PARAMETER deplay
 Milliseconds, dely between each execution of $url, but there is no delay within in $urlfile (Default: 1000)
@@ -50,7 +50,7 @@ Param (
        [string]$urlipaddr, #specify ip address your want to Host resolve to 
        [string]$urlfile,
        [int]$timeout=3,  # CURL timeout in seconds, default 3. NOTE, --connect-timeout  (default:15) 
-       [int]$count=10,  # Total execution of $url or $urlfile (Default: 10)
+       [int]$count=10,  # Total execution of $url or $urlfile (Default: 10,  0:forever) 
        [int]$delay=1000, # Milliseconds, dely between each execution of CURL (Default: 1000)
        [string]$logfile, #Provide Logfile path and filename, 
        [guid]$aikey  #Prive ApplicationInsigt Instrument Key to enable AI collect data
@@ -181,19 +181,51 @@ if ([string]::IsNullOrEmpty($url) -and [string]::IsNullOrEmpty($urlfile))
     $url="https://www.bing.com"
     Write-Log " -url and -urlfile both empty, use default 'http://www.bing.com' to test" -color Yellow
     if ([string]::IsNullOrEmpty($urlipaddr)) {} else { Write-Log " URLIPAddr : $($urlipaddr)" "green"}
-    for ($i=1;$i -le $count;$i++)  { 
-        invoke_curl -url $url -ipaddr $urlipaddr
-        start-sleep -Milliseconds $delay 
+    if ($count -ne 0)
+    {
+        # run $count curl test
+        for ($i=1;$i -le $count;$i++)  { 
+            Write-Log " Url $($i)/($count) : $($url)   UrlIpAddr  : $($urlipaddr)"   "Green"            
+            invoke_curl -url $url -ipaddr $urlipaddr
+            start-sleep -Milliseconds $delay 
+        }
     }
+    else {
+        # count = 0 and make it forever
+        $i=1
+        while ($true)   
+        {
+            Write-Log " Url $($i)/Forever : $($url)   UrlIpAddr  : $($urlipaddr)"   "Green"            
+            invoke_curl -url $url -ipaddr $urlipaddr
+            start-sleep -Milliseconds $delay
+            $i++
+        }
+    }
+
 }
 else {
     if ([string]::IsNullOrEmpty($urlfile)) 
     {
         Write-Log " URL       : $($url)"  "green"
         if ([string]::IsNullOrEmpty($urlipaddr)) {} else { Write-Log " URLIPAddr : $($urlipaddr)" "green"}        
-        for ($i=1;$i -le $count;$i++) { 
-            invoke_curl -url $url -ipaddr $urlipaddr
-            start-sleep -Milliseconds $delay
+        if ($count -ne 0)
+        {
+            for ($i=1;$i -le $count;$i++) { 
+                Write-Log " Url $($i)/$($count) : $($url)   UrlIpAddr  : $($urlipaddr)"   "Green"            
+                invoke_curl -url $url -ipaddr $urlipaddr
+                start-sleep -Milliseconds $delay
+            }
+        }
+        else{
+            # count = 0 and make it forever
+            $i=1
+            while ($true)   
+            {
+                Write-Log " Url $($i)/Forever : $($url)   UrlIpAddr  : $($urlipaddr)"   "Green"            
+                invoke_curl -url $url -ipaddr $urlipaddr
+                start-sleep -Milliseconds $delay
+                $i++
+            }
         }
     }
     else {
@@ -202,25 +234,53 @@ else {
         {
             $urllist=get-content $urlfile
             Write-Log " TotalURLs : $($urllist.count)"  "green"
-            for ($i=1;$i -le $count;$i++) 
-            { 
-                $j=1
-                foreach ($link in $urllist)
-                {
-                    $urlitem="";$urlip=""
-                    $urlip=$link.split(';')[0]
-                    $urlitem=$link.split(';')[1]
-                    if ([string]::IsNullOrEmpty($urlitem)){
-                        Write-log " Url $($j)/$($urllist.count) : (empty) , skipping invoke_curl.... "  "yellow"
+
+            if ($count -ne 0)
+            {
+                for ($i=1;$i -le $count;$i++) 
+                { 
+                    $j=1
+                    foreach ($link in $urllist)
+                    {
+                        $urlitem="";$urlip=""
+                        $urlip=$link.split(';')[0]
+                        $urlitem=$link.split(';')[1]
+                        if ([string]::IsNullOrEmpty($urlitem)){
+                            Write-log " Url $($j)/$($urllist.count) - $($i)/$($count) : (empty) , skipping invoke_curl.... "  "yellow"
+                        }
+                        else{
+                            Write-Log " Url $($j)/$($urllist.count) - $($i)/$($count) : $($urlitem)   UrlIpAddr  : $($urlip)"   "Green"
+                            invoke_curl -url $urlitem -ipaddr $urlip
+                            start-sleep -Milliseconds $delay
+                        }
+                        $j++
                     }
-                    else{
-                        Write-Log " Url $($j)/$($urllist.count) : $($urlitem)   UrlIpAddr  : $($urlip)"   "Green"
-                        invoke_curl -url $urlitem -ipaddr $urlip
-                        start-sleep -Milliseconds $delay
-                    }
-                    $j++
                 }
             }
+            else {
+                $i=1
+                while ($true)
+                {
+                    $j=1
+                    foreach ($link in $urllist)
+                    {
+                        $urlitem="";$urlip=""
+                        $urlip=$link.split(';')[0]
+                        $urlitem=$link.split(';')[1]
+                        if ([string]::IsNullOrEmpty($urlitem)){
+                            Write-log " Url $($j)/$($urllist.count) - $($i)forever : (empty) , skipping invoke_curl.... "  "yellow"
+                        }
+                        else{
+                            Write-Log " Url $($j)/$($urllist.count) - $($i)/forever : $($urlitem)   UrlIpAddr  : $($urlip)"   "Green"
+                            invoke_curl -url $urlitem -ipaddr $urlip
+                            start-sleep -Milliseconds $delay
+                        }
+                        $j++
+                    }
+                    $i++
+                }
+            }
+
         }
         else {
             Write-Log "$($urlfile) does not exsit, please double-check!"  "Yellow"
