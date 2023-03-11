@@ -11,7 +11,7 @@ Today, I introduce some ideas to leverage tshark work with PCAP file(s).
 
 ## Sample One - Expand TCP Details of one specific Frame
 ```
-C:\Program Files\Wireshark>tshark -r d:\temp\mytrace.pcapng -V -O tcp frame.number == 5
+C:\temp>"C:\Program Files\Wireshark\tshark.exe" -r d:\temp\mytrace.pcapng -V -O tcp frame.number == 5 
 Frame 5: 54 bytes on wire (432 bits), 54 bytes captured (432 bits) on interface \Device\NPF_{5E9AC1A3-4E57-4A03-A87B-3A41C71B859F}, id 0
 Ethernet II, Src: 82:04:5f:c1:42:64 (82:04:5f:c1:42:64), Dst: IntelCor_7a:90:b8 (40:1c:83:7a:90:b8)
 Internet Protocol Version 4, Src: 100.45.55.66, Dst: 172.20.10.5
@@ -54,7 +54,7 @@ Transmission Control Protocol, Src Port: 443, Dst Port: 51336, Seq: 1732514733, 
 
 ## Sample Two - list conversation view by ip 
 ```
-C:\Program Files\Wireshark>tshark -r d:\temp\mytrace.pcapng -qz conv,ip
+C:\temp>"C:\Program Files\Wireshark\tshark.exe" -qz conv,ip -r mytrace.pcap
 ================================================================================
 IPv4 Conversations
 Filter:<No Filter>
@@ -80,7 +80,7 @@ Filter:<No Filter>
 
 ## Sample Three - list conversation view by tcp
 ```
-C:\Program Files\Wireshark>tshark -r d:\temp\mytrace.pcapng -qz conv,tcp
+C:\temp>"C:\Program Files\Wireshark\tshark.exe" -qz conv,tcp -r mytrace.pcap
 ================================================================================
 TCP Conversations
 Filter:<No Filter>
@@ -207,12 +207,14 @@ tcp.analysis.ack_rtt >1 and tcp.flags.syn == 1 and tcp.flags.ack ==1
 
 To make the detection works for 1000+ files, let's use Windows Batch file
 ```
-for /f "delims=" %a in ('dir /b /o d:\tracefile\*.pcap') do "c:\program files\wireshark\tshark" -r "d:\tracefile\%a" "tcp.analysis.ack_rtt >1 and tcp.flags.syn == 1 and tcp.flags.ack ==1 and tcp.srcport == 6379"
+cd d:\tracefile
+for /f "delims=" %a in ('dir /b /o *.pcap') do "c:\program files\wireshark\tshark.exe" -r "%a" "tcp.analysis.ack_rtt >1 and tcp.flags.syn == 1 and tcp.flags.ack ==1 and tcp.srcport == 6379"
 ```
 
 Result is promising....
 ```
-C:\Windows\System32>"c:\program files\wireshark\tshark" -r "c:\tracefile\file_16_43_00.pcap" "tcp.analysis.ack_rtt >1 and tcp.flags.syn == 1 and tcp.flags.ack ==1 and tcp.srcport == 6379"
+
+d:\tracefile>"c:\program files\wireshark\tshark.exe" -r "c:\tracefile\file_16_43_00.pcap" "tcp.analysis.ack_rtt >1 and tcp.flags.syn == 1 and tcp.flags.ack ==1 and tcp.srcport == 6379"
 
 C:\Windows\System32>"c:\program files\wireshark\tshark" -r "c:\tracefile\file_16_44_00.pcap" "tcp.analysis.ack_rtt >1 and tcp.flags.syn == 1 and tcp.flags.ack ==1 and tcp.srcport == 6379"
 22808 2023-01-13 16:44:47.160183 0.000000 10.227.8.192 → 10.227.6.87  0x0000 (0),0x0100 (256),0x0000 (0) TCP 2945986252 1537613497 1.035904000 154 6379 → 41990 [SYN, ACK] Seq=2945986252 Ack=1537613497 Win=43440 Len=0 MSS=1418 SACK_PERM TSval=2115729317 TSecr=842724217 WS=512
