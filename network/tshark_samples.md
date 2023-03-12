@@ -10,7 +10,7 @@ Everyday while I am working with Network trace, there are many scenerios
 Today, I introduce some ideas to leverage tshark work with PCAP file(s). 
 
 ## Sample One - Expand TCP Details of one specific Frame
-```
+``` bash
 C:\temp>"C:\Program Files\Wireshark\tshark.exe" -r d:\temp\mytrace.pcapng -V -O tcp frame.number == 5 
 Frame 5: 54 bytes on wire (432 bits), 54 bytes captured (432 bits) on interface \Device\NPF_{5E9AC1A3-4E57-4A03-A87B-3A41C71B859F}, id 0
 Ethernet II, Src: 82:04:5f:c1:42:64 (82:04:5f:c1:42:64), Dst: IntelCor_7a:90:b8 (40:1c:83:7a:90:b8)
@@ -53,7 +53,7 @@ Transmission Control Protocol, Src Port: 443, Dst Port: 51336, Seq: 1732514733, 
 ```
 
 ## Sample Two - list conversation view by ip 
-```
+``` bash
 C:\temp>"C:\Program Files\Wireshark\tshark.exe" -qz conv,ip -r mytrace.pcap
 ================================================================================
 IPv4 Conversations
@@ -79,7 +79,7 @@ Filter:<No Filter>
 ``` 
 
 ## Sample Three - list conversation view by tcp
-```
+``` bash
 C:\temp>"C:\Program Files\Wireshark\tshark.exe" -qz conv,tcp -r mytrace.pcap
 ================================================================================
 TCP Conversations
@@ -102,28 +102,39 @@ Filter:<No Filter>
 
 ```
 
-## Sample Four - dump PCAP to CSV , use ADX (Kusto) to analyze trace in fast fashion
-For big trace analyze, export trace to CSV then import ADX for fast analyze is nature way to speed-up analyze. Using Tshark we can "convert" pcap to csv, here is my favorite fields commonly used when analyze TCP/UDP network trace. 
+## Sample Four - Convert PCAP to CSV, ingress to ADX (Kusto) to analyze trace in fast fashion
 
-TSHARK covert to csv , Fields selected
-``` cmd 
+For big trace analyze, use Azure Data Explorer (aka. kusto) is good way to speed up our analyze. To do that
+1. (tshark) Export trace to CSV 
+1. (kusto) create table in ADX
+1. (kusto) Ingress CSV in step 1 to ADX
+ 
+Here is my favorite fields commonly used when analyze TCP/UDP network trace, Encap Trace file are supported. 
+
+1. (tshark) Export trace to csv , Fields selected
+``` bash 
 "c:\program files\wireshark\tshark" -r my.pcapng -T fields -e frame.number -e frame.time_epoch -e frame.time_delta_displayed -e ip.src -e ip.dst -e ip.id -e _ws.col.Protocol -e tcp.seq -e tcp.ack -e frame.len -e tcp.srcport -e tcp.dstport -e udp.srcport -e udp.dstport -e tcp.analysis.ack_rtt -e frame.protocols -e _ws.col.Info -e eth.src -e eth.dst -e ipv6.src -e ipv6.dst -e ip.proto -E header=y -E separator=, -E quote=d > my.pcapng.csv
 ```
 
-ADX (Kusto) create table and import from CSV, 
+ADX (Kusto) create table and ingress from CSV to table 
 
 Import ADX might failure due to Wirehsark parser, need disable a few protocols to get clean output in Field "Info" 
 Recommended Protocol to disable, IRC , RESP (Redis)
 
 ``` kql
-.drop table trace
+.drop table trace  //
 
 .create table trace (framenumber:long,frametime:string,DeltaDisplayed:string,Source:string,Destination:string,ipid:string,Protocol:string,tcpseq:string,tcpack:string,Length:int,tcpsrcport:int,tcpdstport:int,udpsrcport:int,udpdstport:int,tcpackrtt:string,frameprotocol:string,Info:string,ethsrc:string,ethdst:string,SourceV6:string,DestinationV6:string,ipProtocol:string)
 
-.ingest into table trace (@"c:\temp\my.pcapng.csv") with (format='csv',ignoreFirstRecord=true)
+.ingest into table trace (@"c:\temp\my.pcapng.csv") with (format='csv',ignoreFirstRecord=true)  // For Local Kusto Emulator
+
+.ingest into table trace (@"<SAS URL to file on Azure Blob Storage>") with (format='csv',ignoreFirstRecord=true)  // For Azure Data Explorer cluster
 ```
 
-Sample query and covert Epoch time to UTC readable format 
+Sample query 
+1. covert Epoch time to UTC readable format
+1. Filter data 
+
 ``` kql
 //convert epoch time to UTC display time with Seconds
 trace 
@@ -148,13 +159,14 @@ framenumber	TT	DeltaDisplayed	Source	Destination	ipid	Protocol	tcpseq	tcpack	Len
 ```
 
 ### Tips
-While work with a lot of pcap files, let's create one batch file 
-```
+To work with list of cap files, let's create one batch file 
+``` bash
 * following command must run Windows Command Prompt not Powershell
 cd d:\temp
 for /f "delims=" %a in ('dir /b /o *.pcap') do "c:\program files\wireshark\tshark" -r "%a" -T fields -e frame.number -e frame.time_epoch -e frame.time_delta_displayed -e ip.src -e ip.dst -e ip.id -e _ws.col.Protocol -e tcp.seq -e tcp.ack -e frame.len -e tcp.srcport -e tcp.dstport -e udp.srcport -e udp.dstport -e tcp.analysis.ack_rtt -e frame.protocols -e _ws.col.Info -e eth.src -e eth.dst -e ipv6.src -e ipv6.dst -e ip.proto -E header=y -E separator=, -E quote=d > "%a.csv"
 
-before process
+rem before process
+
 D:\temp>dir *.cap
  Volume in drive D is 1-DATA
  Volume Serial Number is DE8A-D932
@@ -171,7 +183,8 @@ D:\temp>dir *.cap
                7 File(s)  1,287,989,870 bytes
                0 Dir(s)  569,877,078,016 bytes free
 
-After process
+rem After process
+
 D:\temp>dir NetworkTrace*.*
  Volume in drive D is 1-DATA
  Volume Serial Number is DE8A-D932
@@ -197,23 +210,24 @@ D:\temp>dir NetworkTrace*.*
 
 ```
 
-## Sample Five - detect 1s delay TCP SYN - TCP SYN/ACK for port 6379 traffic from 1000+ trace file 
-Today I get into a situation that need to look into 1000+ pcap files to detect a problem whether TCP 3-way handshake is longer than 1 second
+## Sample Five - Detect 1s delay TCP SYN - TCP SYN/ACK for port 6379 traffic, Data source is 1000+ trace files 
 
-To detect TCP 3-way handshake is longer than 1 second, let's use Wireshark filter
-```
+Today I get into a situation that need to review 1000+ pcap files to detect a problem whether TCP 3-way handshake is longer than 1 second
+
+To detect TCP 3-way handshake is longer than 1 second, I am using FILTER 
+``` kql
 tcp.analysis.ack_rtt >1 and tcp.flags.syn == 1 and tcp.flags.ack ==1
 ```
 
-To make the detection works for 1000+ files, let's use Windows Batch file
-```
-cd d:\tracefile
-for /f "delims=" %a in ('dir /b /o *.pcap') do "c:\program files\wireshark\tshark.exe" -r "%a" "tcp.analysis.ack_rtt >1 and tcp.flags.syn == 1 and tcp.flags.ack ==1 and tcp.srcport == 6379"
+To make the FILTER works for 1000+ files, let's use Batch file
+``` bash
+cd c:\tracefile
+for /f "delims=" %a in ('dir /b /o *.pcap') do "c:\program files\wireshark\tshark.exe" -r "c:\tracefile\%a" "tcp.analysis.ack_rtt >1 and tcp.flags.syn == 1 and tcp.flags.ack ==1 and tcp.srcport == 6379"
 ```
 
 Result is promising....
-```
 
+``` bash
 d:\tracefile>"c:\program files\wireshark\tshark.exe" -r "c:\tracefile\file_16_43_00.pcap" "tcp.analysis.ack_rtt >1 and tcp.flags.syn == 1 and tcp.flags.ack ==1 and tcp.srcport == 6379"
 
 C:\Windows\System32>"c:\program files\wireshark\tshark" -r "c:\tracefile\file_16_44_00.pcap" "tcp.analysis.ack_rtt >1 and tcp.flags.syn == 1 and tcp.flags.ack ==1 and tcp.srcport == 6379"
@@ -227,18 +241,18 @@ C:\Windows\System32>"c:\program files\wireshark\tshark" -r "c:\tracefile\file_16
 C:\Windows\System32>"c:\program files\wireshark\tshark" -r "c:\tracefile\file_16_47_00.pcap" "tcp.analysis.ack_rtt >1 and tcp.flags.syn == 1 and tcp.flags.ack ==1 and tcp.srcport == 6379"
 ```
 
-We can conclude  in c:\tracefile\file_16_44_00.pcap,  there are two streams, let's find the exact PCAP file and check further in Wirehsark. 
+We can conclude  in c:\tracefile\file_16_44_00.pcap,  there are two "problemtic" streams. Then we can open the exact PCAP file (\file_16_44_00.pcap) and look it in details by Wirhshark
 ```
 10.227.8.192 → 10.227.6.87   6379 → 41990 [SYN, ACK] is taking 1.03590400 to response
 10.227.4.160 → 10.227.6.87   6379 → 38444 [SYN, ACK] is taking 1.03606600 to response 
 ```
 
-## Sample Six － could we trust AB(AppacheBench) requests per second? 
+## Sample Six － could we trust AB(AppacheBench) requests per second?
 
 Today  I try to compare AB requests per second with OS level TCP connection
-ab is saying 
+ab is saying (lying)
 
-```
+``` bash
 root@mymachine:~# ab -n 5000000 -c 500 -H "connection:close" http://10.6.0.4:80/
 
 Time taken for tests:   280.039 seconds
@@ -251,7 +265,7 @@ In a modern environment, use AB RPS cannot describe the real world workload
 
 I requests team to do tcpdump and it ends with 4GB files, convert to CSV and we get 12GB csv, send to ADX, pretty good, we can query the details
 
-```
+```kql
 trace
 | extend aa=tolong(replace_string(frametime,'.',''))/1000
 | extend TT=unixtime_microseconds_todatetime(aa)
@@ -264,10 +278,22 @@ trace
 | project TT,DeltaDisplayed, SourceCA, DestCA, ipidinnner, Protocol,tcpseq, tcpack, Length, Info, tcpsrcport, tcpdstport, udpdstport, udpsrcport//,ethsrc, ethdst, frameprotocol
 | summarize count() by bin(TT,1s) | render timechart  
 ```
+![image](./.image/ab.png?raw=true)
 
+## Sample Sever - Use tshark to take rolling capture
 
+For long run capture, we can use rolling capture. the following sample will take 100 capture files and each file is set to 200MB
 
-## Reduce file size - Truncate packet lengths
+```bash
+C:\temp>d:\Wireshark\tshark -D
+1. \Device\NPF_{DC4266CC-D150-485B-AF26-CE59D246BD49} (Ethernet 4)
+2. \Device\NPF_{D8591B22-E79C-4AD7-B62A-13E917469A6D} (Ethernet)
+
+Enable tshark capture. Rolling tracking 
+C:\temp>d:\wireshark\tshark -i 2 -n -b filesize:204800 -w "C:\temp\%COMPUTERNAME%.pcap" -b files:100
+```
+
+## Sample Eight - Reduce file size - Truncate packet lengths
 
 If you have a massive Wireshark capture, and you are struggling to process it due to its sheer size, you can use editcap.exe (which lives in your `C:\Program Files\Wireshark` folder) to truncate the individual packets, leaving only the necessary header data. Note that this is *generally* 64 bytes for general TCP/UDP traffic, but can be more if you are looking at encapsulated packets, etc. 
 
@@ -277,7 +303,7 @@ The `-s` parameter allows you to select your snaplength. Here is the format:
 
 Real world example:
 
-``` cmd
+``` bash
 PS C:\Program Files\Wireshark> .\editcap.exe -s 128 C:\Downloads\mycap.pcap C:\Downloads\mycap-snaplen128.pcap
 ```
 
@@ -287,8 +313,9 @@ More on editcap.exe can be found here: [editcap(1) Manual Page](https://www.wire
 
 
 
-## Split based on number of packets
-```
+## Sample Night - Split large capture file with fix number of packets per file
+
+``` bash
 editcap.exe -c <number of packets per file> C:\path-to\OriginalFile.pcapng C:\path-to\NewFile.pcapng
 
 rem split one file
