@@ -2,12 +2,13 @@
 
 # Using Tshark to dump Packet details into TEXT format
 
-Everyday while I am working with Network trace, there are many scenerios
-- Share the trace analyze details with colleage, use screenshot (PrtScr or FastStone capture) is one way, but not very friend for email or MarkDown edit. 
-- Work with super large PCAP file to get useful insight, but filter in Wireshark is very slow
-- Work with many(1000+) PCAP files to apply same filter to get useful insight, combine pcap into one file could help but will hit the second limitation above. 
+Every day while I am working with network traces, there are many scenarios: 
+- Sharing the trace analysis details with colleagues can be done using screenshots (PrtScr or FastStone capture), but this is not very friendly for email or MarkDown editing. 
+- Working with very large PCAP files to gain useful insights can be slow, as filters in Wireshark take time to process. 
+- Working with many (1000+) PCAP files to apply the same filter to gain useful insights can be difficult; combining the PCAP files into one file might help, but this can lead to the second limitation mentioned above. 
+- Working with trace and try to generate insight of request per seconds. 
 
-Today, I introduce some ideas to leverage tshark work with PCAP file(s). 
+Today, I would like to introduce some ideas to leverage tshark for working with PCAP file(s).
 
 ## Sample One - Expand TCP Details of one specific Frame
 ``` bash
@@ -212,13 +213,13 @@ D:\temp>dir NetworkTrace*.*
 
 ## Sample Five - Detect 1s delay TCP SYN - TCP SYN/ACK for port 6379 traffic, Data source is 1000+ trace files 
 
-Today I get into a situation that need to review 1000+ pcap files to detect a problem whether TCP 3-way handshake is longer than 1 second
+I got into a situation today where I had to review over 1000 pcap files to detect a problem where the TCP 3-way handshake was taking longer than 1 second.
 
-To detect TCP 3-way handshake is longer than 1 second, I am using FILTER 
+To detect if a TCP 3-way handshake is taking longer than 1 second, I am using a FILTER.
 
 `tcp.analysis.ack_rtt >1 and tcp.flags.syn == 1 and tcp.flags.ack ==1`
 
-To make the FILTER works for 1000+ files, let's use Batch file
+To make the filter work for 1,000+ files, let's use a batch file
 
 ``` bash
 cd c:\tracefile
@@ -241,7 +242,7 @@ C:\Windows\System32>"c:\program files\wireshark\tshark" -r "c:\tracefile\file_16
 C:\Windows\System32>"c:\program files\wireshark\tshark" -r "c:\tracefile\file_16_47_00.pcap" "tcp.analysis.ack_rtt >1 and tcp.flags.syn == 1 and tcp.flags.ack ==1 and tcp.srcport == 6379"
 ```
 
-We can conclude  in c:\tracefile\file_16_44_00.pcap,  there are two "problemtic" streams. Then we can open the exact PCAP file (\file_16_44_00.pcap) and look it in details by Wirhshark
+We can conclude that in c:\tracefile\file_16_44_00.pcap, there are two "problematic" streams. Then, we can open the exact PCAP file (\file_16_44_00.pcap) and look at it in detail using Wireshark to analyze what the issue is.
 ```
 10.227.8.192 → 10.227.6.87   6379 → 41990 [SYN, ACK] is taking 1.03590400 to response
 10.227.4.160 → 10.227.6.87   6379 → 38444 [SYN, ACK] is taking 1.03606600 to response 
@@ -249,8 +250,9 @@ We can conclude  in c:\tracefile\file_16_44_00.pcap,  there are two "problemtic"
 
 ## Sample Six － could we trust AB(AppacheBench) requests per second?
 
-Today  I try to compare AB requests per second with OS level TCP connection
-ab is saying (lying)
+Today, we have received complaints that the user reported that the Apache Bench (AB) reported requests per second (RPS) below system limitations, but they were still throttled. 
+
+In order to compare the AB results and see where things went wrong, I researched the source code of AB. I found that its RPS calculation is simply the total number of requests divided by the time taken for the tests (5000000 / 280 = 17857). This does not accurately convey the number of requests sent out every second, and can lead to misguiding analysis in modern or cloud environments.
 
 ``` bash
 root@mymachine:~# ab -n 5000000 -c 500 -H "connection:close" http://10.6.0.4:80/
@@ -260,11 +262,8 @@ Complete requests:      5000000
 Requests per second:    17854.66 [#/sec] (mean) 
 Time per request:       28.004 [ms] (mean) 
 ```
-Review AB source code this is simply Complete requests divide Time taken for tests (5000000 / 280 = 17857) , it won't be able to tell in every seconds, how many requests was send out. 
-In a modern environment, use AB RPS cannot describe the real world workload 
 
-I requests team to do tcpdump and it ends with 4GB files, convert to CSV and we get 12GB csv, send to ADX, pretty good, we can query the details
-
+I requested that the team do a tcpdump, which resulted in a 4GB file. After converting to CSV, we had a 12GB file, which we sent to ADX. This provided us with the details we needed to investigate.
 ```kql
 trace
 | extend aa=tolong(replace_string(frametime,'.',''))/1000
