@@ -215,11 +215,11 @@ D:\temp>dir NetworkTrace*.*
 Today I get into a situation that need to review 1000+ pcap files to detect a problem whether TCP 3-way handshake is longer than 1 second
 
 To detect TCP 3-way handshake is longer than 1 second, I am using FILTER 
-``` kql
-tcp.analysis.ack_rtt >1 and tcp.flags.syn == 1 and tcp.flags.ack ==1
-```
+
+`tcp.analysis.ack_rtt >1 and tcp.flags.syn == 1 and tcp.flags.ack ==1`
 
 To make the FILTER works for 1000+ files, let's use Batch file
+
 ``` bash
 cd c:\tracefile
 for /f "delims=" %a in ('dir /b /o *.pcap') do "c:\program files\wireshark\tshark.exe" -r "c:\tracefile\%a" "tcp.analysis.ack_rtt >1 and tcp.flags.syn == 1 and tcp.flags.ack ==1 and tcp.srcport == 6379"
@@ -303,15 +303,11 @@ The `-s` parameter allows you to select your snaplength. Here is the format:
 
 Real world example:
 
-``` bash
-PS C:\Program Files\Wireshark> .\editcap.exe -s 128 C:\Downloads\mycap.pcap C:\Downloads\mycap-snaplen128.pcap
-```
+`C:\Program Files\Wireshark> .\editcap.exe -s 128 C:\Downloads\mycap.pcap C:\Downloads\mycap-snaplen128.pcap`
 
-This turned a 3.6GB file (C:\Downloads\mycap.pcap) (3,850,030 total packets) into a 350MB file (C:\Downloads\mycap-snaplen128.pcap).
+This turned one 3.6GB file `C:\Downloads\mycap.pcap` (3,850,030 total packets) into a 350MB file `C:\Downloads\mycap-snaplen128.pcap`.
 
 More on editcap.exe can be found here: [editcap(1) Manual Page](https://www.wireshark.org/docs/man-pages/editcap.html)
-
-
 
 ## Sample Night - Split large capture file with fix number of packets per file
 
