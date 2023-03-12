@@ -27,7 +27,23 @@
        Add-AppxPackage -Path C:\setup\Microsoft.UI.Xaml.2.7_7.2208.15002.0_x64__8wekyb3d8bbwe.Appx
        Add-AppxPackage -Path C:\setup\Microsoft.WindowsTerminal_Win11_1.15.2875.0_8wekyb3d8bbwe.msixbundle
       ```
-
+1. how to get temperature 
+   WMIC version
+   ```dos
+   wmic /namespace:\\root\wmi PATH MSAcpi_ThermalZoneTemperature get CriticalTripPoint, CurrentTemperature
+   ```
+   Powershell version
+   ```powershell
+   $a=Get-CimInstance -Namespace root/wmi -ClassName MsAcpi_ThermalZoneTemperature | select CriticalTripPoint, CurrentTemperature , InstanceName
+   foreach ($line in $a) { write-output "$($line.InstanceName),$(($line.CriticalTripPoint-2732)/10),$(($line.CurrentTemperature-2732)/10)"}
+    ACPI\ThermalZone\CPUZ_0,128,71
+    ACPI\ThermalZone\GFXZ_0,128,30
+    ACPI\ThermalZone\EXTZ_0,128,41
+    ACPI\ThermalZone\LOCZ_0,128,47
+    ACPI\ThermalZone\BATZ_0,128,23
+    ACPI\ThermalZone\CHGZ_0,128,45
+    ACPI\ThermalZone\PCHZ_0,128,0
+   ```
 
 
 
