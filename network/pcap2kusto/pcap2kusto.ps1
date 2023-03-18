@@ -135,7 +135,7 @@ function CSVtoContainer([string]$csvfile,[string]$sastoken,[string]$jobid)
     if (-not ((get-command "azcopy").count -eq 0)) #if we have azcopy installed or use $useWebClient switch is enabled, fall back to System.Net.WebClient download. otherwise use azcopy to speed up the download performance
     {
         Write-UTCLog "  +++ (azcopy10) upload $csvfile " -color "Green"
-        $cmdazcopy="azcopy copy ""$($csvfile)"" ""$($sastoken)""" #--check-md5 NoCheck
+        $cmdazcopy="azcopy copy ""$($csvfile)"" ""$($sastoken)"" --overwrite=ifSourceNewer"  
         if ($debug) {Invoke-Expression $cmdazcopy} else {Invoke-Expression $cmdazcopy|Out-Null}
     }
     else {
