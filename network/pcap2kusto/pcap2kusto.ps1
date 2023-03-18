@@ -65,7 +65,7 @@ Param (
 	[string]$kustotable, # 
 	# table naming rule https://learn.microsoft.com/en-us/azure/data-explorer/kusto/query/schema-entities/entity-names
 	[string]$sastoken,
-    [string]$kustcli="D:\Source_git\Script\KustoCLI\Kusto.Cli.exe",
+    [string]$kustocli="D:\Source_git\Script\KustoCLI\Kusto.Cli.exe",
     [string]$tsharkcli="c:\program files\wireshark\tshark.exe",
     [switch]$newtable,
     [switch]$debug  #if debug is enable, will output function callname
@@ -121,7 +121,7 @@ function CSVtoKustoEmulator([string]$csvfile,[string]$kustoendpoint,[string]$kus
     if ($debug) {Write-UTCLog "  ++kql: $($kqlcsv)"  "cyan"}
     $kqlcsv|out-file "$($env:temp)\$($(Get-ChildItem $csvfile).BaseName)_$($jobid)_1_ingress.kql" -Encoding ascii
 
-    $kqlcmd="$($kustcli) ""$kustoendpoint"" -script:""$($env:temp)\$($(Get-ChildItem $csvfile).BaseName)_$($jobid)_1_ingress.kql"""
+    $kqlcmd="$($kustocli) ""$kustoendpoint"" -script:""$($env:temp)\$($(Get-ChildItem $csvfile).BaseName)_$($jobid)_1_ingress.kql"""
     if ($debug) {Write-UTCLog "  ++kqlcmd: $($kqlcmd)" "cyan"}
     Write-UTCLog "  +++ (Kusto.Cli) (Local) ingress table $($kustotable) from ($($csvfilename))" -color "Green"
 
@@ -132,14 +132,14 @@ function CSVtoKustoEmulator([string]$csvfile,[string]$kustoendpoint,[string]$kus
 function CSVtoContainer([string]$csvfile,[string]$sastoken,[string]$jobid)
 {
     if ($debug) {Write-UTCLog " +++function:CSVtoContainer " "cyan"}
-    if (!((get-command "azcopy").count -eq 0)) #if we have azcopy installed or use $useWebClient switch is enabled, fall back to System.Net.WebClient download. otherwise use azcopy to speed up the download performance
+    if (-not ((get-command "azcopy").count -eq 0)) #if we have azcopy installed or use $useWebClient switch is enabled, fall back to System.Net.WebClient download. otherwise use azcopy to speed up the download performance
     {
         Write-UTCLog "  +++ (azcopy10) upload $csvfile " -color "Green"
         $cmdazcopy="azcopy copy ""$($csvfile)"" ""$($sastoken)""" #--check-md5 NoCheck
         if ($debug) {Invoke-Expression $cmdazcopy} else {Invoke-Expression $cmdazcopy|Out-Null}
     }
     else {
-        Write-UTCLog "  +++ azcopy(10) cannot be found, please install wireshark and continue" -color "Red"
+        Write-UTCLog "  +++ azcopy(10) cannot be found, please review installation and continue" -color "Red"
         return
     }
 }
@@ -157,7 +157,7 @@ function CSVtoKustoCluster([string]$csvfile,[string]$kustoendpoint,[string]$kust
     $kqlcsvblob=".ingest into table $($kustotable) (@""$($csvsas)"") with (format='csv',ignoreFirstRecord=true)"
     if ($debug) {Write-UTCLog "  ++kql: $($kqlcsvblob)"  "cyan"}
     $kqlcsvblob|out-file "$($env:temp)\$($(Get-ChildItem $csvfile).BaseName)_$($jobid)_1_ingress.kql" -Encoding ascii
-    $kqlcmd="$($kustcli) ""$kustoendpoint"" -script:""$($env:temp)\$($(Get-ChildItem $csvfile).BaseName)_$($jobid)_1_ingress.kql"""
+    $kqlcmd="$($kustocli) ""$kustoendpoint"" -script:""$($env:temp)\$($(Get-ChildItem $csvfile).BaseName)_$($jobid)_1_ingress.kql"""
     if ($debug) {Write-UTCLog "  ++kqlcmd: $($kqlcmd)" "cyan"}
     Write-UTCLog "  +++ (Kusto.Cli) (ADX) ingress table $($kustotable) from blob $($csvfilename)" -color "Green"
 
@@ -201,26 +201,79 @@ function pcap2kustocore([string]$pcapfile,[string]$csvfile,[string]$kustoendpoin
 $tracefolder=$tracefolder.TrimEnd("\")  #remove extra "\"
 $csvfolder=$csvfolder.TrimEnd("\") #remove extra "\"
 
-if (!(Test-Path $tsharkcli))
-{
-    Write-UTCLog "'$($tsharkcli)' cannot be found, please install wireshark and continue" "red"
-    exit
-}
-
-if (!(Test-path $csvfolder))
+#determine target folder exist or not
+if (-not (Test-path $csvfolder))
 {
     Write-UTCLog "'$($csvfolder)' does not exsit! Creating" "Yellow"
     mkdir $csvfolder 
 }
 
+# check tshark.exe exist, 
+if (-not (Test-Path $tsharkcli))
+{
+    Write-UTCLog "'$($tsharkcli)' wasn't found, download and install Wireshark 3.4.9" "red"
+    # Download the Wireshark installer
+    (New-Object System.Net.WebClient).DownloadFile("https://www.wireshark.org/download/win64/all-versions/Wireshark-win64-3.4.9.exe", "$($env:temp)\wireshark.exe")
+
+    # Install Wireshark silently
+    $arguments = "/S /D=`"$($env:ProgramFiles)\Wireshark`""
+    Start-Process -FilePath "$($env:temp)\wireshark.exe" -ArgumentList $arguments -Wait
+
+    # Clean up the temporary files
+    Remove-Item -Path "$($env:temp)\wireshark.exe"
+
+    if (Test-Path $tsharkcli)
+    {
+        #config tshark alias and we can use in current session
+        Set-Alias -Name tshark -Value $tsharkcli        
+        Write-UTCLog " $((tshark --version)[0]) is installed."  "Green"
+    }
+    else {
+        Write-UTCLog " tshark installation failed."  "Red"
+    }
+}
+else {
+    Set-Alias -Name tshark -Value $tsharkcli        
+    Write-UTCLog " $((tshark --version)[0]) is installed."  "Green"
+}
+
+
+# Check if AzCopy is already installed
+if (-not (Get-Command azcopy -ErrorAction SilentlyContinue)) {
+
+    Write-UTCLog "  azcopy wasn't found, download & unzip azcopy" -color "Yellow"
+    # Download the AzCopy executable
+    (New-Object System.Net.WebClient).DownloadFile("https://aka.ms/downloadazcopy-v10-windows", "$($env:temp)\azcopy.zip")
+    
+    # Extract the AzCopy executable
+    Expand-Archive -Path "$($env:temp)\azcopy.zip" -DestinationPath $env:temp -Force
+
+    # Clean up the temporary files
+    Remove-Item -Path "$($env:temp)\azcopy.zip"
+
+    #config azcopy alias and we can use in current session
+    Set-Alias -Name azcopy -Value (Get-ChildItem "$($env:temp)\azcopy.exe" -Recurse)[0].FullName
+
+    # Verify that AzCopy is installed
+    if (Get-Command azcopy -ErrorAction SilentlyContinue) {
+        Write-UTCLog " $(azcopy --version) is installed."  "Green"
+    } else {
+        Write-UTCLog " azcopy installation failed."  "Red"
+    }
+}
+else {
+    Write-UTCLog " $(azcopy --version) is installed."  "Green"
+}
+
+# Check if KustoCli is already installed
 if ([string]::IsNullOrEmpty($kustoendpoint))
 {
     Write-UTCLog " -KustoEndpoint is not specified, pcap2csv only" "Red"
 }
 else {
-    if (!(Test-path $kustcli))
+    if (-not (Test-path $kustocli))
     {
-        Write-UTCLog "'$($kustcli)' cannot be found, please install KustoCLI and continue" "red"
+        Write-UTCLog "'$($kustocli)' cannot be found, please install KustoCLI https://www.nuget.org/packages/Microsoft.Azure.Kusto.Tools/#release-body-tab and continue" "red"
         $kustoendpoint = $null
         $kustotable = $null
         $sastoken = $null
@@ -234,7 +287,7 @@ else {
             $kqlnewtable1=".create table $($kustotable) (framenumber:long,frametime:string,DeltaDisplayed:string,Source:string,Destination:string,ipid:string,Protocol:string,tcpseq:string,tcpack:string,Length:int,tcpsrcport:int,tcpdstport:int,udpsrcport:int,udpdstport:int,tcpackrtt:string,frameprotocol:string,Info:string,ethsrc:string,ethdst:string,SourceV6:string,DestinationV6:string,ipProtocol:string)"
             $kqlnewtable0|out-file "$($env:temp)\$($globalid)_0_createtable.kql" -Encoding ascii
             $kqlnewtable1|out-file "$($env:temp)\$($globalid)_0_createtable.kql" -Encoding ascii -Append
-            $kqlcmd="$($kustcli) ""$kustoendpoint"" -script:""$($env:temp)\$($globalid)_0_createtable.kql"""
+            $kqlcmd="$($kustocli) ""$kustoendpoint"" -script:""$($env:temp)\$($globalid)_0_createtable.kql"""
             Write-UTCLog " (Kusto.Cli.exe) create new table $($kustotable) @ $($kustoendpoint)" -color "Green"
             if ($debug) {Write-UTCLog "  ++kqlcmd: $($kqlcmd)" "cyan"}
             #execute kusto
