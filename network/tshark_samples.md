@@ -164,7 +164,7 @@ To work with list of cap files, let's create one batch file
 ``` bash
 * following command must run Windows Command Prompt not Powershell
 cd d:\temp
-for /f "delims=" %a in ('dir /b /o *.pcap') do "c:\program files\wireshark\tshark" -r "%a" -T fields -e frame.number -e frame.time_epoch -e frame.time_delta_displayed -e ip.src -e ip.dst -e ip.id -e _ws.col.Protocol -e tcp.seq -e tcp.ack -e frame.len -e tcp.srcport -e tcp.dstport -e udp.srcport -e udp.dstport -e tcp.analysis.ack_rtt -e frame.protocols -e _ws.col.Info -e eth.src -e eth.dst -e ipv6.src -e ipv6.dst -e ip.proto -E header=y -E separator=, -E quote=d > "%a.csv"
+for /f "delims=" %a in ('dir /b /o *.pcap') do "c:\program files\wireshark\tshark" -r "%a" -T fields -e frame.number -e frame.time_epoch -e frame.time_delta_displayed -e ip.src -e ip.dst -e ip.id -e _ws.col.Protocol -e tcp.seq -e tcp.ack -e frame.len -e tcp.srcport -e tcp.dstport -e udp.srcport -e udp.dstport -e tcp.analysis.ack_rtt -e frame.protocols -e _ws.col.Info -e eth.src -e eth.dst -e ipv6.src -e ipv6.dst -e ip.proto -E header=y -E separator=, -E quote=d > "%~na.csv"
 
 rem before process
 
@@ -335,5 +335,5 @@ rem - for one file
 "c:\Program Files\Wireshark\tshark.exe" -r tracefile001.pcap -2R "icmp" -w icmp\tracefile001.icmp.pcap
 
 rem - for all files
-for /f "delims=" %a in ('dir /b /o *.pcap') do "c:\program files\wireshark\tshark.exe" -r "%a" -Y "icmp" -w icmp\$a.icmp.pcap
+for /f "delims=" %a in ('dir /b /o *.pcap') do "c:\program files\wireshark\tshark.exe" -r "%a" -Y "icmp" -w "icmp\%~na.icmp.pcap"
 ```
