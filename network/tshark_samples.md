@@ -325,9 +325,10 @@ Wireshark will append a suffix in the format of -nnnnn_YYYYMMDDHHMMSS.
 nnnnn starts at 00000 and increments for each file
 YYYYMMDDHHMMSS is the timestamp of the first packet in the new file
 
-## Sample Ten - find out all ICMP traffic from 250GB trace file, and analyze 
+## Sample Ten - Find out all ICMP traffic from a 1000+ (459GB) trace file and analyze it.
 
-I got into a situation today where I had to review over 1002 pcap files (total 459GB) to detect review ICMP traffic. 
+I found myself in a situation today where I had to review over 1002 pcap files (total 459GB) to review ICMP traffic."
+I hope that helps! Let me know if you have any other questions.
 
 ``` bash
 rem - for one file 
