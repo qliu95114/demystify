@@ -324,3 +324,16 @@ Wireshark will append a suffix in the format of -nnnnn_YYYYMMDDHHMMSS.
 
 nnnnn starts at 00000 and increments for each file
 YYYYMMDDHHMMSS is the timestamp of the first packet in the new file
+
+## Sample Ten - find out all ICMP traffic from 250GB trace file, and analyze 
+
+I got into a situation today where I had to review over 1002 pcap files (total 459GB) to detect review ICMP traffic. 
+
+``` bash
+rem - for one file 
+"c:\Program Files\Wireshark\tshark.exe" -r tracefile001.pcap -Y "icmp" -w icmp\tracefile001.icmp.pcap
+"c:\Program Files\Wireshark\tshark.exe" -r tracefile001.pcap -2R "icmp" -w icmp\tracefile001.icmp.pcap
+
+rem - for all files
+for /f "delims=" %a in ('dir /b /o *.pcap') do "c:\program files\wireshark\tshark.exe" -r "%a" -Y "icmp" -w icmp\$a.icmp.pcap
+```
