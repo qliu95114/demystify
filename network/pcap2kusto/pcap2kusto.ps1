@@ -3,48 +3,47 @@
 Import Network Trace file to Azure Data Explorer (ADX or Kusto Emulator)
 
 .DESCRIPTION
-Covert one cap or pcap to CSV 
-Covert *.cap or *.pcap under a folder to CSV files
-Kusto Emulaor, same machine or use file share path 
-Kusto Cluster, use storage container sas token we can upload 
-Table name are needed, or -newtable , script will create one
+This script converts one cap or pcap file to CSV format and can also convert all *.cap or *.pcap files in a folder to CSV files. 
+It can be used with Kusto Emulator on the same machine or with a file share path. 
+For Kusto Cluster, a storage container sas token can be provided to upload files. 
+Table names are required, or the script will create one.
 
 .PARAMETER -tracefolder
-The folder name where trace located 
+The name of the folder where the trace is located.
 
 .PARAMETER -tracefile 
-The trace file that need be converted.
+The name of the trace file that needs to be converted.
 
 .PARAMETER -csvfolder
-where CSV file will be converted
+The location where the CSV file will be saved.
 
 .PARAMETER -kustoendpoint
-kusto endpoint (database name included, database name is case-sensitive)
+The Kusto endpoint, including the database name (case-sensitive).
 
 .PARAMETER -kustotable 
-table name of kusto, case-sensitive
+The name of the Kusto table (case-sensitive).
 
 .PARAMETER -sastoken
-provide valid SASTOKEN to Azure Storage Account - Container level, permission read/write/list 
+A valid SASTOKEN is required for Azure Storage Account at the Container level, with permissions for read/write/list.
 
 .PARAMETER -logfile 
-Default option $($env:temp)\pcap2kusto_timestamp.log
+The default option is $($env:temp)\pcap2kusto_timestamp.log.
 
 .EXAMPLE
-covert e:\share\*.pcap to e:\share\csv\*.csv 
+convert e:\share\*.pcap to e:\share\csv\*.csv 
 .\pcap2kusto.ps1 -tracefolder e:\share -tracefile *.pcap -csvfolder e:\share\csv 
 
-covert e:\share\*.pcap to e:\share\csv\*.csv and import to local kusto cluster
+convert e:\share\*.pcap to e:\share\csv\*.csv and import to local kusto cluster
 .\pcap2kusto.ps1 -tracefolder e:\share -tracefile *.pcap -csvfolder e:\share\csv -kustoendpoint http://localhost:8080/public -kustotable mytablename
 
-covert e:\share\*.pcap to e:\share\csv\*.csv and import to local kusto cluster, drop / create new table -newtable
+convert e:\share\*.pcap to e:\share\csv\*.csv and import to local kusto cluster, drop / create new table -newtable
 .\pcap2kusto.ps1 -tracefolder e:\share -tracefile *.pcap -csvfolder e:\share\csv -kustoendpoint http://localhost:8080/public -kustotable mytablename
 
-covert e:\share\*.pcap to e:\share\csv\*.csv , use storage account and import to kusto, get one from http://aka.ms/kustofree
-.\pcap2kusto.ps1 -tracefolder e:\share -tracefile *.pcap -csvfolder e:\share\csv -kustoendpoint https://kvcy2wf2t0n1epwsyck1cj.australiaeast.kusto.windows.net/public -kustotable pcap2kustotable  -sastoken <SAS>
+convert e:\share\*.pcap to e:\share\csv\*.csv , use storage account and import to kusto, get one from http://aka.ms/kustofree
+.\pcap2kusto.ps1 -tracefolder e:\share -tracefile *.pcap -csvfolder e:\share\csv -kustoendpoint "https://kvcy2wf2t0n1epwsyck1cj.australiaeast.kusto.windows.net/public;AAD Federated Security=True" -kustotable pcap2kustotable  -sastoken <SAS>
 
-covert e:\share\*.pcap to e:\share\csv\*.csv , use storage account and import to kusto, drop / create new table
-.\pcap2kusto.ps1 -tracefolder e:\share -tracefile *.pcap -csvfolder e:\share\csv -kustoendpoint https://kvcy2wf2t0n1epwsyck1cj.australiaeast.kusto.windows.net/public -kustotable pcap2kustotable  -sastoken <SAS> -newtable
+convert e:\share\*.pcap to e:\share\csv\*.csv , use storage account and import to kusto, drop / create new table
+.\pcap2kusto.ps1 -tracefolder e:\share -tracefile *.pcap -csvfolder e:\share\csv -kustoendpoint "https://kvcy2wf2t0n1epwsyck1cj.australiaeast.kusto.windows.net/public;AAD Federated Security=True" -kustotable pcap2kustotable  -sastoken <SAS> -newtable
 
 Create kusto table 
 .drop table pcap2kustotable
@@ -53,6 +52,7 @@ Create kusto table
 
 <#
 author: qliu 
+2023-03-25, Fix a few bugs & comments 
 2023-03-18, FIRST VERSION
 #>
 
@@ -234,7 +234,7 @@ if (-not (Test-Path $tsharkcli))
 }
 else {
     Set-Alias -Name tshark -Value $tsharkcli        
-    Write-UTCLog " $((tshark --version)[0]) is installed."  "Green"
+    Write-UTCLog " $((tshark --version)[0]) is installed.  Location: '$($tsharkcli)'"  "Green"
 }
 
 
