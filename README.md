@@ -10,6 +10,8 @@
 1. How can ADX be used to analyze NSGFlowLogV2 (get raw JSON logs from customers and others without configuring LA)?
 1. How can ADX be used to analyze random text logs (Linux secure logs, random DNS fail logs, etc.)?
 1. Linux_bash: Post-boot script for Azure VMs.
+1. network\pcap2kusto\pcap2kusto.ps1 : import PCAP to Kusto
+1. network\pcap2kusto\mergecapfiles.ps1 : merge all pcap files under one folder to one pcap file
 
 ## Things are NOT related to Azure Platform 
 
