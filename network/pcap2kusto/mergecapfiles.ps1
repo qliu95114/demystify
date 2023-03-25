@@ -120,7 +120,7 @@ if (Test-Path $tracefolder)  #validate
                     }
                     $i++
                 }
-                Rename-Item "$($tracefolder)\$($guid)_$($i-1).pcapng" $($targetfile)
+                Move-Item "$($tracefolder)\$($guid)_$($i-1).pcapng" $($targetfile)
                 Write-UTCLog " Pcap $($tracefolder)\$($tracefile) Total : $($pcapfilelist.count) File(s) merged" "Yellow"
                 Write-UTCLog " Target file: $($targetfile)" "Yellow"
             }
