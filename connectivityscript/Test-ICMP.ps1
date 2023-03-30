@@ -22,21 +22,34 @@ Param (
     [ValidateScript({$_ -match [IPAddress]$_ })]    
     [string]$IPAddress,
 	[string]$logpath=$env:temp,
-    [int]$wait=1000,
+    [int]$intervalinMS=1000,
     [int]$timeout=1000,
     [int]$size=96,
     [int]$n=10,
     [switch]$forever
 )
 
-$logfile= Join-Path $logpath $($env:COMPUTERNAME+"_ICMP_"+$IPAddress+"_"+((get-date).ToUniversalTime()).ToString("yyyyMMddTHHmmss")+".log")
+Function Write-UTCLog ([string]$message,[string]$color="white")
+{
+    	$logdate = ((get-date).ToUniversalTime()).ToString("yyyy-MM-dd HH:mm:ss")
+    	$logstamp = "["+$logdate + "]," + $message
+        Write-Host $logstamp -ForegroundColor $color
+#    	Write-Output $logstamp | Out-File $logfile -Encoding ASCII -append
+}
 
+$logfile= Join-Path $logpath $($env:COMPUTERNAME+"_Ping_"+$IPAddress+"_"+((get-date).ToUniversalTime()).ToString("yyyyMMddTHHmmss")+".log")
 
- Write-host "Log File : "$logfile -Fo Cyan 
+Write-UTCLog "Log File : $($logfile) , Press <CTRL> + C to stop" -color Cyan 
+Write-UTCLog "IPaddress : $($IPAddress) " -color Cyan
+Write-UTCLog "Interval : $($intervalinMS) (ms)" -color Cyan
+Write-UTCLog "Timeout : $($timeout) (ms) " -color Cyan
+Write-UTCLog "PingSize : $($size) (bytes) " -color Cyan
+Write-UTCLog "Repeat : $($n) " -color Cyan
+Write-UTCLog "ContinuePing : $($forever) " -color Cyan
+
 $killswitch=1
- Write-Host "Running ping test to " $IPAddress " every 1 seconds. Logs errros to screen. Press <CTRL> C to stop." -Fo Cyan
 
-"TIMESTAMP,TYPE,LATENCY,RESULT" | Out-File $logfile -Encoding utf8
+"TIMESTAMP,COMPUTERNAME,TYPE,LATENCY,RESULT" | Out-File $logfile -Encoding utf8
 while (($killswitch -le $n) -or ($forever)) {
 
     $object = New-Object system.Net.NetworkInformation.Ping
@@ -46,15 +59,15 @@ while (($killswitch -le $n) -or ($forever)) {
 #   $latency
 
 If (!($result.Status -eq "Success")) {
-    $result = ((get-date).ToUniversalTime()).ToString("yyyy-MM-dd HH:mm:ss.fff")+",ERROR,"+$latency+",Ping "+$IPAddress+" Fail - Request timed out. "
+    $result = ((get-date).ToUniversalTime()).ToString("yyyy-MM-dd HH:mm:ss.fff")+",$($env:COMPUTERNAME),ERROR,"+$latency+",Ping "+$IPAddress+" Fail - Request timed out. "
     $result | Out-File $logfile -Encoding utf8 -Append
     Write-Host $result -Fo Red
  }
  Else {
-    $result =((get-date).ToUniversalTime()).ToString("yyyy-MM-dd HH:mm:ss.fff")+",INFO,"+$latency+",Ping "+$IPAddress+" ok"
+    $result =((get-date).ToUniversalTime()).ToString("yyyy-MM-dd HH:mm:ss.fff")+",$($env:COMPUTERNAME),INFO,"+$latency+",Ping "+$IPAddress+" ok"
     $result | Out-File $logfile -Encoding utf8 -Append
     Write-Host $result -Fo Green
-    Start-Sleep -m $wait
+    Start-Sleep -Milliseconds $intervalinMS
  }
  $killswitch++
 }

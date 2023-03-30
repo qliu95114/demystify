@@ -1,7 +1,7 @@
 ﻿
 <#
 co-authoer: qliu
-Usage: Test-Https.ps1  -HttpsUrl URL  [-Interval 20]
+Usage: Test-Https.ps1  -HttpsUrl URL  -IntervalinMS 2000 -timeout 3
 Output: build a TEXT output Warp on top of Invoke-WebRequest, 
 
 Version: 1.0.20181205.1702
@@ -18,18 +18,28 @@ Change:
 
 Param (
     [Parameter(Mandatory=$false, Position=0)]
-    [string]$Url = "https://www.microsoft.com",
-    
-    [int32]$interval = 10,
+    [string]$Url = "https://dns.google",
+    [int]$timeout=3,
+    [int]$intervalinMS=5000,  #interval is -Milliseconds,
 	[string]$logpath=$env:temp,
-    [switch]$NoVerboseLog 
+    [switch]$VerboseLog
 )
 
+Function Write-UTCLog ([string]$message,[string]$color="white")
+{
+    	$logdate = ((get-date).ToUniversalTime()).ToString("yyyy-MM-dd HH:mm:ss")
+    	$logstamp = "["+$logdate + "]," + $message
+        Write-Host $logstamp -ForegroundColor $color
+#    	Write-Output $logstamp | Out-File $logfile -Encoding ASCII -append
+}
 
-$logfile= Join-Path  $logpath $($env:COMPUTERNAME+"_TestHTTPS_"+((get-date).ToUniversalTime()).ToString("yyyyMMddTHHmmss")+".log")
-Write-host "Log File : "$logfile -Fo Cyan 
+$logfile= Join-Path $logpath $($env:COMPUTERNAME+"_TestHTTPS_$($url.split('/')[2])_$((get-date).ToUniversalTime().ToString('yyyyMMddTHHmmss')).log")
+Write-UTCLog "Log File : $($logfile)" -color "Cyan"
 
-Write-Host "Running Invoke-WebRequest test to URL: $Url every $($interval) seconds. Logs errors to screen. Press <CTRL> C to stop. " -Fo Cyan
+Write-UTCLog "Running Invoke-WebRequest(IWR) test, press CTRL + C to stop" 
+Write-UTCLog "URL : $($Url) "  "Yellow"
+Write-UTCLog "Interval : $($intervalinMS) (ms)" -color "Yellow"
+Write-UTCLog "IWR_Timeout : $($timeout) (s)" -color "Yellow"
 
 add-type @"
 using System.Net;
@@ -48,8 +58,8 @@ public class TrustAllCertsPolicy : ICertificatePolicy {
 $killswitch=1
 $failcount=0
 
-$headline="TIMESTAMP,RESULT,FailCount,URL,StatusCode,ResponseSize"
-$headline > $logfile
+$headline="TIMESTAMP,COMPUTERNAME,RESULT,FailCount,URL,StatusCode,ResponseSize"
+$headline | Out-File $logfile -Encoding utf8
 
 while ($killswitch -ne 0) 
 {
@@ -58,16 +68,16 @@ while ($killswitch -ne 0)
     {
         $strState = "Success"
 
-        $out = Invoke-WebRequest $Url 
-        $out
+        $out = Invoke-WebRequest $Url -UseBasicParsing -TimeoutSec $timeout
         #$result = ((get-date).ToUniversalTime()).ToString("yyyy-MM-dd HH:mm:ss")+","+$strState+",-,"+$Url
         $failcount = 0; #reset fault count on every successful test.
-        $result = ($timeStart.ToUniversalTime()).ToString("yyyy-MM-dd HH:mm:ss")+","+$strState+",-,"+$Url+","+$out.StatusCode+","+$out.RawContentLength
-        Write-Host $result -Fo Green
-        $result >> $logfile
-        if(!($NoVerboseLog))
+        $result = "$($timeStart.ToUniversalTime().ToString('yyyy-MM-dd HH:mm:ss')),$($env:COMPUTERNAME),$($strState),0,$($Url),$($out.StatusCode),$($out.RawContentLength)"
+        Write-Host $result -Fo "Cyan"
+        $result |Out-File $logfile -Encoding utf8 -Append
+        if($VerboseLog)
         {
-            $out >> $logfile
+            $out.RawContent
+            $out.RawContent | Out-File $logfile -Encoding utf8 -Append
         }    
 
     }
@@ -75,22 +85,23 @@ while ($killswitch -ne 0)
     {
         $failcount++
         $strState = "ERROR"
-        $result = ((get-date).ToUniversalTime()).ToString("yyyy-MM-dd HH:mm:ss")+","+$strState+","+$failcount+" times"+","+$Url+","+$_.Exception.Response.StatusCode.Value__+","+$out.RawContentLength
-        Write-Host $result -Fo Red
+        $result = "$((get-date).ToUniversalTime().ToString('yyyy-MM-dd HH:mm:ss')),$($env:COMPUTERNAME),$($strState),$($failcount),$($Url),$($_.Exception.Response.StatusCode.Value),$($out.RawContentLength)"
+        Write-Host $result -Fo "Red"
         $result >> $logfile
-
-        $Error[0]   >> $logfile 
+        $Error[0] | Out-File $logfile -Encoding utf8 -Append
     }
 
     # calculate the sleep time based on running time.
     $timeEnd = Get-Date
     $timeSpan = NEW-TIMESPAN -Start $timeStart –End $timeEnd
-    $sleepInterval = $interval*1000 - $timeSpan.TotalMilliseconds
-    Write-Verbose "Sleep interval: $sleepInterval - Time span: $($timeSpan.Milliseconds) - Start time: $($timeStart.Second).$($timeStart.Millisecond) - End time: $($timeEnd.Second).$($timeEnd.Millisecond)"
-    
-    if ($sleepInterval -gt 0) 
+    $sleepInterval = $intervalinMS - $timeSpan.TotalMilliseconds 
+    if ($sleepInterval -gt 0)
     {
+        Write-UTCLog "Sleep (ms): $($sleepInterval) - LastRequestTimeCost(ms): $($timeSpan.Milliseconds)"  "Green"
         Start-Sleep -Milliseconds $sleepInterval
+    }
+    else {
+        Write-UTCLog "Sleep (ms): 0 - LastRequestTimeCost(ms): $($timeSpan.Milliseconds)"  "Yellow"
     }
 }
 
