@@ -109,7 +109,7 @@ sudo su  #must be in sudo mode.
 Output paping result with UTC timestamp
 Console & LogFile : "$(hostname -s)_paping.log"
 ```
-./paping www.bing.com -p 443| while read pong; do echo "$(date -u +'%F %H:%M:%S') - $pong";done 2>&1 | tee "$(hostname -s)_paping.log"
+target="www.bing.com";port="443";./paping $target -p $port| while read pong; do echo "$(date -u +'%F %H:%M:%S') - $pong";done 2>&1 | tee "$(hostname -s)_paping_${target}_${port}.log"
 ```
 paping command
 ```
@@ -123,18 +123,18 @@ paping [-c count]
 Output paping result with UTC timestamp
 Console & LogFile : "$(hostname -s)_nc.log"
 ```
-while true; do echo "`date -u +'%F %H:%M:%S'` - `nc -vvzw 2 www.bing.com 443 2>&1`";sleep 1; done 2>&1 | tee "$(hostname -s)_nc.log"
+target="www.bing.com";while true; do echo "`date -u +'%F %H:%M:%S'` - `nc -vvzw 2 $target 443 2>&1`";sleep 1; done 2>&1 | tee "$(hostname -s)_nc_${target}.log"
 ```
 ## Linux - Script (ICMP - ping)
 
 Output ping result with UTC timestamp
 Console & LogFile : "$(hostname -s)_ping.log"
 ```
-while true; do ping 192.168.3.5 -w 3 -c 1 -i 3| while read pong; do echo "$(date -u +'%F %H:%M:%S') - $pong"; done ;sleep 1; done 2>&1 | tee "$(hostname -s)_ping.log"
+ipaddr="192.168.3.11";ping -O $ipaddr -W 1 -i 1| while read pong; do echo "$(date -u +'%F %H:%M:%S') - $pong"; done 2>&1 | tee "$(hostname -s)_ping_${ipaddr}.log"
+ipaddr="192.168.3.11";ping -O $ipaddr -W 1 -i 1| while read pong; do echo "$(date -u +'%F %H:%M:%S') - $pong"; done 
 ```
 ```
-ping 192.168.3.5| while read pong; do echo "$(date -u +'%F %H:%M:%S') - $pong"; done 2>&1 | tee "$(hostname -s)_ping.log"
-ping 192.168.3.5| while read pong; do echo "$(date -u +'%F %H:%M:%S') - $pong"; done 
+ipaddr="192.168.3.11";while true; do ping -O $ipaddr -W 1 -c 1| while read pong; do echo "$(date -u +'%F %H:%M:%S') - $pong"; done ;sleep 1; done 2>&1 | tee "$(hostname -s)_ping_${ipaddr}.log"
 ```
 
 ## Linux - Script (HTTPS - curl)
@@ -142,7 +142,7 @@ ping 192.168.3.5| while read pong; do echo "$(date -u +'%F %H:%M:%S') - $pong"; 
 Output Curl output with UTC timstamp
 Console & LogFile : "$(hostname -s)_curl.log"
 ```
-while true; do curl -o /dev/null --connect-timeout 1.0 -s -w "remote_ip:%{remote_ip},dns_resolution:%{time_namelookup},tcp_established:%{time_connect},ssl_handshake_done:%{time_appconnect},TTFB:%{time_starttransfer},httpstatus:%{http_code},size_download:%{size_download}\n" https://www.google.com | while read pong; do echo "$(date -u +'%F %H:%M:%S') - $pong"; done; sleep 1; done 2>&1 | tee "$(hostname -s)_curl.log"
+url="https://www.google.com";hh=$(echo $url|cut -d'/' -f3);while true; do curl -o /dev/null --connect-timeout 1.0 -s -w "${hh},remote_ip:%{remote_ip},dns_resolution:%{time_namelookup},tcp_established:%{time_connect},ssl_handshake_done:%{time_appconnect},TTFB:%{time_starttransfer},httpstatus:%{http_code},size_download:%{size_download}\n" $url | while read pong; do echo "$(date -u +'%F %H:%M:%S') - $pong"; done; sleep 1; done 2>&1 | tee "$(hostname -s)_curl_${hh}.log"
 ```
 
 
