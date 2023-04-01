@@ -40,9 +40,19 @@ Sample output
 
 ## Windows - Powershell (HTTP/HTTPS iwr (invoke-webrequest), same source port, continoue traffic)
 ```
-$url="https://www.bing.com";$internal=5;$timeout=5;while ($true) {$iwr=invoke-webrequest $url -UseBasicParsing -TimeoutSec $timeout;"{0},{1},{2},{3},{4}" -f (Get-Date).ToUniversalTime().ToString("yyyy-MM-dd HH:mm:ss"),$($url),$iwr.StatusCode,$iwr.StatusDescription,$iwr.RawContentLength; sleep $internal}
+$url="https://www.bing.com";$interval=1;$timeout=5;while ($true) {try {$iwr=Invoke-WebRequest -Uri $url -UseBasicParsing -TimeoutSec $timeout;"{0},{1},{2},{3},{4}" -f (Get-Date).ToUniversalTime().ToString("yyyy-MM-dd HH:mm:ss"),$($url),$iwr.StatusCode,$iwr.StatusDescription,$iwr.RawContentLength } catch {    $iwr = $_.Exception.Message; "{0},{1},{2}" -f (Get-Date).ToUniversalTime().ToString("yyyy-MM-dd HH:mm:ss"),$url,$iwr }; sleep $interval}
 ```
-
+Sample output
+```
+2023-04-01 04:09:14,https://ipinfo.io,The operation has timed out.
+2023-04-01 04:09:20,https://ipinfo.io,The operation has timed out. 
+2023-04-01 04:12:21,https://portal.azure.cn/abc,200,OK,2880
+2023-04-01 04:12:22,https://portal.azure.cn/abc,200,OK,2880
+2023-04-01 04:13:06,https://management.azure.cn,The remote name could not be resolved: 'management.azure.cn'
+2023-04-01 04:13:07,https://management.azure.cn,The remote name could not be resolved: 'management.azure.cn'
+2023-04-01 04:13:18,https://management.chinacloudapi.cn,The remote server returned an error: (400) Bad Request.
+2023-04-01 04:13:19,https://management.chinacloudapi.cn,The remote server returned an error: (400) Bad Request.
+```
 ## Windows - Command Prompt (TCP - PSPING)
 
 Result to LogFile : %temp%\%computername%_psping.log
