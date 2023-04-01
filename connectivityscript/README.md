@@ -20,13 +20,13 @@ Output curl.exe result with UTC timestamp
 Console & LogFile : $env:temp\$env:computername_curl.log, 
 Output / result are splitted. 
 ```
-$url="www.bing.com";$interval=3;while ($true) {curl.exe --connect-timeout 1.0 -s -w "remote_ip:%{remote_ip},dns_resolution:%{time_namelookup},tcp_established:%{time_connect},ssl_handshake_done:%{time_appconnect},TTFB:%{time_starttransfer},httpstatus:%{http_code},size_download:%{size_download}" https://$($url) -o "$($env:temp)\$($env:computername)_curl_result.html"|foreach {"{0},{1},{2}" -f (Get-Date).ToUniversalTime().ToString("yyyy-MM-dd HH:mm:ss"),$url,$_;"{0},{1},{2}" -f (Get-Date).ToUniversalTime().ToString("yyyy-MM-dd HH:mm:ss"),$url,$_|out-file "$($env:temp)\$($env:computername)_curl.log" -append -encoding utf8; start-sleep $interval}}
+$url="https://www.bing.com";$hostname=$url.split('/')[2].split(':')[0];$p=$url.split(':')[0];$interval=5;while ($true) {curl.exe --connect-timeout 1.0 -s -w "remote_ip:%{remote_ip},dns_resolution:%{time_namelookup},tcp_established:%{time_connect},ssl_handshake_done:%{time_appconnect},TTFB:%{time_starttransfer},httpstatus:%{http_code},size_download:%{size_download}" $url -o "$($env:temp)\$($env:computername)_curl_$($p)_$($hostname)_result.html"|foreach {"{0},{1},{2}" -f (Get-Date).ToUniversalTime().ToString("yyyy-MM-dd HH:mm:ss"),$hostname,$_;"{0},{1},{2}" -f (Get-Date).ToUniversalTime().ToString("yyyy-MM-dd HH:mm:ss"),$hostname,$_|out-file "$($env:temp)\$($env:computername)_curl_$($p)_$($hostname).log" -append -encoding utf8; start-sleep $interval}}
 ```
 Output curl.exe result with UTC timestamp, 
 Console & LogFile : $env:temp\$env:computername_curl.log, 
 output / result are together in one file
 ```
-$url="www.bing.com";$interval=3;while ($true) {curl.exe -w "dns_resolution: %{time_namelookup}, tcp_established: %{time_connect}, ssl_handshake_done: %{time_appconnect}, TTFB: %{time_starttransfer}, HTTPSTATUS: %{http_code}" https://$($url) |foreach {"{0},{1},{2}" -f (Get-Date).ToUniversalTime().ToString("yyyy-MM-dd HH:mm:ss"),$url,$_;"{0},{1},{2}" -f (Get-Date).ToUniversalTime().ToString("yyyy-MM-dd HH:mm:ss"),$url,$_|out-file "$($env:temp)\$($env:computername)_curl.log" -append -encoding utf8; start-sleep $interval}}
+$url="https://www.bing.com";$hostname=$url.split('/')[2].split(':')[0];$p=$url.split(':')[0];$interval=5;while ($true) {curl.exe -w "dns_resolution: %{time_namelookup}, tcp_established: %{time_connect}, ssl_handshake_done: %{time_appconnect}, TTFB: %{time_starttransfer}, HTTPSTATUS: %{http_code}" $url |foreach {"{0},{1},{2}" -f (Get-Date).ToUniversalTime().ToString("yyyy-MM-dd HH:mm:ss"),$hostname,$_;"{0},{1},{2}" -f (Get-Date).ToUniversalTime().ToString("yyyy-MM-dd HH:mm:ss"),$hostname,$_|out-file "$($env:temp)\$($env:computername)_curl_$($p)_$($hostname).log" -append -encoding utf8; start-sleep $interval}}
 
 ```
 
