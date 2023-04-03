@@ -20,30 +20,39 @@ Output curl.exe result with UTC timestamp
 Console & LogFile : $env:temp\$env:computername_curl.log, 
 Output / result are splitted. 
 ```
-$url="www.bing.com";$interval=3;while ($true) {curl.exe --connect-timeout 1.0 -s -w "remote_ip:%{remote_ip},dns_resolution:%{time_namelookup},tcp_established:%{time_connect},ssl_handshake_done:%{time_appconnect},TTFB:%{time_starttransfer},httpstatus:%{http_code},size_download:%{size_download}" https://$($url) -o "$($env:temp)\$($env:computername)_curl_result.html"|foreach {"{0},{1},{2}" -f (Get-Date).ToUniversalTime().ToString("yyyy-MM-dd HH:mm:ss"),$url,$_;"{0},{1},{2}" -f (Get-Date).ToUniversalTime().ToString("yyyy-MM-dd HH:mm:ss"),$url,$_|out-file "$($env:temp)\$($env:computername)_curl.log" -append -encoding utf8; start-sleep $interval}}
+$url="https://www.bing.com";$interval=4;$timeout="1.0";$hostname=$url.split('/')[2].split(':')[0];$p=$url.split(':')[0];while ($true) {curl.exe --connect-timeout $($timeout) -s -w "remote_ip:%{remote_ip},dns_resolution:%{time_namelookup},tcp_established:%{time_connect},ssl_handshake_done:%{time_appconnect},TTFB:%{time_starttransfer},httpstatus:%{http_code},size_download:%{size_download}" $url -o "$($env:temp)\$($env:computername)_curl_$($p)_$($hostname)_result.html"|foreach {"{0},{1},{2}" -f (Get-Date).ToUniversalTime().ToString("yyyy-MM-dd HH:mm:ss"),$hostname,$_;"{0},{1},{2}" -f (Get-Date).ToUniversalTime().ToString("yyyy-MM-dd HH:mm:ss"),$hostname,$_|out-file "$($env:temp)\$($env:computername)_curl_$($p)_$($hostname).log" -append -encoding utf8; start-sleep $interval}}
 ```
 Output curl.exe result with UTC timestamp, 
 Console & LogFile : $env:temp\$env:computername_curl.log, 
 output / result are together in one file
 ```
-$url="www.bing.com";$interval=3;while ($true) {curl.exe -w "dns_resolution: %{time_namelookup}, tcp_established: %{time_connect}, ssl_handshake_done: %{time_appconnect}, TTFB: %{time_starttransfer}, HTTPSTATUS: %{http_code}" https://$($url) |foreach {"{0},{1},{2}" -f (Get-Date).ToUniversalTime().ToString("yyyy-MM-dd HH:mm:ss"),$url,$_;"{0},{1},{2}" -f (Get-Date).ToUniversalTime().ToString("yyyy-MM-dd HH:mm:ss"),$url,$_|out-file "$($env:temp)\$($env:computername)_curl.log" -append -encoding utf8; start-sleep $interval}}
+$url="https://www.bing.com";$interval=4;$timeout="1.0";$hostname=$url.split('/')[2].split(':')[0];$p=$url.split(':')[0];while ($true) {curl.exe --connect-timeout $($timeout) -w "dns_resolution: %{time_namelookup}, tcp_established: %{time_connect}, ssl_handshake_done: %{time_appconnect}, TTFB: %{time_starttransfer}, HTTPSTATUS: %{http_code}" $url |foreach {"{0},{1},{2}" -f (Get-Date).ToUniversalTime().ToString("yyyy-MM-dd HH:mm:ss"),$hostname,$_;"{0},{1},{2}" -f (Get-Date).ToUniversalTime().ToString("yyyy-MM-dd HH:mm:ss"),$hostname,$_|out-file "$($env:temp)\$($env:computername)_curl_$($p)_$($hostname).log" -append -encoding utf8; start-sleep $interval}}
 
 ```
 
 Sample output
 ```
-2023-01-29 04:37:46,www.bing.com,dns_resolution: 0.027826, tcp_established: 0.104387, ssl_handshake_done: 0.268914, TTFB: 0.415539, HTTPSTATUS: 200
-2023-01-29 04:37:49,www.bing.com,dns_resolution: 0.010106, tcp_established: 0.080188, ssl_handshake_done: 0.247045, TTFB: 0.395230, HTTPSTATUS: 200
-2023-01-29 04:37:53,www.bing.com,dns_resolution: 0.009926, tcp_established: 0.090002, ssl_handshake_done: 0.255321, TTFB: 0.403124, HTTPSTATUS: 200
-2023-01-29 04:37:56,www.bing.com,dns_resolution: 0.009757, tcp_established: 0.079645, ssl_handshake_done: 0.242734, TTFB: 0.390715, HTTPSTATUS: 200
+2023-04-01 03:42:31,www.bing.com,remote_ip:204.79.197.200,dns_resolution:0.019208,tcp_established:0.090411,ssl_handshake_done:0.255966,TTFB:0.432676,httpstatus:200,size_download:89177
+2023-04-01 03:42:37,www.bing.com,remote_ip:204.79.197.200,dns_resolution:0.007000,tcp_established:0.090975,ssl_handshake_done:0.257738,TTFB:0.447636,httpstatus:200,size_download:89179
+2023-04-01 03:42:42,www.bing.com,remote_ip:204.79.197.200,dns_resolution:0.011646,tcp_established:0.082188,ssl_handshake_done:0.253898,TTFB:0.428031,httpstatus:200,size_download:89413
 
 ```
 
 ## Windows - Powershell (HTTP/HTTPS iwr (invoke-webrequest), same source port, continoue traffic)
 ```
-$url="https://www.bing.com";while ($true) {$iwr=invoke-webrequest $url -UseBasicParsing -TimeoutSec 30;"{0},{1},{2},{3},{4}" -f (Get-Date).ToUniversalTime(),$($url),$iwr.StatusCode,$iwr.StatusDescription,$iwr.RawContentLength; sleep 1}
+$url="https://www.bing.com";$interval=1;$timeout=5;while ($true) {try {$iwr=Invoke-WebRequest -Uri $url -UseBasicParsing -TimeoutSec $timeout;"{0},{1},{2},{3},{4}" -f (Get-Date).ToUniversalTime().ToString("yyyy-MM-dd HH:mm:ss"),$($url),$iwr.StatusCode,$iwr.StatusDescription,$iwr.RawContentLength } catch {    $iwr = $_.Exception.Message; "{0},{1},{2}" -f (Get-Date).ToUniversalTime().ToString("yyyy-MM-dd HH:mm:ss"),$url,$iwr }; sleep $interval}
 ```
-
+Sample output
+```
+2023-04-01 04:09:14,https://ipinfo.io,The operation has timed out.
+2023-04-01 04:09:20,https://ipinfo.io,The operation has timed out. 
+2023-04-01 04:12:21,https://portal.azure.cn/abc,200,OK,2880
+2023-04-01 04:12:22,https://portal.azure.cn/abc,200,OK,2880
+2023-04-01 04:13:06,https://management.azure.cn,The remote name could not be resolved: 'management.azure.cn'
+2023-04-01 04:13:07,https://management.azure.cn,The remote name could not be resolved: 'management.azure.cn'
+2023-04-01 04:13:18,https://management.chinacloudapi.cn,The remote server returned an error: (400) Bad Request.
+2023-04-01 04:13:19,https://management.chinacloudapi.cn,The remote server returned an error: (400) Bad Request.
+```
 ## Windows - Command Prompt (TCP - PSPING)
 
 Result to LogFile : %temp%\%computername%_psping.log
@@ -109,7 +118,7 @@ sudo su  #must be in sudo mode.
 Output paping result with UTC timestamp
 Console & LogFile : "$(hostname -s)_paping.log"
 ```
-./paping www.bing.com -p 443| while read pong; do echo "$(date -u +'%F %H:%M:%S') - $pong";done 2>&1 | tee "$(hostname -s)_paping.log"
+target="www.bing.com";port="443";./paping $target -p $port| while read pong; do echo "$(date -u +'%F %H:%M:%S') - $pong";done 2>&1 | tee "$(hostname -s)_paping_${target}_${port}.log"
 ```
 paping command
 ```
@@ -123,18 +132,18 @@ paping [-c count]
 Output paping result with UTC timestamp
 Console & LogFile : "$(hostname -s)_nc.log"
 ```
-while true; do echo "`date -u +'%F %H:%M:%S'` - `nc -vvzw 2 www.bing.com 443 2>&1`";sleep 1; done 2>&1 | tee "$(hostname -s)_nc.log"
+target="www.bing.com";while true; do echo "`date -u +'%F %H:%M:%S'` - `nc -vvzw 2 $target 443 2>&1`";sleep 1; done 2>&1 | tee "$(hostname -s)_nc_${target}.log"
 ```
 ## Linux - Script (ICMP - ping)
 
 Output ping result with UTC timestamp
 Console & LogFile : "$(hostname -s)_ping.log"
 ```
-while true; do ping 192.168.3.5 -w 3 -c 1 -i 3| while read pong; do echo "$(date -u +'%F %H:%M:%S') - $pong"; done ;sleep 1; done 2>&1 | tee "$(hostname -s)_ping.log"
+ipaddr="192.168.3.11";ping -O $ipaddr -W 1 -i 1| while read pong; do echo "$(date -u +'%F %H:%M:%S') - $pong"; done 2>&1 | tee "$(hostname -s)_ping_${ipaddr}.log"
+ipaddr="192.168.3.11";ping -O $ipaddr -W 1 -i 1| while read pong; do echo "$(date -u +'%F %H:%M:%S') - $pong"; done 
 ```
 ```
-ping 192.168.3.5| while read pong; do echo "$(date -u +'%F %H:%M:%S') - $pong"; done 2>&1 | tee "$(hostname -s)_ping.log"
-ping 192.168.3.5| while read pong; do echo "$(date -u +'%F %H:%M:%S') - $pong"; done 
+ipaddr="192.168.3.11";while true; do ping -O $ipaddr -W 1 -c 1| while read pong; do echo "$(date -u +'%F %H:%M:%S') - $pong"; done ;sleep 1; done 2>&1 | tee "$(hostname -s)_ping_${ipaddr}.log"
 ```
 
 ## Linux - Script (HTTPS - curl)
@@ -142,7 +151,7 @@ ping 192.168.3.5| while read pong; do echo "$(date -u +'%F %H:%M:%S') - $pong"; 
 Output Curl output with UTC timstamp
 Console & LogFile : "$(hostname -s)_curl.log"
 ```
-while true; do curl -o /dev/null --connect-timeout 1.0 -s -w "remote_ip:%{remote_ip},dns_resolution:%{time_namelookup},tcp_established:%{time_connect},ssl_handshake_done:%{time_appconnect},TTFB:%{time_starttransfer},httpstatus:%{http_code},size_download:%{size_download}\n" https://www.google.com | while read pong; do echo "$(date -u +'%F %H:%M:%S') - $pong"; done; sleep 1; done 2>&1 | tee "$(hostname -s)_curl.log"
+url="https://www.google.com";timeout="1.0";interval=4;hh=$(echo $url|cut -d'/' -f3);while true; do curl -o /dev/null --connect-timeout $timeout -s -w "${hh},remote_ip:%{remote_ip},dns_resolution:%{time_namelookup},tcp_established:%{time_connect},ssl_handshake_done:%{time_appconnect},TTFB:%{time_starttransfer},httpstatus:%{http_code},size_download:%{size_download}\n" $url | while read pong; do echo "$(date -u +'%F %H:%M:%S') - $pong"; done; sleep $interval; done 2>&1 | tee "$(hostname -s)_curl_${hh}.log"
 ```
 
 

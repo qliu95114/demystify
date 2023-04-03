@@ -10,7 +10,7 @@ Every day while I am working with network traces, there are many scenarios:
 
 Today, I would like to introduce some ideas to leverage tshark for working with PCAP file(s).
 
-## Sample One - Expand TCP Details of one specific Frame
+## Sample 1 - Expand TCP Details of one specific Frame
 ``` bash
 C:\temp>"C:\Program Files\Wireshark\tshark.exe" -r d:\temp\mytrace.pcapng -V -O tcp frame.number == 5 
 Frame 5: 54 bytes on wire (432 bits), 54 bytes captured (432 bits) on interface \Device\NPF_{5E9AC1A3-4E57-4A03-A87B-3A41C71B859F}, id 0
@@ -53,7 +53,7 @@ Transmission Control Protocol, Src Port: 443, Dst Port: 51336, Seq: 1732514733, 
         [iRTT: 0.068990000 seconds]
 ```
 
-## Sample Two - list conversation view by ip 
+## Sample 2 - list conversation view by ip 
 ``` bash
 C:\temp>"C:\Program Files\Wireshark\tshark.exe" -qz conv,ip -r mytrace.pcap
 ================================================================================
@@ -79,7 +79,7 @@ Filter:<No Filter>
 ===================================================================================
 ``` 
 
-## Sample Three - list conversation view by tcp
+## Sample 3 - list conversation view by tcp
 ``` bash
 C:\temp>"C:\Program Files\Wireshark\tshark.exe" -qz conv,tcp -r mytrace.pcap
 ================================================================================
@@ -103,7 +103,7 @@ Filter:<No Filter>
 
 ```
 
-## Sample Four - Convert PCAP to CSV, ingress to ADX (Kusto) to analyze trace in fast fashion
+## Sample 4 - Convert PCAP to CSV, ingress to ADX (Kusto) to analyze trace in fast fashion
 
 For big trace analyze, use Azure Data Explorer (aka. kusto) is good way to speed up our analyze. To do that
 1. (tshark) Export trace to CSV 
@@ -211,7 +211,7 @@ D:\temp>dir NetworkTrace*.*
 
 ```
 
-## Sample Five - Detect 1s delay TCP SYN - TCP SYN/ACK for port 6379 traffic, Data source is 1000+ trace files 
+## Sample 5 - Detect 1s delay TCP SYN - TCP SYN/ACK for port 6379 traffic, Data source is 1000+ trace files 
 
 I got into a situation today where I had to review over 1000 pcap files to detect a problem where the TCP 3-way handshake was taking longer than 1 second.
 
@@ -248,7 +248,7 @@ We can conclude that in c:\tracefile\file_16_44_00.pcap, there are two "problema
 10.227.4.160 → 10.227.6.87   6379 → 38444 [SYN, ACK] is taking 1.03606600 to response 
 ```
 
-## Sample Six － could we trust AB(AppacheBench) requests per second?
+## Sample 6 － could we trust AB(AppacheBench) requests per second?
 
 Today, we have received complaints that the user reported that the Apache Bench (AB) reported requests per second (RPS) below system limitations, but they were still throttled. 
 
@@ -279,7 +279,7 @@ trace
 ```
 ![image](./.image/ab.png?raw=true)
 
-## Sample Sever - Use tshark to take rolling capture
+## Sample 7 - Use tshark to take rolling capture
 
 For long run capture, we can use rolling capture. the following sample will take 100 capture files and each file is set to 200MB
 
@@ -292,7 +292,7 @@ Enable tshark capture. Rolling tracking
 C:\temp>d:\wireshark\tshark -i 2 -n -b filesize:204800 -w "C:\temp\%COMPUTERNAME%.pcap" -b files:100
 ```
 
-## Sample Eight - Reduce file size - Truncate packet lengths
+## Sample 8 - Reduce file size - Truncate packet lengths
 
 If you have a massive Wireshark capture, and you are struggling to process it due to its sheer size, you can use editcap.exe (which lives in your `C:\Program Files\Wireshark` folder) to truncate the individual packets, leaving only the necessary header data. Note that this is *generally* 64 bytes for general TCP/UDP traffic, but can be more if you are looking at encapsulated packets, etc. 
 
@@ -308,7 +308,7 @@ This turned one 3.6GB file `C:\Downloads\mycap.pcap` (3,850,030 total packets) i
 
 More on editcap.exe can be found here: [editcap(1) Manual Page](https://www.wireshark.org/docs/man-pages/editcap.html)
 
-## Sample Night - Split large capture file with fix number of packets per file
+## Sample 9 - Split large capture file with fix number of packets per file
 
 ``` bash
 editcap.exe -c <number of packets per file> C:\path-to\OriginalFile.pcapng C:\path-to\NewFile.pcapng
@@ -325,7 +325,7 @@ Wireshark will append a suffix in the format of -nnnnn_YYYYMMDDHHMMSS.
 nnnnn starts at 00000 and increments for each file
 YYYYMMDDHHMMSS is the timestamp of the first packet in the new file
 
-## Sample Ten - Find out all ICMP traffic from a 1000+ (459GB) trace file and analyze it.
+## Sample 10 - Find out all ICMP traffic from a 1000+ (459GB) trace file and analyze it.
 
 I found myself in a situation today where I had to review over 1002 pcap files (total 459GB) to review ICMP traffic."
 I hope that helps! Let me know if you have any other questions.

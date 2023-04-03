@@ -54,6 +54,7 @@ public class TrustAllCertsPolicy : ICertificatePolicy {
 "@
 
 [System.Net.ServicePointManager]::CertificatePolicy = New-Object TrustAllCertsPolicy
+[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 
 $killswitch=1
 $failcount=0
@@ -85,15 +86,19 @@ while ($killswitch -ne 0)
     {
         $failcount++
         $strState = "ERROR"
-        $result = "$((get-date).ToUniversalTime().ToString('yyyy-MM-dd HH:mm:ss')),$($env:COMPUTERNAME),$($strState),$($failcount),$($Url),$($_.Exception.Response.StatusCode.Value),$($out.RawContentLength)"
+        $result = "$((get-date).ToUniversalTime().ToString('yyyy-MM-dd HH:mm:ss')),$($env:COMPUTERNAME),$($strState),$($failcount),$($Url),$($_.Exception.Message),"
         Write-Host $result -Fo "Red"
-        $result >> $logfile
-        $Error[0] | Out-File $logfile -Encoding utf8 -Append
+        $result |Out-File $logfile -Encoding utf8 -Append
+        if($VerboseLog)
+        {
+            $Error[0]
+            $Error[0] | Out-File $logfile -Encoding utf8 -Append
+        }
     }
 
     # calculate the sleep time based on running time.
     $timeEnd = Get-Date
-    $timeSpan = NEW-TIMESPAN -Start $timeStart –End $timeEnd
+    $timeSpan = NEW-TIMESPAN -Start $timeStart -End $timeEnd
     $sleepInterval = $intervalinMS - $timeSpan.TotalMilliseconds 
     if ($sleepInterval -gt 0)
     {
