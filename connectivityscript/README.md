@@ -2,16 +2,16 @@
 
 | Windows | linux | Python |
 |-|-|-|
-|1. [Test-dns.ps1](win/Test-dns.ps1) | 1. [Test_tcpping.sh](linux/Test_tcpping.sh)| 1. [tcping_ai.py](py/tcping_ai.py)|
-|1. [Test-curl.ps1](win/Test-Https.ps1)|||
-|1. [Test-Https.ps1](win/Test-Https.ps1)|||
-|1. [Test-ICMP.ps1](win/Test-ICMP.ps1)|||
-|1. [Test-IpInRange.ps1](win/Test-IpInRange.ps1)|||
-|1. [Test-PSPing.ps1](win/Test-PSPing.ps1)|||
-|1. [Test-PSping_batch.ps1](win/Test-PsPing_batch.ps1)|||
-|1. [UdpPing.ps1](win/UdpPing.ps1)|||
-|1. [UdpSend.ps1](win/UdpSend.ps1)|||
-|1. [UdpSend_batch.ps1](win/UdpSend_batch.ps1)|||
+|[Test-dns.ps1](win/Test-dns.ps1) | [Test_tcpping.sh](linux/Test_tcpping.sh)| [tcping_ai.py](py/tcping_ai.py)|
+|[Test-curl.ps1](win/Test-Https.ps1)|||
+|[Test-Https.ps1](win/Test-Https.ps1)|||
+|[Test-ICMP.ps1](win/Test-ICMP.ps1)|||
+|[Test-IpInRange.ps1](win/Test-IpInRange.ps1)|||
+|[Test-PSPing.ps1](win/Test-PSPing.ps1)|||
+|[Test-PSping_batch.ps1](win/Test-PsPing_batch.ps1)|||
+|[UdpPing.ps1](win/UdpPing.ps1)|||
+|[UdpSend.ps1](win/UdpSend.ps1)|||
+|[UdpSend_batch.ps1](win/UdpSend_batch.ps1)|||
 
 
 # One Line Script (Windows & Linux)
