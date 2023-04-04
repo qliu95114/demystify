@@ -1,6 +1,7 @@
 # All kinds of connectivity scripts
 
 | Windows | linux | Python |
+|-|-|-|
 |1. [Test-dns.ps1](win/Test-dns.ps1) | 1. [Test_tcpping.sh](linux/Test_tcpping.sh)| 1. [tcping_ai.py](py/tcping_ai.py)|
 |1. [Test-curl.ps1](win/Test-Https.ps1)|||
 |1. [Test-Https.ps1](win/Test-Https.ps1)|||
