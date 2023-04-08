@@ -30,18 +30,30 @@ Total execution of $url or $urlfile (Default: 10) , 0 - Forever
 .PARAMETER deplay
 Milliseconds, dely between each execution of $url, but there is no delay within in $urlfile (Default: 1000)
 
+.PARAMETER aikey
+GUID, Instrumentation Key used by Application Insight
+
+
 .EXAMPLE
+Flood test https://www.bing.com without no delay in between
 .\Test-Curl.ps1 -delay 0 -url https://www.bing.com 
 
 .EXAMPLE
-hard code ip address 
+Flood test https://www.bing.com and hard code webserver ip address 1.1.1.1, without no delay in between
 .\Test-Curl.ps1 -delay 0 -url https://www.bing.com -urlipaddr 1.1.1.1 
 
 .EXAMPLE
+Flood https://www.bing.com and confirm curl timeout is 1 second
 .\Test-Curl.ps1 -delay 0 -urlfile D:\temp\urlfile.txt -timeout 1
 
 .EXAMPLE
+Flood https://www.bing.com and confirm curl timeout is 1 second and result save to custom log d:\temp\a.log
 .\Test-Curl.ps1 -delay 0 -urlfile D:\temp\urlfile.txt -timeout 1 -logfile d:\temp\a.log
+
+.EXAMPLE
+Flood https://www.bing.com and confirm curl timeout is 1 second , send the result to Application Insight, 
+.\Test-Curl.ps1 -delay 0 -urlfile D:\temp\urlfile.txt -timeout 1 -aikey 11111111-1111-1111-1111-111111111111
+
 
 #>
 
@@ -53,10 +65,11 @@ Param (
        [int]$count=10,  # Total execution of $url or $urlfile (Default: 10,  0:forever) 
        [int]$delay=1000, # Milliseconds, dely between each execution of CURL (Default: 1000)
        [string]$logfile, #Provide Logfile path and filename, 
-       [guid]$aikey  #Prive ApplicationInsigt Instrument Key to enable AI collect data
+       [string]$aikey  #Provide Application Insigt instrumentation key 
 )
 
-Function SendEvent{
+# Powershell Function Send-AIEvent , 2023-04-08
+Function Send-AIEvent{
     param (
                 [Guid]$piKey,
                 [String]$pEventName,
@@ -72,11 +85,12 @@ Function SendEvent{
                 time = [DateTime]::UtcNow.ToString("o")
                 iKey = $piKey
                 tags = @{
-                    "ai.device.id" = $env:COMPUTERNAME
-                    "ai.device.locale" = $domainname
                     "ai.user.id" = $uname
                     "ai.user.authUserId" = "$($domainname)\$($uname)"
                     "ai.cloud.roleInstance" = $env:COMPUTERNAME
+                    "ai.device.osVersion" = [System.Environment]::OSVersion.VersionString
+                    "ai.device.model"= (Get-CimInstance CIM_ComputerSystem).Model
+
           }
             "data" = @{
                     baseType = "EventData"
@@ -94,12 +108,12 @@ Function SendEvent{
         $attempt=1
         do {
             try {
-                Invoke-WebRequest -Method POST -Uri $appInsightsEndpoint -Headers @{"Content-Type"="application/x-json-stream"} -Body $body -TimeoutSec 4 -UseBasicParsing| Out-Null 
+                Invoke-WebRequest -Method POST -Uri $appInsightsEndpoint -Headers @{"Content-Type"="application/x-json-stream"} -Body $body -TimeoutSec 3 -UseBasicParsing| Out-Null 
                 return    
             }
             catch {
                 $PreciseTimeStamp=($timeStart.ToUniversalTime()).ToString("yyyy-MM-dd HH:mm:ss")
-                if ($attempt -ge 3)
+                if ($attempt -ge 4)
                 {
                     Write-Output "retry 3 failure..." 
                     $sendaimessage =$PreciseTimeStamp+",Fail to send AI message after 3 attemps, message lost"
@@ -116,7 +130,7 @@ Function SendEvent{
         $ProgressPreference = $temp
     }
     
-Function Write-Log ([string]$message,[string]$color="white")
+Function Write-UTCLog ([string]$message,[string]$color="white")
 {
     	$logdate = ((get-date).ToUniversalTime()).ToString("yyyy-MM-dd HH:mm:ss")
     	$logstamp = "["+$logdate + "]," + $message
@@ -150,8 +164,8 @@ Function invoke_curl([string]$url,[string]$ipaddr)
     else 
     {
         #$headline="TIMESTAMP,RESULT,DestIP,DestPort,Message,FailCount,HOSTNAME"
-        #Write-Log " Send AI...."  "Yellow"
-        SendEvent -piKey $aikey -pEventName "test-curl" -pCustomProperties @{PreciseTimeStamp=$PreciseTimeStamp;Message=$Message.ToString()} 
+        #Write-UTCLog " Send AI...."  "Yellow"
+        Send-AIEvent -piKey $aikey -pEventName "test-curl_ps1" -pCustomProperties @{PreciseTimeStamp=$PreciseTimeStamp;Message=$Message.ToString()} 
     }
 }
 
@@ -161,31 +175,31 @@ If ([string]::IsNullOrEmpty($logfile))
     # use default path $env:temp , $env:computename, TEST-DNS, utc timestamp 
     $logfile= Join-Path  $($env:temp) $($env:COMPUTERNAME+"_Test-CURL_"+((get-date).ToUniversalTime()).ToString("yyyyMMddTHHmmss")+".log")
 }
-Write-Log " LogFile   : $($logfile)"
-Write-Log " Timeout   : $($timeout)" 
-Write-Log " Count     : $($count)" 
-Write-Log " Delay(ms) : $($delay)"
+Write-UTCLog " LogFile   : $($logfile)"
+Write-UTCLog " Timeout   : $($timeout)" 
+Write-UTCLog " Count     : $($count)" 
+Write-UTCLog " Delay(ms) : $($delay)"
 
 if ([string]::IsNullOrEmpty($aikey))
 {
-    Write-Log " AppInsight: TRUE"  "Green"
+    Write-UTCLog " AppInsight: FALSE"  "Yellow"
 }
 else {
-    Write-Log " AppInsight: FALSE"  "Yellow"
+    Write-UTCLog " AppInsight: TRUE "  "Cyan"
 }
 #$header="TIMESTAMP,SystemCost,Url,URLIpAddress,dns_resolution,tcp_established,ssl_handshake_done,TTFB,httpstatus,SizeOfRequest"
-$header|Out-File $logfile -Encoding utf8
+$header|Out-File $logfile -Encoding utf8 -Append
 
 if ([string]::IsNullOrEmpty($url) -and [string]::IsNullOrEmpty($urlfile)) 
 {
     $url="https://www.bing.com"
-    Write-Log " -url and -urlfile both empty, use default 'http://www.bing.com' to test" -color Yellow
-    if ([string]::IsNullOrEmpty($urlipaddr)) {} else { Write-Log " URLIPAddr : $($urlipaddr)" "green"}
+    Write-UTCLog " -url and -urlfile both empty, use default 'http://www.bing.com' to test" -color Yellow
+    if ([string]::IsNullOrEmpty($urlipaddr)) {} else { Write-UTCLog " URLIPAddr : $($urlipaddr)" "green"}
     if ($count -ne 0)
     {
         # run $count curl test
         for ($i=1;$i -le $count;$i++)  { 
-            Write-Log " Url $($i)/($count) : $($url)   UrlIpAddr  : $($urlipaddr)"   "Green"            
+            Write-UTCLog " Url $($i)/($count) : $($url)   UrlIpAddr  : $($urlipaddr)"   "Green"            
             invoke_curl -url $url -ipaddr $urlipaddr
             start-sleep -Milliseconds $delay 
         }
@@ -195,7 +209,7 @@ if ([string]::IsNullOrEmpty($url) -and [string]::IsNullOrEmpty($urlfile))
         $i=1
         while ($true)   
         {
-            Write-Log " Url $($i)/Forever : $($url)   UrlIpAddr  : $($urlipaddr)"   "Green"            
+            Write-UTCLog " Url $($i)/Forever : $($url)   UrlIpAddr  : $($urlipaddr)"   "Green"            
             invoke_curl -url $url -ipaddr $urlipaddr
             start-sleep -Milliseconds $delay
             $i++
@@ -206,12 +220,12 @@ if ([string]::IsNullOrEmpty($url) -and [string]::IsNullOrEmpty($urlfile))
 else {
     if ([string]::IsNullOrEmpty($urlfile)) 
     {
-        Write-Log " URL       : $($url)"  "green"
-        if ([string]::IsNullOrEmpty($urlipaddr)) {} else { Write-Log " URLIPAddr : $($urlipaddr)" "green"}        
+        Write-UTCLog " URL       : $($url)"  "green"
+        if ([string]::IsNullOrEmpty($urlipaddr)) {} else { Write-UTCLog " URLIPAddr : $($urlipaddr)" "green"}        
         if ($count -ne 0)
         {
             for ($i=1;$i -le $count;$i++) { 
-                Write-Log " Url $($i)/$($count) : $($url)   UrlIpAddr  : $($urlipaddr)"   "Green"            
+                Write-UTCLog " Url $($i)/$($count) : $($url)   UrlIpAddr  : $($urlipaddr)"   "Green"            
                 invoke_curl -url $url -ipaddr $urlipaddr
                 start-sleep -Milliseconds $delay
             }
@@ -221,7 +235,7 @@ else {
             $i=1
             while ($true)   
             {
-                Write-Log " Url $($i)/Forever : $($url)   UrlIpAddr  : $($urlipaddr)"   "Green"            
+                Write-UTCLog " Url $($i)/Forever : $($url)   UrlIpAddr  : $($urlipaddr)"   "Green"            
                 invoke_curl -url $url -ipaddr $urlipaddr
                 start-sleep -Milliseconds $delay
                 $i++
@@ -229,11 +243,11 @@ else {
         }
     }
     else {
-        Write-Log " URLlist   : $($urlfile)" "green"
+        Write-UTCLog " URLlist   : $($urlfile)" "green"
         if (Test-Path $urlfile)
         {
             $urllist=get-content $urlfile
-            Write-Log " TotalURLs : $($urllist.count)"  "green"
+            Write-UTCLog " TotalURLs : $($urllist.count)"  "green"
 
             if ($count -ne 0)
             {
@@ -246,10 +260,10 @@ else {
                         $urlip=$link.split(';')[0]
                         $urlitem=$link.split(';')[1]
                         if ([string]::IsNullOrEmpty($urlitem)){
-                            Write-log " Url $($j)/$($urllist.count) - $($i)/$($count) : (empty) , skipping invoke_curl.... "  "yellow"
+                            Write-UTCLog " Url $($j)/$($urllist.count) - $($i)/$($count) : (empty) , skipping invoke_curl.... "  "yellow"
                         }
                         else{
-                            Write-Log " Url $($j)/$($urllist.count) - $($i)/$($count) : $($urlitem)   UrlIpAddr  : $($urlip)"   "Green"
+                            Write-UTCLog " Url $($j)/$($urllist.count) - $($i)/$($count) : $($urlitem)   UrlIpAddr  : $($urlip)"   "Green"
                             invoke_curl -url $urlitem -ipaddr $urlip
                             start-sleep -Milliseconds $delay
                         }
@@ -268,10 +282,10 @@ else {
                         $urlip=$link.split(';')[0]
                         $urlitem=$link.split(';')[1]
                         if ([string]::IsNullOrEmpty($urlitem)){
-                            Write-log " Url $($j)/$($urllist.count) - $($i)forever : (empty) , skipping invoke_curl.... "  "yellow"
+                            Write-UTCLog " Url $($j)/$($urllist.count) - $($i)forever : (empty) , skipping invoke_curl.... "  "yellow"
                         }
                         else{
-                            Write-Log " Url $($j)/$($urllist.count) - $($i)/forever : $($urlitem)   UrlIpAddr  : $($urlip)"   "Green"
+                            Write-UTCLog " Url $($j)/$($urllist.count) - $($i)/forever : $($urlitem)   UrlIpAddr  : $($urlip)"   "Green"
                             invoke_curl -url $urlitem -ipaddr $urlip
                             start-sleep -Milliseconds $delay
                         }
@@ -283,7 +297,7 @@ else {
 
         }
         else {
-            Write-Log "$($urlfile) does not exsit, please double-check!"  "Yellow"
+            Write-UTCLog "$($urlfile) does not exsit, please double-check!"  "Yellow"
         }
     }
 }

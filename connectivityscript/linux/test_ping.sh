@@ -111,7 +111,7 @@ function send-aievent {
                   }
                }'
     curl --connect-timeout 3.0 --retry 4 --retry-delay 1 -X POST -H "Content-Type: application/x-json-stream"  -d "$telemetry" "https://dc.services.visualstudio.com/v2/track" -o /dev/null -s &
-    echo "Info : aikey is specificed, send-aievent() is called"    
+    echo "Info : aikey is specified, send-aievent() is called"    
   fi
 }
 
