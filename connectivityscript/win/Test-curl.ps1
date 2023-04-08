@@ -65,7 +65,7 @@ Param (
        [int]$count=10,  # Total execution of $url or $urlfile (Default: 10,  0:forever) 
        [int]$delay=1000, # Milliseconds, dely between each execution of CURL (Default: 1000)
        [string]$logfile, #Provide Logfile path and filename, 
-       [string]$aikey  #Provide Application Insigt instrumentation key 
+       [guid]$aikey  #Provide Application Insigt instrumentation key 
 )
 
 # Powershell Function Send-AIEvent , 2023-04-08
@@ -165,7 +165,7 @@ Function invoke_curl([string]$url,[string]$ipaddr)
     {
         #$headline="TIMESTAMP,RESULT,DestIP,DestPort,Message,FailCount,HOSTNAME"
         #Write-UTCLog " Send AI...."  "Yellow"
-        Send-AIEvent -piKey $aikey -pEventName "test-curl_ps1" -pCustomProperties @{PreciseTimeStamp=$PreciseTimeStamp;Message=$Message.ToString()} 
+        Send-AIEvent -piKey $aikey -pEventName "test-curl_ps1" -pCustomProperties @{Message=$Message.ToString()} 
     }
 }
 

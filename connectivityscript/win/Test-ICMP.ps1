@@ -135,7 +135,7 @@ If (!($result.Status -eq "Success")) {
     Write-Host $result -Fo Red
     if ([string]::IsNullOrEmpty($aikey)) 
     {
-        Write-Host "Info : aikey is not Specified, Send-AIEvent() is skipped." -ForegroundColor "Gray"
+        Write-Host "Info : aikey is not specified, Send-AIEvent() is skipped." -ForegroundColor "Gray"
     } 
     else 
     {
@@ -149,7 +149,7 @@ If (!($result.Status -eq "Success")) {
     Write-Host $result -Fo Green
     if ([string]::IsNullOrEmpty($aikey)) 
     {
-        Write-Host "Info : aikey is not Specified, Send-AIEvent() is skipped." -ForegroundColor "Gray"
+        Write-Host "Info : aikey is not specified, Send-AIEvent() is skipped." -ForegroundColor "Gray"
     } 
     else 
     {
