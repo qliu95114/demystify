@@ -22,7 +22,8 @@ Param (
     [int]$timeout=3,
     [int]$intervalinMS=5000,  #interval is -Milliseconds,
 	[string]$logpath=$env:temp,
-    [switch]$VerboseLog
+    [switch]$VerboseLog,
+    [guid]$aikey
 )
 
 Function Write-UTCLog ([string]$message,[string]$color="white")
@@ -33,13 +34,86 @@ Function Write-UTCLog ([string]$message,[string]$color="white")
 #    	Write-Output $logstamp | Out-File $logfile -Encoding ASCII -append
 }
 
-$logfile= Join-Path $logpath $($env:COMPUTERNAME+"_TestHTTPS_$($url.split('/')[2])_$((get-date).ToUniversalTime().ToString('yyyyMMddTHHmmss')).log")
-Write-UTCLog "Log File : $($logfile)" -color "Cyan"
 
-Write-UTCLog "Running Invoke-WebRequest(IWR) test, press CTRL + C to stop" 
+# Powershell Function Send-AIEvent , 2023-04-08
+Function Send-AIEvent{
+    param (
+                [Guid]$piKey,
+                [String]$pEventName,
+                [Hashtable]$pCustomProperties
+    )
+        $appInsightsEndpoint = "https://dc.services.visualstudio.com/v2/track"        
+        
+        if ([string]::IsNullOrEmpty($env:USERNAME)) {$uname=($env:USERPROFILE).split('\')[2]} else {$uname=$env:USERNAME}
+        if ([string]::IsNullOrEmpty($env:USERDOMAIN)) {$domainname=$env:USERDOMAIN_ROAMINGPROFILE} else {$domainname=$env:USERDOMAIN}
+            
+        $body = (@{
+                name = "Microsoft.ApplicationInsights.$iKey.Event"
+                time = [DateTime]::UtcNow.ToString("o")
+                iKey = $piKey
+                tags = @{
+                    "ai.user.id" = $uname
+                    "ai.user.authUserId" = "$($domainname)\$($uname)"
+                    "ai.cloud.roleInstance" = $env:COMPUTERNAME
+                    "ai.device.osVersion" = [System.Environment]::OSVersion.VersionString
+                    "ai.device.model"= (Get-CimInstance CIM_ComputerSystem).Model
+
+          }
+            "data" = @{
+                    baseType = "EventData"
+                    baseData = @{
+                        ver = "2"
+                        name = $pEventName
+                        properties = ($pCustomProperties | ConvertTo-Json -Depth 10 | ConvertFrom-Json)
+                    }
+                }
+            }) | ConvertTo-Json -Depth 10 -Compress
+    
+        $temp = $ProgressPreference
+        $ProgressPreference = "SilentlyContinue"
+
+        $attempt=1
+        do {
+            try {
+                Invoke-WebRequest -Method POST -Uri $appInsightsEndpoint -Headers @{"Content-Type"="application/x-json-stream"} -Body $body -TimeoutSec 3 -UseBasicParsing| Out-Null 
+                return    
+            }
+            catch {
+                $PreciseTimeStamp=($timeStart.ToUniversalTime()).ToString("yyyy-MM-dd HH:mm:ss")
+                if ($attempt -ge 4)
+                {
+                    Write-Output "retry 3 failure..." 
+                    $sendaimessage =$PreciseTimeStamp+",Fail to send AI message after 3 attemps, message lost"
+                    $sendaimessage | Out-File "$($logpath)\aimessage.log" -Append -Encoding utf8
+                    return $null
+                }
+                Write-Output "Attempt($($attempt)): send aievent failure, retry" 
+                $sendaimessage =$PreciseTimeStamp+", Attempt($($attempt)) , wait 1 second, resend AI message"
+                $sendaimessage | Out-File "$($logpath)\aimessage.log" -Append -Encoding utf8
+                Start-Sleep -Seconds 1
+            }
+            $attempt++
+        } until ($success)
+        $ProgressPreference = $temp
+}
+
+
+#main program start
+#$logfile= Join-Path $logpath $($env:COMPUTERNAME+"_TestHTTPS_$($url.split('/')[2])_$((get-date).ToUniversalTime().ToString('yyyyMMddTHHmmss')).log")
+$logfile= Join-Path $logpath $($env:COMPUTERNAME+"_TestHTTPS_$($url.split('/')[2]).log")
+
+Write-UTCLog "Log File : $($logfile)" -color "Cyan"
+Write-UTCLog "Running Invoke-WebRequest(IWR) test, press CTRL + C to stop" -color "Cyan"
 Write-UTCLog "URL : $($Url) "  "Yellow"
 Write-UTCLog "Interval : $($intervalinMS) (ms)" -color "Yellow"
 Write-UTCLog "IWR_Timeout : $($timeout) (s)" -color "Yellow"
+if ([string]::IsNullOrEmpty($aikey))
+{
+    Write-UTCLog "AppInsight: FALSE"  "Yellow"
+}
+else {
+    Write-UTCLog "AppInsight: TRUE "  "Cyan"
+}
 
 add-type @"
 using System.Net;
@@ -60,7 +134,7 @@ $killswitch=1
 $failcount=0
 
 $headline="TIMESTAMP,COMPUTERNAME,RESULT,FailCount,URL,StatusCode,ResponseSize"
-$headline | Out-File $logfile -Encoding utf8
+$headline | Out-File $logfile -Encoding utf8 -Append
 
 while ($killswitch -ne 0) 
 {
@@ -75,6 +149,16 @@ while ($killswitch -ne 0)
         $result = "$($timeStart.ToUniversalTime().ToString('yyyy-MM-dd HH:mm:ss')),$($env:COMPUTERNAME),$($strState),0,$($Url),$($out.StatusCode),$($out.RawContentLength)"
         Write-Host $result -Fo "Cyan"
         $result |Out-File $logfile -Encoding utf8 -Append
+        
+        if ([string]::IsNullOrEmpty($aikey)) {
+            Write-Host "Info : aikey is not specified, Send-AIEvent() is skipped." -ForegroundColor "Gray"
+        } 
+        else 
+        {
+            Write-Host "Info : aikey is specified, Send-AIEvent() is called" -ForegroundColor "Green"
+            Send-AIEvent -piKey $aikey -pEventName "test-https_ps1" -pCustomProperties @{result=$strState.tostring();url=$Url.tostring();failcount="0";httpstatus=$out.StatusCode.tostring();responsesize=$out.RawContentLength.ToString()} 
+        }
+
         if($VerboseLog)
         {
             $out.RawContent
@@ -89,6 +173,16 @@ while ($killswitch -ne 0)
         $result = "$((get-date).ToUniversalTime().ToString('yyyy-MM-dd HH:mm:ss')),$($env:COMPUTERNAME),$($strState),$($failcount),$($Url),$($_.Exception.Message),"
         Write-Host $result -Fo "Red"
         $result |Out-File $logfile -Encoding utf8 -Append
+
+        if ([string]::IsNullOrEmpty($aikey)) {
+            Write-Host "Info : aikey is not specified, Send-AIEvent() is skipped." -ForegroundColor "Gray"
+        } 
+        else 
+        {
+            Write-Host "Info : aikey is specified, Send-AIEvent() is called" -ForegroundColor "Green"
+            Send-AIEvent -piKey $aikey -pEventName "test-https_ps1" -pCustomProperties @{result=$strState.tostring();url=$Url.tostring();failcount=$failcount.tostring();httpstatus=$_.Exception.Message.tostring();responsesize="0"} 
+        }
+
         if($VerboseLog)
         {
             $Error[0]

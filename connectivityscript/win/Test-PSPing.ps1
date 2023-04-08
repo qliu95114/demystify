@@ -93,7 +93,8 @@ Param (
     [Switch]$AsJob
 )
 
-Function SendEvent{
+# Powershell Function Send-AIEvent , 2023-04-08
+Function Send-AIEvent{
     param (
                 [Guid]$piKey,
                 [String]$pEventName,
@@ -109,11 +110,12 @@ Function SendEvent{
                 time = [DateTime]::UtcNow.ToString("o")
                 iKey = $piKey
                 tags = @{
-                    "ai.device.id" = $env:COMPUTERNAME
-                    "ai.device.locale" = $domainname
                     "ai.user.id" = $uname
                     "ai.user.authUserId" = "$($domainname)\$($uname)"
                     "ai.cloud.roleInstance" = $env:COMPUTERNAME
+                    "ai.device.osVersion" = [System.Environment]::OSVersion.VersionString
+                    "ai.device.model"= (Get-CimInstance CIM_ComputerSystem).Model
+
           }
             "data" = @{
                     baseType = "EventData"
@@ -131,12 +133,12 @@ Function SendEvent{
         $attempt=1
         do {
             try {
-                Invoke-WebRequest -Method POST -Uri $appInsightsEndpoint -Headers @{"Content-Type"="application/x-json-stream"} -Body $body -TimeoutSec 4 -UseBasicParsing| Out-Null 
+                Invoke-WebRequest -Method POST -Uri $appInsightsEndpoint -Headers @{"Content-Type"="application/x-json-stream"} -Body $body -TimeoutSec 3 -UseBasicParsing| Out-Null 
                 return    
             }
             catch {
                 $PreciseTimeStamp=($timeStart.ToUniversalTime()).ToString("yyyy-MM-dd HH:mm:ss")
-                if ($attempt -ge 3)
+                if ($attempt -ge 4)
                 {
                     Write-Output "retry 3 failure..." 
                     $sendaimessage =$PreciseTimeStamp+",Fail to send AI message after 3 attemps, message lost"
@@ -151,7 +153,8 @@ Function SendEvent{
             $attempt++
         } until ($success)
         $ProgressPreference = $temp
-    }
+}
+
     
 
 # Start main scription
@@ -285,11 +288,13 @@ while ($killswitch -ne 0)
         $line = $PreciseTimeStamp+",ERROR"+","+$IPAddress+","+$port+","+$result +","+$failcount+","+$env:COMPUTERNAME
         $line |Out-File $logfile -Encoding utf8 -Append
         Write-Host $line -Fo Red
-        if ([string]::IsNullOrEmpty($aikey)) {} 
+        if ([string]::IsNullOrEmpty($aikey)) {
+            Write-Host "Info : aikey is not specified, Send-AIEvent() is skipped." -ForegroundColor "Gray"
+        } 
         else 
         {
-            #$headline="TIMESTAMP,RESULT,DestIP,DestPort,Message,FailCount,HOSTNAME"
-            SendEvent -piKey $aikey -pEventName "test-psping" -pCustomProperties @{PreciseTimeStamp=$PreciseTimeStamp;RESULT="ERROR";DestIP=$ipaddress;DestPort=$port;Message=$result.ToString();FailCount=$failcount} 
+            Write-Host "Info : aikey is specified, Send-AIEvent() is called" -ForegroundColor "Green"
+            Send-AIEvent -piKey $aikey -pEventName "test-psping_ps1" -pCustomProperties @{RESULT="ERROR";DestIP=$ipaddress;DestPort=$port;Message=$result.ToString();FailCount=$failcount} 
         }
     }
     else 
@@ -300,10 +305,13 @@ while ($killswitch -ne 0)
         $line =$PreciseTimeStamp+",SUCCESS"+","+$IPAddress+","+$port+","+$result +",0,"+$env:COMPUTERNAME
         $line |Out-File $logfile -Encoding utf8 -Append
         Write-Host $line -Fo Green
-        if ([string]::IsNullOrEmpty($aikey)) {} 
+        if ([string]::IsNullOrEmpty($aikey)) {
+            Write-Host "Info : aikey is not specified, Send-AIEvent() is skipped." -ForegroundColor "Gray"
+        } 
         else 
         {
-            SendEvent -piKey $aikey -pEventName "test-psping" -pCustomProperties @{PreciseTimeStamp=$PreciseTimeStamp;RESULT="SUCCESS";DestIP=$ipaddress;DestPort=$port;Message=$result.ToString();FailCount=$failcount} 
+            Write-Host "Info : aikey is specified, Send-AIEvent() is called" -ForegroundColor "Green"
+            Send-AIEvent -piKey $aikey -pEventName "test-psping_ps1" -pCustomProperties @{RESULT="SUCCESS";DestIP=$ipaddress;DestPort=$port;Message=$result.ToString();FailCount=$failcount} 
         }
         $failcount=0
     }

@@ -160,11 +160,12 @@ Function invoke_curl([string]$url,[string]$ipaddr)
     "$($PreciseTimeStamp),$($Message)"
     "$($PreciseTimeStamp),$($Message)" | Out-File $logfile -Append -Encoding utf8
     
-    if ([string]::IsNullOrEmpty($aikey)) {} 
+    if ([string]::IsNullOrEmpty($aikey)) {
+        Write-Host "Info : aikey is not specified, Send-AIEvent() is skipped." -ForegroundColor "Gray"
+    } 
     else 
     {
-        #$headline="TIMESTAMP,RESULT,DestIP,DestPort,Message,FailCount,HOSTNAME"
-        #Write-UTCLog " Send AI...."  "Yellow"
+        Write-Host "Info : aikey is specified, Send-AIEvent() is called" -ForegroundColor "Green"
         Send-AIEvent -piKey $aikey -pEventName "test-curl_ps1" -pCustomProperties @{Message=$Message.ToString()} 
     }
 }
