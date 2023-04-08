@@ -1,22 +1,32 @@
 #!/bin/bash
 
 # Name 
-# test_ping - This script will run ping test and keep local log and send result to application insight
+# test_ping - This script will run ping test, save result to logfile and send result to Application Insight (via instrumentation key)
 
 # SYNOPSIS
 # bash test_ping.sh  [ipaddress||dnsname] [aikey or (0||empty)] [logfile]
 
 # Options: 
-# $1 : Ip Address or FQDN DNS Name
-# $2 : Application Insight instructment key , 0 or leave empty will skip send-aievent()
+# $1 : IP Address or FQDN DNS Name
+# $2 : Application Insight instrumentation key (aikey, 48 Guid) , 0 or leave empty will skip send-aievent()
 # $3 : logfile, include path and file name
 
 # Examples:
-# Ping 8.8.4.4 and output log to /tmp/myping.log
-# test_ping.sh 8.8.4.4 /tmp/myping.log
+# Ping 8.8.4.4, save result to default logfile /tmp/$(hostname -s)_test_ping_sh_${ipaddr}.log.
+# ./test_ping.sh 8.8.4.4 
 
-# Author: Qing Liu (qliu95114@qq.com)
+# Ping 8.8.4.4, save result to custom logfile /tmp/myping.log.
+# ./test_ping.sh 8.8.4.4 0 /tmp/myping.log
 
+# Ping 8.8.4.4, send result to Application Insight and save result to default logfile /tmp/$(hostname -s)_test_ping_sh_${ipaddr}.log
+# ./test_ping.sh 8.8.4.4 11111111-1111-1111-1111-111111111111
+
+# Ping 8.8.4.4, send result to Application Insight and save result to custom logfile /tmp/myping.log.
+# ./test_ping.sh 8.8.4.4 11111111-1111-1111-1111-111111111111 /tmp/myping.log
+
+# Author: Qing Liu
+
+# Print string with UTC time and color
 function write-utclog() {
   # Get current UTC time
   utc_time=$(date -u +"%Y-%m-%d %H:%M:%S.%3N")
@@ -62,18 +72,18 @@ function write-utclog() {
 #ai.user.anonId: a unique identifier for the user
 #ai.user.userAgent: the user agent string of the client making the request
 
+# Send Customer Event via POST call to Application Insights. 
 function send-aievent {
   if [[ "$1" = "0" || -z "$1" ]]
   then 
-    echo "Info : Aikey is not specified or 0, skisend-aievent() is skipped." 
+    echo "Info : Aikey is 0 or Not Specified, send-aievent() is skipped." 
   else
     cname=$(hostname -s)
     uname=$(id -un)
     clientos=$(cat /etc/os-release | grep "PRETTY_NAME" | sed 's/PRETTY_NAME=//g' | sed 's/["]//g')
     clientmodel=$(uname -r)
     #clientip=$(ip addr show dev eth0 | grep 'inet '|awk '{print $2}'|awk -F '/' '{print $1}')
-    aikey=$1
-    message=$2
+    aikey=$1; message=$2; target=$3; tid=$4
     utc_time=$(date -u +"%Y-%m-%d %H:%M:%S.%3N")    
     telemetry='{
                 "name":"Microsoft.ApplicationInsights.'${aiKey}'.Event",
@@ -94,28 +104,22 @@ function send-aievent {
                           "properties":
                             {
                               "message":"'${message}'",
-                              "target":"'${ipaddr}'"
+                              "target":"'${target}'",
+                              "tid":"'${tid}'"
                             }
                       }
                   }
                }'
     curl --connect-timeout 3.0 --retry 4 --retry-delay 1 -X POST -H "Content-Type: application/x-json-stream"  -d "$telemetry" "https://dc.services.visualstudio.com/v2/track" -o /dev/null -s &
-    echo "Info : aikey specificed, send-aievent() is called"    
-    #retries=${1:-3}
-    #write-utclog  "${telemetry}" "green"
-    #while ! curl --connect-timeout 1.0 -X POST -H "Content-Type: application/x-json-stream"  -d "$telemetry" "https://dc.services.visualstudio.com/v2/track"  --output /dev/null & ; do
-    #    if [ $retries -eq 0 ]; then
-    #        write-utclog  "Error: unable to send telemetry after maximum retries" "Red"
-    #        return 1
-    #    fi
-    #    write-utclog "Error: sending telemetry failed, $retries retries remaining"  "Yellow"
-    #    sleep 1
-    #    ((retries--))
-    #done
+    echo "Info : aikey is specificed, send-aievent() is called"    
   fi
 }
 
+# main routing 
+# Creates random 8-bytes characters to track ping thread in Application Insight 
+tid=$(head /dev/urandom | tr -dc A-Za-z0-9 | head -c 8 ; echo '')  
 
+#1 is target ip address or fqdn dns name
 if [ -z "$1" ] 
 then
   read -p "Enter your target ip address or dns name (e.g. 8.8.8.8 or dns.google):" ipaddr
@@ -123,6 +127,7 @@ else
   ipaddr=$1
 fi
 
+#3 is logfile
 if [ -z "$3" ]
 then
   logfile="/tmp/$(hostname -s)_test_ping_sh_${ipaddr}.log"
@@ -130,15 +135,17 @@ else
   logfile=$3
 fi
 
+#2 is instrumentation key
 if [ -z "$2" ]
 then
   ikey="0"
 else
-  ikey=$2  # Replace with your instrumentation key
-  send-aievent "${ikey}" "test_ping_sh started, logfile: ${logfile}"
+  ikey=$2  
+  send-aievent "${ikey}" "test_ping_sh started, logfile: ${logfile}" "${ipaddr}" "${tid}"
 fi
 
 write-utclog "target dns or ip : ${ipaddr}" "cyan"
 write-utclog "log file : ${logfile}"  "cyan"
 
-ping -O $ipaddr -W 1 -i 1 | while read pong; do echo "$(date -u +'%F %H:%M:%S.%3N'),$pong"; echo "$(date -u +'%F %H:%M:%S'),$pong" | iconv -t UTF-8 >> $logfile ; send-aievent "${ikey}" "${pong}" ; done 2>&1 
+# main function of ping
+ping -O $ipaddr -W 1 -i 1 | while read pong; do echo "$(date -u +'%F %H:%M:%S.%3N'),${tid},${pong}"; echo "$(date -u +'%F %H:%M:%S,%3N'),${tid},${pong}" | iconv -t UTF-8 >> $logfile ; send-aievent "${ikey}" "${pong}" "${ipaddr}" "${tid}"; done 2>&1 
