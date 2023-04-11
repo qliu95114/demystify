@@ -8,7 +8,7 @@ echo $learningbash
 # installation
 sudo apt update -y
 sudo apt upgrade -y
-sudo apt install netfilter-persistent net-tools iptables tcpdump nano vim iputils-ping cron inetutils-traceroute iotop iftop iperf3 netcat apache2-utils -y
+sudo apt install netfilter-persistent net-tools iptables tcpdump nano vim iputils-ping cron inetutils-traceroute iotop iftop iperf3 netcat apache2-utils moreutils -y
 
 # add powershell 
 sudo snap install powershell --classic  # LEGACY, but working in Ubuntu 22
