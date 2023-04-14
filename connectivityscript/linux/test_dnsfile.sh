@@ -1,30 +1,32 @@
 #!/bin/bash
 
 # Name 
-# test_ping - This script will run ping test, save result to logfile and send result to Application Insight (via instrumentation key)
+# test_dns - This script will run ping test, save result to logfile and send result to Application Insight (via instrumentation key)
 
 # SYNOPSIS
-# bash test_ping.sh  [ipaddress||dnsname] [aikey or (0||empty)] [logfile]
+# bash test_dns.sh  [dnsnamefile] [aikey or (0||empty)] [dnsserver ip address] [logfile]
 
 # Options: 
-# $1 : IP Address or FQDN DNS Name
+# $1 : A Text File with a list of dnsnames
 # $2 : Application Insight instrumentation key (aikey, 48 Guid) , 0 or leave empty will skip send-aievent()
-# $3 : logfile, include path and file name
+# $3 ：IP Address of Dns Server
+# $4 : Logfile, include path and file name
 
 # Examples:
-# Ping 8.8.4.4, save result to default logfile /tmp/$(hostname -s)_test_ping_sh_${ipaddr}.log.
-# ./test_ping.sh 8.8.4.4 
+# test_dns www.bing.com, save result to default logfile /tmp/$(hostname -s)_test_dns_sh_${ipaddr}.log.
+# ./test_dns.sh www.bing.com 
 
-# Ping 8.8.4.4, save result to custom logfile /tmp/myping.log.
-# ./test_ping.sh 8.8.4.4 0 /tmp/myping.log
+# Ping 8.8.4.4, save result to default log /tmp/$(hostname -s)_test_dns_sh_${ipaddr}.log., and use 168.63.129.16 (Azure VM default DNS SERVER)
+# ./test_dns.sh www.bing.com 0 168.63.129.16
 
-# Ping 8.8.4.4, send result to Application Insight and save result to default logfile /tmp/$(hostname -s)_test_ping_sh_${ipaddr}.log
-# ./test_ping.sh 8.8.4.4 11111111-1111-1111-1111-111111111111
+# Ping 8.8.4.4, save result to default log /tmp/$(hostname -s)_test_dns_sh_${ipaddr}.log., and use 168.63.129.16 (Azure VM default DNS SERVER) and send result to Application Insight 
+# ./test_dns.sh www.bing.com 11111111-1111-1111-1111-111111111111 168.63.129.16
 
-# Ping 8.8.4.4, send result to Application Insight and save result to custom logfile /tmp/myping.log.
-# ./test_ping.sh 8.8.4.4 11111111-1111-1111-1111-111111111111 /tmp/myping.log
+# Ping 8.8.4.4, save result to /tmp/mydns.log use 168.63.129.16 (Azure VM default DNS SERVER and send result to Application Insight 
+# ./test_dns.sh www.bing.com 11111111-1111-1111-1111-111111111111 /tmp/mydns.log
 
 # Author: Qing Liu
+# nslookup -timeout=1 -retry=1 -type=A www.google.com. 10.10.10.10 | awk '!a[$0]++' | tr '\n' ';' | tr '\t' ' '
 
 # Print string with UTC time and color
 function write-utclog() {
@@ -83,10 +85,10 @@ function send-aievent {
     clientos=$(cat /etc/os-release | grep "PRETTY_NAME" | sed 's/PRETTY_NAME=//g' | sed 's/["]//g')
     clientmodel=$(uname -r)
     #clientip=$(ip addr show dev eth0 | grep 'inet '|awk '{print $2}'|awk -F '/' '{print $1}')
-    aikey=$1; message=$2; target=$3; tid=$4; containerid=$5
+    aikey=$1; message=$2; dnsname=$3; dnsserver=$4; name=$5,  containerid=$6
     utc_time=$(date -u +"%Y-%m-%d %H:%M:%S.%3N")    
     telemetry='{
-                "name":"Microsoft.ApplicationInsights.'${aiKey}'.Event",
+                "name":"Microsoft.ApplicationInsights.'${aikey}'.Event",
                 "time":"'${utc_time}'",
                 "iKey":"'${aikey}'",
                 "tags":{
@@ -100,41 +102,52 @@ function send-aievent {
                     "baseData":
                       {
                           "ver":2,
-                          "name":"test_ping_sh",
+                          "name":"'${name}'",
                           "properties":
                             {
                               "message":"'${message}'",
-                              "target":"'${target}'",
-                              "tid":"'${tid}'",
-                              "cid":"'${$containerid}'"
+                              "dnsname":"'${dnsname}'",
+                              "dnsserver":"'${dnsserver}'",
+                              "cid":"'${$containerid}'"                              
                             }
                       }
                   }
                }'
+    #echo ${telemetry}
     curl --connect-timeout 3.0 --retry 4 --retry-delay 1 -X POST -H "Content-Type: application/x-json-stream"  -d "$telemetry" "https://dc.services.visualstudio.com/v2/track" -o /dev/null -s &
+    #curl --connect-timeout 3.0 --retry 4 --retry-delay 1 -X POST -H "Content-Type: application/x-json-stream"  -d "$telemetry" "https://dc.services.visualstudio.com/v2/track" #-o /dev/null -s &
     echo "Info : aikey is specified, send-aievent() is called"    
   fi
 }
 
-# main routing 
-# Creates random 8-bytes characters to track ping thread in Application Insight 
-tid=$(head /dev/urandom | tr -dc A-Za-z0-9 | head -c 8 ; echo '')  
-
+# main program
 # azure get containerid from a vm
 cid=$(sudo curl -s --connect-timeout 1 http://168.63.129.16/machine?comp=goalstate -H "x-ms-guest-agent-name: WaAgent-2.7.0.0 (2.7.0.0)" -H "x-ms-version: 2012-11-30" |sed -n 's:.*<ContainerId>\([^<]*\)</ContainerId>.*:\1:p')
 
 #1 is target ip address or fqdn dns name
 if [ -z "$1" ] 
 then
-  read -p "Enter your target ip address or dns name (e.g. 8.8.8.8 or dns.google):" ipaddr
+  read -p "Enter your target filename that has a list of dnsnames (e.g. /tmp/dnsname.txt):" dnsfilename
 else
-  ipaddr=$1
+  dnsfilename=$1
 fi
 
-#3 is logfile
-if [ -z "$3" ]
+filename=$(basename $dnsfilename)
+filename_noext="${filename%.*}"
+
+#3 is dns server
+if [ -z "$3" ] 
 then
-  logfile="/tmp/$(hostname -s)_test_ping_sh_${ipaddr}.log"
+  write-utclog "dnsserver is not specified, use system default dns" "cyan"
+else
+  dnsserver=$3
+fi
+
+
+#4 is logfile
+if [ -z "$4" ]
+then
+  logfile="/tmp/$(hostname -s)_test_dnsfile_sh_${filename_noext}.log"
 else
   logfile=$3
 fi
@@ -145,11 +158,40 @@ then
   ikey="0"
 else
   ikey=$2  
-  send-aievent "${ikey}" "test_ping_sh started, logfile: ${logfile}" "${ipaddr}" "${tid}" "${cid}"
+  send-aievent "${ikey}" "test_dnsfile_sh started, logfile: ${logfile}" "${dnsfilename}" "${dnsserver}" "test_dnsfile_sh" "${cid}"
 fi
 
-write-utclog "target dns or ip : ${ipaddr}" "cyan"
+# main function of nslookup
+
+write-utclog "target dnsfile : ${dnsfilename}" "cyan"
 write-utclog "log file : ${logfile}"  "cyan"
 
-# main function of ping
-ping -O $ipaddr -W 1 -i 1 | while read pong; do echo "$(date -u +'%F %H:%M:%S.%3N'),${tid},${pong}"; echo "$(date -u +'%F %H:%M:%S,%3N'),${tid},${pong}" | iconv -t UTF-8 >> $logfile ; send-aievent "${ikey}" "${pong}" "${ipaddr}" "${tid}" "${cid}"; done 2>&1 
+if [ ! -f "$dnsfilename" ]; then
+  write-utclog  "File '${dnsfilename}' does not exist! please double-check!" "red"
+  exit 1
+fi
+
+# Read file
+while IFS= read -r line
+do
+  # Add line to array
+  lines+=("$line")
+done < "$dnsfilename"
+
+# Count total lines
+total_lines=${#lines[@]}
+write-utclog "Total $total_lines record"
+
+while true
+do
+  for (( i=0; i<$total_lines; i++ ));
+  do
+    #"${lines[$i]}"
+    result=$(nslookup -timeout=2 -retry=1 -type=A ${lines[$i]}. ${dnsserver} | awk '!a[$0]++' | tr '\n' '|' | tr '\t' ' ')  # remove duplicate line, remove \n and \t for JSON format
+    echo "$(date -u +'%F %H:%M:%S.%3N'),${lines[$i]}.,${dnsserver},${result}" | tee -a $logfile
+    send-aievent "${ikey}" "${result}" "${lines[$i]}" "${dnsserver}" "test_dnsfile_sh" "${cid}"
+    read -t 0.1
+  done
+done
+
+
