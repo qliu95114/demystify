@@ -106,7 +106,7 @@ function send-aievent {
                               "message":"'${message}'",
                               "target":"'${target}'",
                               "tid":"'${tid}'",
-                              "cid":"'${$containerid}'"
+                              "cid":"'${containerid}'"
                             }
                       }
                   }
