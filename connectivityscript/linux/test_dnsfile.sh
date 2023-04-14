@@ -85,7 +85,7 @@ function send-aievent {
     clientos=$(cat /etc/os-release | grep "PRETTY_NAME" | sed 's/PRETTY_NAME=//g' | sed 's/["]//g')
     clientmodel=$(uname -r)
     #clientip=$(ip addr show dev eth0 | grep 'inet '|awk '{print $2}'|awk -F '/' '{print $1}')
-    aikey=$1; message=$2; dnsname=$3; dnsserver=$4; name=$5, containerid=$6
+    aikey=$1; message=$2; dnsname=$3; dnsserver=$4; name=$5; containerid=$6
     utc_time=$(date -u +"%Y-%m-%d %H:%M:%S.%3N")    
     telemetry='{
                 "name":"Microsoft.ApplicationInsights.'${aikey}'.Event",
@@ -108,7 +108,7 @@ function send-aievent {
                               "message":"'${message}'",
                               "dnsname":"'${dnsname}'",
                               "dnsserver":"'${dnsserver}'",
-                              "cid":"'${$containerid}'"                              
+                              "cid":"'${containerid}'"                              
                             }
                       }
                   }
