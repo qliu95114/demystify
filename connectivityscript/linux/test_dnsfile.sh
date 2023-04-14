@@ -85,7 +85,7 @@ function send-aievent {
     clientos=$(cat /etc/os-release | grep "PRETTY_NAME" | sed 's/PRETTY_NAME=//g' | sed 's/["]//g')
     clientmodel=$(uname -r)
     #clientip=$(ip addr show dev eth0 | grep 'inet '|awk '{print $2}'|awk -F '/' '{print $1}')
-    aikey=$1; message=$2; dnsname=$3; dnsserver=$4; name=$5,  containerid=$6
+    aikey=$1; message=$2; dnsname=$3; dnsserver=$4; name=$5, containerid=$6
     utc_time=$(date -u +"%Y-%m-%d %H:%M:%S.%3N")    
     telemetry='{
                 "name":"Microsoft.ApplicationInsights.'${aikey}'.Event",
@@ -115,7 +115,6 @@ function send-aievent {
                }'
     #echo ${telemetry}
     curl --connect-timeout 3.0 --retry 4 --retry-delay 1 -X POST -H "Content-Type: application/x-json-stream"  -d "$telemetry" "https://dc.services.visualstudio.com/v2/track" -o /dev/null -s &
-    #curl --connect-timeout 3.0 --retry 4 --retry-delay 1 -X POST -H "Content-Type: application/x-json-stream"  -d "$telemetry" "https://dc.services.visualstudio.com/v2/track" #-o /dev/null -s &
     echo "Info : aikey is specified, send-aievent() is called"    
   fi
 }
@@ -190,7 +189,7 @@ do
     result=$(nslookup -timeout=2 -retry=1 -type=A ${lines[$i]}. ${dnsserver} | awk '!a[$0]++' | tr '\n' '|' | tr '\t' ' ')  # remove duplicate line, remove \n and \t for JSON format
     echo "$(date -u +'%F %H:%M:%S.%3N'),${lines[$i]}.,${dnsserver},${result}" | tee -a $logfile
     send-aievent "${ikey}" "${result}" "${lines[$i]}" "${dnsserver}" "test_dnsfile_sh" "${cid}"
-    read -t 0.1
+    #read -t 0.1
   done
 done
 
