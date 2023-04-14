@@ -83,7 +83,7 @@ function send-aievent {
     clientos=$(cat /etc/os-release | grep "PRETTY_NAME" | sed 's/PRETTY_NAME=//g' | sed 's/["]//g')
     clientmodel=$(uname -r)
     #clientip=$(ip addr show dev eth0 | grep 'inet '|awk '{print $2}'|awk -F '/' '{print $1}')
-    aikey=$1; message=$2; target=$3; tid=$4
+    aikey=$1; message=$2; target=$3; tid=$4; containerid=$5
     utc_time=$(date -u +"%Y-%m-%d %H:%M:%S.%3N")    
     telemetry='{
                 "name":"Microsoft.ApplicationInsights.'${aiKey}'.Event",
@@ -105,7 +105,8 @@ function send-aievent {
                             {
                               "message":"'${message}'",
                               "target":"'${target}'",
-                              "tid":"'${tid}'"
+                              "tid":"'${tid}'",
+                              "cid":"'${$containerid}'",
                             }
                       }
                   }
@@ -118,6 +119,9 @@ function send-aievent {
 # main routing 
 # Creates random 8-bytes characters to track ping thread in Application Insight 
 tid=$(head /dev/urandom | tr -dc A-Za-z0-9 | head -c 8 ; echo '')  
+
+# azure get containerid from a vm
+cid=$(sudo curl -s --connect-timeout 1 http://168.63.129.16/machine?comp=goalstate -H "x-ms-guest-agent-name: WaAgent-2.7.0.0 (2.7.0.0)" -H "x-ms-version: 2012-11-30" |sed -n 's:.*<ContainerId>\([^<]*\)</ContainerId>.*:\1:p')
 
 #1 is target ip address or fqdn dns name
 if [ -z "$1" ] 
@@ -141,11 +145,11 @@ then
   ikey="0"
 else
   ikey=$2  
-  send-aievent "${ikey}" "test_ping_sh started, logfile: ${logfile}" "${ipaddr}" "${tid}"
+  send-aievent "${ikey}" "test_ping_sh started, logfile: ${logfile}" "${ipaddr}" "${tid}" "${cid}"
 fi
 
 write-utclog "target dns or ip : ${ipaddr}" "cyan"
 write-utclog "log file : ${logfile}"  "cyan"
 
 # main function of ping
-ping -O $ipaddr -W 1 -i 1 | while read pong; do echo "$(date -u +'%F %H:%M:%S.%3N'),${tid},${pong}"; echo "$(date -u +'%F %H:%M:%S,%3N'),${tid},${pong}" | iconv -t UTF-8 >> $logfile ; send-aievent "${ikey}" "${pong}" "${ipaddr}" "${tid}"; done 2>&1 
+ping -O $ipaddr -W 1 -i 1 | while read pong; do echo "$(date -u +'%F %H:%M:%S.%3N'),${tid},${pong}"; echo "$(date -u +'%F %H:%M:%S,%3N'),${tid},${pong}" | iconv -t UTF-8 >> $logfile ; send-aievent "${ikey}" "${pong}" "${ipaddr}" "${tid}" "${cid}"; done 2>&1 

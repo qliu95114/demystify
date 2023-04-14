@@ -85,7 +85,7 @@ function send-aievent {
     clientos=$(cat /etc/os-release | grep "PRETTY_NAME" | sed 's/PRETTY_NAME=//g' | sed 's/["]//g')
     clientmodel=$(uname -r)
     #clientip=$(ip addr show dev eth0 | grep 'inet '|awk '{print $2}'|awk -F '/' '{print $1}')
-    aikey=$1; message=$2; dnsname=$3; dnsserver=$4; name=$5
+    aikey=$1; message=$2; dnsname=$3; dnsserver=$4; name=$5; containerid=$6
     utc_time=$(date -u +"%Y-%m-%d %H:%M:%S.%3N")    
     telemetry='{
                 "name":"Microsoft.ApplicationInsights.'${aikey}'.Event",
@@ -107,7 +107,8 @@ function send-aievent {
                             {
                               "message":"'${message}'",
                               "dnsname":"'${dnsname}'",
-                              "dnsserver":"'${dnsserver}'"
+                              "dnsserver":"'${dnsserver}'",
+                              "cid":"'${containerid}'"
                             }
                       }
                   }
@@ -118,7 +119,11 @@ function send-aievent {
   fi
 }
 
-# main routing 
+# main program start
+
+# azure get containerid from a vm
+cid=$(sudo curl -s --connect-timeout 1 http://168.63.129.16/machine?comp=goalstate -H "x-ms-guest-agent-name: WaAgent-2.7.0.0 (2.7.0.0)" -H "x-ms-version: 2012-11-30" |sed -n 's:.*<ContainerId>\([^<]*\)</ContainerId>.*:\1:p')
+
 #1 is target ip address or fqdn dns name
 if [ -z "$1" ] 
 then
@@ -149,7 +154,7 @@ then
   ikey="0"
 else
   ikey=$2  
-  send-aievent "${ikey}" "test_dns_sh started, logfile: ${logfile}" "${dnsname}" "${dnsserver}" "test_dns_sh"
+  send-aievent "${ikey}" "test_dns_sh started, logfile: ${logfile}" "${dnsname}" "${dnsserver}" "test_dns_sh" "${cid}"
 fi
 
 write-utclog "target dns : ${dnsname}" "cyan"
@@ -160,7 +165,7 @@ while true
 do
   result=$(nslookup -timeout=2 -retry=1 -type=A ${dnsname}. ${dnsserver} | awk '!a[$0]++' | tr '\n' '|' | tr '\t' ' ')  # remove duplicate line, remove \n and \t for JSON format
   echo "$(date -u +'%F %H:%M:%S.%3N'),${dnsname}.,${dnsserver},${result}" | tee -a $logfile
-  send-aievent "${ikey}" "${result}" "${dnsname}" "${dnsserver}" "test_dns_sh"
+  send-aievent "${ikey}" "${result}" "${dnsname}" "${dnsserver}" "test_dns_sh" "${cid}"
   sleep 1 
 done
 
