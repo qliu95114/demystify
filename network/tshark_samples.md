@@ -114,7 +114,7 @@ Here is my favorite fields commonly used when analyze TCP/UDP network trace, Enc
 
 1. (tshark) Export trace to csv , Fields selected
 ``` bash 
-"c:\program files\wireshark\tshark" -r my.pcapng -T fields -e frame.number -e frame.time_epoch -e frame.time_delta_displayed -e ip.src -e ip.dst -e ip.id -e _ws.col.Protocol -e tcp.seq -e tcp.ack -e frame.len -e tcp.srcport -e tcp.dstport -e udp.srcport -e udp.dstport -e tcp.analysis.ack_rtt -e frame.protocols -e _ws.col.Info -e eth.src -e eth.dst -e ipv6.src -e ipv6.dst -e ip.proto -E header=y -E separator=, -E quote=d > my.pcapng.csv
+"c:\program files\wireshark\tshark" -r my.pcapng -T fields -e frame.number -e frame.time_epoch -e frame.time_delta_displayed -e ip.src -e ip.dst -e ip.id -e _ws.col.Protocol -e tcp.seq -e tcp.ack -e frame.len -e tcp.srcport -e tcp.dstport -e udp.srcport -e udp.dstport -e tcp.analysis.ack_rtt -e frame.protocols -e _ws.col.Info -e eth.src -e eth.dst -e ipv6.src -e ipv6.dst -e ip.proto -e dns.id -E header=y -E separator=, -E quote=d > my.pcapng.csv
 ```
 
 ADX (Kusto) create table and ingress from CSV to table 
@@ -125,7 +125,7 @@ Recommended Protocol to disable, IRC , RESP (Redis)
 ``` kql
 .drop table trace  //
 
-.create table trace (framenumber:long,frametime:string,DeltaDisplayed:string,Source:string,Destination:string,ipid:string,Protocol:string,tcpseq:string,tcpack:string,Length:int,tcpsrcport:int,tcpdstport:int,udpsrcport:int,udpdstport:int,tcpackrtt:string,frameprotocol:string,Info:string,ethsrc:string,ethdst:string,SourceV6:string,DestinationV6:string,ipProtocol:string)
+.create table trace (framenumber:long,frametime:string,DeltaDisplayed:string,Source:string,Destination:string,ipid:string,Protocol:string,tcpseq:string,tcpack:string,Length:int,tcpsrcport:int,tcpdstport:int,udpsrcport:int,udpdstport:int,tcpackrtt:string,frameprotocol:string,Info:string,ethsrc:string,ethdst:string,SourceV6:string,DestinationV6:string,ipProtocol:string,dnsid:string)
 
 .ingest into table trace (@"c:\temp\my.pcapng.csv") with (format='csv',ignoreFirstRecord=true)  // For Local Kusto Emulator
 
@@ -289,7 +289,12 @@ C:\temp>d:\Wireshark\tshark -D
 2. \Device\NPF_{D8591B22-E79C-4AD7-B62A-13E917469A6D} (Ethernet)
 
 Enable tshark capture. Rolling tracking 
-C:\temp>d:\wireshark\tshark -i 2 -n -b filesize:204800 -w "C:\temp\%COMPUTERNAME%.pcap" -b files:100
+C:\temp>d:\wireshark\tshark -i 2 -n -b filesize:204800 -w "C:\temp\%COMPUTERNAME%.pcap" -b files:100 -s 128
+
+-i interface id
+-b filesize:204800 (max size per file : 200MB)
+-b files:100  (max files: 100)
+-s 128   packet lenght, take 128 including eth header. 
 ```
 
 ## Sample 8 - Reduce file size - Truncate packet lengths
