@@ -7,13 +7,12 @@ Param (
 	[int]$mychoice=9999
 )
 
-#Send-UdpDatagram -EndPoint $Endpoint -Port $port -Message "test.mymetric:0|c"      
+# a function to write log with UTC time stamp
 Function Write-UTCLog ([string]$message,[string]$color="Green")
 {
     	$logdate = ((get-date).ToUniversalTime()).ToString("yyyy-MM-dd HH:mm:ss")
     	$logstamp = "["+$logdate + "]," + $message
         Write-Host $logstamp -ForegroundColor $color
-#    	Write-Output $logstamp | Out-File $logfile -Encoding ASCII -append
 }
 
 function FFMpegCommand (
