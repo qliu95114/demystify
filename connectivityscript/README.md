@@ -1,11 +1,11 @@
 # All kinds of connectivity scripts
 
-| Windows | linux | Python |
+| win | linux | python |
 |-|-|-|
 |[Test-dns.ps1](win/Test-dns.ps1) | [Test_tcpping.sh](linux/Test_tcpping.sh)| [tcping_ai.py](py/tcping_ai.py)|
-|[Test-curl.ps1](win/Test-Https.ps1)|||
-|[Test-Https.ps1](win/Test-Https.ps1)|||
-|[Test-ICMP.ps1](win/Test-ICMP.ps1)|||
+|[Test-curl.ps1](win/Test-Https.ps1)|[Test_dns.sh)(linux/test_dns.sh)]||
+|[Test-Https.ps1](win/Test-Https.ps1)|[Test_dnsfile.sh)(linux/test_dnsfile.sh)||
+|[Test-ICMP.ps1](win/Test-ICMP.ps1)|[Test_ping.sh)(linux/test_ping.sh)||
 |[Test-IpInRange.ps1](win/Test-IpInRange.ps1)|||
 |[Test-PSPing.ps1](win/Test-PSPing.ps1)|||
 |[Test-PSping_batch.ps1](win/Test-PsPing_batch.ps1)|||
