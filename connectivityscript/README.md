@@ -40,7 +40,9 @@ Sample output
 
 ```
 
-## Windows - Powershell (HTTP/HTTPS iwr (invoke-webrequest), same source port, continoue traffic)
+## Windows - Powershell (HTTP/HTTPS iwr (invoke-webrequest), 
+If the script running in Powershell Command-Prompt, it will be same source port, continoue traffic.
+If the script running in Powershell Core Command-Prompt, it will create new tcp stream for every IWR request
 ```
 $url="https://www.bing.com";$interval=1;$timeout=5;while ($true) {try {$iwr=Invoke-WebRequest -Uri $url -UseBasicParsing -TimeoutSec $timeout;"{0},{1},{2},{3},{4}" -f (Get-Date).ToUniversalTime().ToString("yyyy-MM-dd HH:mm:ss"),$($url),$iwr.StatusCode,$iwr.StatusDescription,$iwr.RawContentLength } catch {    $iwr = $_.Exception.Message; "{0},{1},{2}" -f (Get-Date).ToUniversalTime().ToString("yyyy-MM-dd HH:mm:ss"),$url,$iwr }; sleep $interval}
 ```
