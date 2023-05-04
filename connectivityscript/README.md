@@ -16,7 +16,7 @@
 
 # One Line Script (Windows & Linux)
 
-## Windows - Powershell (HTTPS cURL.exe)
+## Windows - Powershell (HTTPS/HTTP - cURL.exe)
 
 Output curl.exe result with UTC timestamp
 Console & LogFile : $env:temp\$env:computername_curl.log, 
@@ -40,7 +40,7 @@ Sample output
 
 ```
 
-## Windows - Powershell (HTTP/HTTPS iwr (invoke-webrequest), 
+## Windows - Powershell (HTTP/HTTPS - Invoke-WebRequest(IWR))
 |Powershell Command-Prompt|Powershell Core Command-Prompt|
 |-|-|
 |Script will use one TCP stream, same source port, continoue traffic.|Script will create new tcp stream for every IWR request|
@@ -58,7 +58,7 @@ Sample output
 2023-04-01 04:13:18,https://management.chinacloudapi.cn,The remote server returned an error: (400) Bad Request.
 2023-04-01 04:13:19,https://management.chinacloudapi.cn,The remote server returned an error: (400) Bad Request.
 ```
-## Windows - Command Prompt (TCP - PSPING)
+## Windows - Command Prompt (TCP - PSPING.EXE)
 
 Result to LogFile : %temp%\%computername%_psping.log
 ```
@@ -75,7 +75,7 @@ psping.exe -t www.bing.com:443 |cmd /q /v /c "(pause&pause)>nul & for /l %a in (
 Test-Connection -Count 9999 www.bing.com | Format-Table @{Name='TimeStamp';Expression={(get-date).ToUniversalTime().ToString("yyyy-MM-ddT HH:mm:ss")}},Address,ProtocolAddress,ResponseTime
 ```
 
-## Windows - Powershell (TCP - PSPING)
+## Windows - Powershell (TCP - PSPING.EXE)
 
 **Recommended** Output psping.exe result with UTC timestamp
 Console & LogFile : %temp%\%computername%_psping.log (Encoding: utf8) 
@@ -96,7 +96,7 @@ Output psping.exe result with UTC timestamp - Console & LogFile %temp%\%computer
 psping.exe -4 -t -i 3 -w 10 www.bing.com:80 /Accepteula | Foreach{"{0} - {1}" -f (Get-Date).ToUniversalTime(),$_;"{0} - {1}" -f (Get-Date).ToUniversalTime(),$_|Out-File "$($env:temp)\$($env:computername)_psping.log" -append -encoding utf8}
 ```
 
-## Windows - Powershell (ICMP - PING)
+## Windows - Powershell (ICMP - PING.EXE)
 
 Output ping.exe result with UTC timestamp 
 Console & LogFile : %temp%\%computername%_ping.log
@@ -139,6 +139,7 @@ Console & LogFile : "$(hostname -s)_nc.log"
 ```
 target="www.bing.com";while true; do echo "`date -u +'%F %H:%M:%S'` - `nc -vvzw 2 $target 443 2>&1`";sleep 1; done 2>&1 | tee -a "$(hostname -s)_nc_${target}.log"
 ```
+
 ## Linux - Script (ICMP - ping)
 
 Output ping result with UTC timestamp
@@ -151,7 +152,7 @@ ipaddr="192.168.3.11";ping -O $ipaddr -W 1 -i 1| while read pong; do echo "$(dat
 ipaddr="192.168.3.11";while true; do ping -O $ipaddr -W 1 -c 1| while read pong; do echo "$(date -u +'%F %H:%M:%S') - $pong"; done ;sleep 1; done 2>&1 | tee -a "$(hostname -s)_ping_${ipaddr}.log"
 ```
 
-## Linux - Script (HTTPS - curl)
+## Linux - Script (HTTPS/HTTP - curl)
 
 Output Curl output with UTC timstamp
 Console & LogFile : "$(hostname -s)_curl.log"
