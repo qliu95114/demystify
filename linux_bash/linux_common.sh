@@ -16,3 +16,12 @@ sudo snap install powershell --classic  # LEGACY, but working in Ubuntu 22
 # sudo apt install dotnet-sdk-5.0 -y
 # dotnet tool install --global PowerShell 
 
+# install a web server
+sudo apt install apache2 -y
+sudo systemctl start apache2
+sudo systemctl enable apache2
+
+# create a default webpage for apache2 and include the hostname
+sudo echo "<html><body><h1>$(hostname)</h1></body></html>" > /var/www/html/index.html
+
+
