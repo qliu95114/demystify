@@ -22,7 +22,7 @@ sudo systemctl enable apache2
 
 # MaxKeepAliveRequests: The maximum number of requests to allow
 # during a persistent connection. Set to 0 to allow an unlimited amount.
-sudo sed -i 's/MaxKeepAliveRequests 100/MaxKeepAliveRequests 9999/g' /etc/apache2/apache2.conf
+sudo sed -i 's/MaxKeepAliveRequests 100/MaxKeepAliveRequests 999/g' /etc/apache2/apache2.conf
 sudo sed -i 's/KeepAliveTimeout 5/KeepAliveTimeout 30/g' /etc/apache2/apache2.conf
 
 # create a default webpage for apache2 and include the hostname
