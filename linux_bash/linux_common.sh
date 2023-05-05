@@ -29,7 +29,7 @@ sudo sed -i 's/KeepAliveTimeout 5/KeepAliveTimeout 30/g' /etc/apache2/apache2.co
 sudo echo "<html><body><h1>$(hostname)</h1></body></html>" | sudo tee /var/www/html/hostname.html
 
 # open tcpport 80 to allow web traffic
-sudo ufw allow 80/tcp
+#sudo ufw allow 80/tcp
 
 # supress wireshark installation
 #echo "wireshark-common wireshark-common/install-setuid boolean true" | sudo debconf-set-selections
