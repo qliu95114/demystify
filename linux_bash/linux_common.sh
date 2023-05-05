@@ -8,7 +8,7 @@ echo $learningbash
 # installation, when install tshark it will prompt diaglog for dumpcap setting, 
 sudo apt update -y
 sudo apt upgrade -y
-sudo apt install netfilter-persistent net-tools iptables tcpdump nano vim iputils-ping cron inetutils-traceroute iotop iftop iperf3 netcat apache2-utils moreutils apache2 -y
+sudo apt install netfilter-persistent net-tools iptables tcpdump nano vim iputils-ping cron inetutils-traceroute iotop iftop iperf3 netcat apache2-utils moreutils apache2 ufw -y
 
 # add powershell 
 sudo snap install powershell --classic  # LEGACY, but working in Ubuntu 22
@@ -29,7 +29,7 @@ sudo sed -i 's/KeepAliveTimeout 5/KeepAliveTimeout 30/g' /etc/apache2/apache2.co
 sudo echo "<html><body><h1>$(hostname)</h1></body></html>" | sudo tee /var/www/html/hostname.html
 
 # open tcpport 80 to allow web traffic
-#sudo ufw allow 80/tcp
+sudo ufw allow 80/tcp
 
 # supress wireshark installation
 #echo "wireshark-common wireshark-common/install-setuid boolean true" | sudo debconf-set-selections
