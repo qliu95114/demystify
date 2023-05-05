@@ -16,10 +16,6 @@ sudo snap install powershell --classic  # LEGACY, but working in Ubuntu 22
 # sudo apt install dotnet-sdk-5.0 -y
 # dotnet tool install --global PowerShell 
 
-# install a web server
-sudo systemctl start apache2
-sudo systemctl enable apache2
-
 # MaxKeepAliveRequests: The maximum number of requests to allow
 # during a persistent connection. Set to 0 to allow an unlimited amount.
 sudo sed -i 's/MaxKeepAliveRequests 100/MaxKeepAliveRequests 999/g' /etc/apache2/apache2.conf
@@ -30,6 +26,10 @@ sudo echo "<html><body><h1>$(hostname)</h1></body></html>" | sudo tee /var/www/h
 
 # open tcpport 80 to allow web traffic
 sudo ufw allow 80/tcp
+
+# install a web server
+sudo systemctl start apache2
+sudo systemctl enable apache2
 
 # supress wireshark installation
 #echo "wireshark-common wireshark-common/install-setuid boolean true" | sudo debconf-set-selections
