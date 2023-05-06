@@ -32,9 +32,9 @@ else
     sudo sed -i '/http {/a \    keepalive_requests 1000000;' /etc/nginx/nginx.conf
   fi
   if grep -q "keepalive_timeout" /etc/nginx/nginx.conf; then
-    sudo sed -i 's/keepalive_timeout [0-9]\+/keepalive_requests 1000000/' /etc/nginx/nginx.conf
+    sudo sed -i 's/keepalive_timeout [0-9]\+/keepalive_timeout 180 180/' /etc/nginx/nginx.conf
   else
-    sudo sed -i '/http {/a \    keepalive_requests 1000000;' /etc/nginx/nginx.conf
+    sudo sed -i '/http {/a \    keepalive_timeout 180 180;' /etc/nginx/nginx.conf
   fi  
 fi
 
