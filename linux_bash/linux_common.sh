@@ -39,7 +39,18 @@ else
 fi
 
 # create a default webpage to show hostname in nginx
-#sudo echo "<html><body><h1>$(hostname)</h1></body></html>" | sudo tee /var/www/html/hostname.html
+sudo echo "<html><body><h1>$(hostname)</h1></body></html>" | sudo tee /var/www/html/hostname.html
+
+# Generate a random number between 0 and 1024
+RANDOM_SIZE=$(( ( RANDOM % 1024 )  + 1 ))
+
+# Create a file called random.html
+sudo touch /var/www/html/random.html
+
+# Fill the file with random number of "A" characters
+for i in $(seq 1 $RANDOM_SIZE); do
+    sudo echo -n "A" >> random.html
+done
 
 # open tcpport 80 to allow web traffic
 sudo ufw allow 80/tcp
