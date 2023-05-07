@@ -44,13 +44,12 @@ sudo echo "<html><body><h1>$(hostname)</h1></body></html>" | sudo tee /var/www/h
 # Generate a random number between 0 and 1024
 RANDOM_SIZE=$(( ( RANDOM % 1024 )  + 1 ))
 
-# Create a file called random.html
-sudo touch /var/www/html/random.html
-
 # Fill the file with random number of "A" characters
+sudo echo "<html><body><h1>" | sudo tee /var/www/html/random.html
 for i in $(seq 1 $RANDOM_SIZE); do
-    sudo echo -n "A" >> random.html
+    sudo echo -n "A" | sudo tee -a /var/www/html/random.html
 done
+sudo echo "</h1></body></html>" | sudo tee -a /var/www/html/random.html
 
 # open tcpport 80 to allow web traffic
 sudo ufw allow 80/tcp
