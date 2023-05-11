@@ -26,7 +26,8 @@ Param (
     [int]$size=96,
     [int]$n=10,
     [switch]$forever,
-    [guid]$aikey  #Provide Application Insigt instrumentation key 
+    [guid]$aikey,  #Provide Application Insigt instrumentation key 
+    [string]$containerid
 )
 
 Function Write-UTCLog ([string]$message,[string]$color="white")
@@ -120,7 +121,7 @@ else {
 
 $killswitch=1
 
-"TIMESTAMP,COMPUTERNAME,TYPE,LATENCY,RESULT" | Out-File $logfile -Encoding utf8 -Append
+"TIMESTAMP,ContainerId,COMPUTERNAME,TYPE,LATENCY,RESULT" | Out-File $logfile -Encoding utf8 -Append
 while (($killswitch -le $n) -or ($forever)) {
 
     $object = New-Object system.Net.NetworkInformation.Ping
@@ -130,7 +131,7 @@ while (($killswitch -le $n) -or ($forever)) {
 #   $latency
 
 If (!($result.Status -eq "Success")) {
-    $result = ((get-date).ToUniversalTime()).ToString("yyyy-MM-dd HH:mm:ss.fff")+",$($env:COMPUTERNAME),ERROR,"+$latency+",Ping "+$IPAddress+" Fail - Request timed out. "
+    $result = ((get-date).ToUniversalTime()).ToString("yyyy-MM-dd HH:mm:ss.fff")+",$($containerid),$($env:COMPUTERNAME),ERROR,"+$latency+",Ping "+$IPAddress+" Fail - Request timed out. "
     $result | Out-File $logfile -Encoding utf8 -Append
     Write-Host $result -Fo Red
     if ([string]::IsNullOrEmpty($aikey)) 
@@ -144,7 +145,7 @@ If (!($result.Status -eq "Success")) {
     }
  }
  Else {
-    $result =((get-date).ToUniversalTime()).ToString("yyyy-MM-dd HH:mm:ss.fff")+",$($env:COMPUTERNAME),INFO,"+$latency+",Ping "+$IPAddress+" OK"
+    $result =((get-date).ToUniversalTime()).ToString("yyyy-MM-dd HH:mm:ss.fff")+",$($containerid),$($env:COMPUTERNAME),INFO,"+$latency+",Ping "+$IPAddress+" OK"
     $result | Out-File $logfile -Encoding utf8 -Append
     Write-Host $result -Fo Green
     if ([string]::IsNullOrEmpty($aikey)) 
@@ -154,7 +155,7 @@ If (!($result.Status -eq "Success")) {
     else 
     {
         Write-Host "Info : aikey is specified, Send-AIEvent() is called" -ForegroundColor "Green"
-        Send-AIEvent -piKey $aikey -pEventName "test-icmp_ps1" -pCustomProperties @{status="INFO";message="Ping OK";target=$IPAddress.tostring();latency=$latency.ToString()} 
+        Send-AIEvent -piKey $aikey -pEventName "test-icmp_ps1" -pCustomProperties @{status="INFO";message="Ping OK";target=$IPAddress.tostring();latency=$latency.ToString();containerid=$containerid.ToString()} 
     }
     Start-Sleep -Milliseconds $intervalinMS
  }
