@@ -126,7 +126,7 @@ if (Test-Path $logfile) {
     Write-UTCLog "Log File : $($logfile) exist, skip create a new one" -color Cyan 
 }
 else {
-    "TIMESTAMP,COMPUTERNAME,TYPE,LATENCY,RESULT" | Out-File $logfile -Encoding utf8 -Append
+    "TIMESTAMP,CONTAINERID,COMPUTERNAME,TYPE,LATENCY,RESULT" | Out-File $logfile -Encoding utf8 -Append
 }
 
 while (($killswitch -le $n) -or ($forever)) {
