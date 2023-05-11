@@ -121,7 +121,14 @@ else {
 
 $killswitch=1
 
-"TIMESTAMP,ContainerId,COMPUTERNAME,TYPE,LATENCY,RESULT" | Out-File $logfile -Encoding utf8 -Append
+# if $logfile exit , skip |outfile
+if (Test-Path $logfile) {
+    Write-UTCLog "Log File : $($logfile) exist, skip create a new one" -color Cyan 
+}
+else {
+    "TIMESTAMP,COMPUTERNAME,TYPE,LATENCY,RESULT" | Out-File $logfile -Encoding utf8 -Append
+}
+
 while (($killswitch -le $n) -or ($forever)) {
 
     $object = New-Object system.Net.NetworkInformation.Ping
