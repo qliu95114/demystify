@@ -3,11 +3,11 @@ rem help me write batch file that take %1 as username %2 as password and modify 
 @echo off
 set "user=%~1"
 set "pass=%~2"
-set pingmesh_powershell="https://raw.githubusercontent.com/qliu95114/demystify/main/connectivityscript/win/pingmesh/pingmesh_bootstrap.ps1"
+rem set pingmesh_powershell="https://raw.githubusercontent.com/qliu95114/demystify/main/connectivityscript/win/pingmesh/pingmesh_bootstrap.ps1"
 rem set pingmesh_config="https://raw.githubusercontent.com/qliu95114/demystify/main/connectivityscript/win/pingmesh/config.json"
-set "pingmesh_config=%~3"
+rem set "pingmesh_config=%~3"
 rem if %~3 is empty then use default config
-if "%~3"=="" set pingmesh_config="https://raw.githubusercontent.com/qliu95114/demystify/main/connectivityscript/win/pingmesh/config.json"
+rem if "%~3"=="" set pingmesh_config=https://raw.githubusercontent.com/qliu95114/demystify/main/connectivityscript/win/pingmesh/config.json
 
 echo "%date% %time% %computername%\%user%" >> c:\pingmesh_bootloader_log.txt
 
@@ -20,7 +20,7 @@ reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon" /v AutoLogo
 echo "%date% %time% update AutoAdminLogin Success!" >> c:\pingmesh_bootloader_log.txt
 
 ren please add HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Run\pingmesh_bootloader.bat
-reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Run" /v pingmesh /t REG_SZ /d "powershell -ExecutionPolicy Unrestricted \"iex (new-object net.webclient).downloadstring('%pingmesh_powershell%') -configjson %pingmesh_config%\"" /f
+reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Run" /v pingmesh /t REG_SZ /d "powershell -ExecutionPolicy Unrestricted \"iex (new-object net.webclient).downloadstring('https://raw.githubusercontent.com/qliu95114/demystify/main/connectivityscript/win/pingmesh/pingmesh_bootstrap.ps1')\"" /f
 
 echo "%date% %time% add powershell pingmesh_bootstrap Success!" >> c:\pingmesh_bootloader_log.txt
 
