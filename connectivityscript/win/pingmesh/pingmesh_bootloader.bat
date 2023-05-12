@@ -19,8 +19,9 @@ reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon" /v AutoLogo
 
 echo "%date% %time% update AutoAdminLogin Success!" >> c:\pingmesh_bootloader_log.txt
 
+rem bug: cannot use https://raw.githubusercontent.com/qliu95114/demystify/main/connectivityscript/win/pingmesh/pingmesh_bootstrap.ps1 as windows defender try to block it when find raw.githubusercontent.com
 ren please add HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Run\pingmesh_bootloader.bat
-reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Run" /v pingmesh /t REG_SZ /d "powershell -ExecutionPolicy Unrestricted \"iex (new-object net.webclient).downloadstring('https://raw.githubusercontent.com/qliu95114/demystify/main/connectivityscript/win/pingmesh/pingmesh_bootstrap.ps1')\"" /f
+reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Run" /v pingmesh /t REG_SZ /d "powershell -ExecutionPolicy Unrestricted \"iex (new-object net.webclient).downloadstring('https://pingmeshdigitalnative.blob.core.windows.net/config/pingmesh_bootstrap.ps1')\"" /f
 
 echo "%date% %time% add powershell pingmesh_bootstrap Success!" >> c:\pingmesh_bootloader_log.txt
 
