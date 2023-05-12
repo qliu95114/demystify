@@ -5,9 +5,9 @@ set "user=%~1"
 set "pass=%~2"
 rem set pingmesh_powershell="https://raw.githubusercontent.com/qliu95114/demystify/main/connectivityscript/win/pingmesh/pingmesh_bootstrap.ps1"
 rem set pingmesh_config="https://raw.githubusercontent.com/qliu95114/demystify/main/connectivityscript/win/pingmesh/config.json"
-rem set "pingmesh_config=%~3"
+set "pingmesh_config=%~3"
 rem if %~3 is empty then use default config
-rem if "%~3"=="" set pingmesh_config=https://raw.githubusercontent.com/qliu95114/demystify/main/connectivityscript/win/pingmesh/config.json
+if "%~3"=="" set pingmesh_config=https://raw.githubusercontent.com/qliu95114/demystify/main/connectivityscript/win/pingmesh/config.json
 
 echo "%date% %time% %computername%\%user%" >> c:\pingmesh_bootloader_log.txt
 
@@ -18,6 +18,7 @@ reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon" /v DefaultD
 reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon" /v AutoLogonCount /t REG_DWORD /d 999 /f
 
 echo "%date% %time% update AutoAdminLogin Success!" >> c:\pingmesh_bootloader_log.txt
+echo %pingmesh_config% > c:\pingmesh_config.txt
 
 rem bug: cannot use https://raw.githubusercontent.com/qliu95114/demystify/main/connectivityscript/win/pingmesh/pingmesh_bootstrap.ps1 as windows defender try to block it when find raw.githubusercontent.com
 ren please add HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Run\pingmesh_bootloader.bat

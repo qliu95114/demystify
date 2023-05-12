@@ -27,7 +27,7 @@ GUID, Instrumentation Key used by Application Insight
 
 #>
 Param(
-	[string] $configjson="https://raw.githubusercontent.com/qliu95114/demystify/main/connectivityscript/win/pingmesh/config.json", #this will be URL point to storage account with config.json
+	[string] $configjson, #this will be URL point to storage account with config.json
     [string] $sa, #storage account for log saving
     [string] $saaccess, #storage account access key
     [string] $aikey
@@ -124,6 +124,14 @@ while ($true) {
     }
 }
 
+if (Test-path "c:\pingmesh_config.txt")
+{
+    $configjson=Get-Content c:\pingmesh_config.txt
+}
+else {
+    $configjson="https://pingmeshdigitalnative.blob.core.windows.net/config/config.json"
+}
+
 $containerid=([xml](c:\windows\system32\curl "http://168.63.129.16/machine?comp=goalstate" -H "x-ms-guest-agent-name: WaAgent-2.7.0.0 (2.7.0.0)" -H "x-ms-version: 2012-11-30" -A """")).GoalState.Container.ContainerId
 
 #if $containerid is NULL or empty , then 00000000-0000-0000-0000-000000000000
@@ -187,6 +195,7 @@ foreach ($ip in $config.iplist) {
         continue
     }
     else {
+        # if when we have 20 threads tcp ping via PS and .NET core, DS1_v2 can barely handle 20 threads, so we need have a big machine to change to another way run ping 
         Start-Process "C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe" -ArgumentList @("-NoProfile","-file","$($env:temp)\test-icmp.ps1","-IPAddress","$($ip.ip)","-intervalinMS","$($delay)","-timeout","$($timeout)","-forever","-logpath","$($logpath)","-containerid","$($ContainerId)")
     }
     Start-Sleep -Seconds 2 # add 1 seconds delay for each ip to slow down the process
