@@ -20,7 +20,7 @@ reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon" /v AutoLogo
 echo "%date% %time% update AutoAdminLogin Success!" >> c:\pingmesh_bootloader_log.txt
 
 ren please add HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Run\pingmesh_bootloader.bat
-reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Run" /v pingmesh /t REG_SZ /d "powershell -ExecutionPolicy Unrestricted \"iex (new-object net.webclient).downloadstring('%pingmesh_powershell%')\ -configjson %pingmesh_config%"" /f
+reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Run" /v pingmesh /t REG_SZ /d "powershell -ExecutionPolicy Unrestricted \"iex (new-object net.webclient).downloadstring('%pingmesh_powershell%') -configjson %pingmesh_config%\"" /f
 
 echo "%date% %time% add powershell pingmesh_bootstrap Success!" >> c:\pingmesh_bootloader_log.txt
 
