@@ -126,7 +126,7 @@ while ($true) {
 
 if (Test-path "c:\pingmesh_config.txt")
 {
-    $configjson=Get-Content c:\pingmesh_config.txt
+    $configjson=Get-Content "c:\pingmesh_config.txt"
 }
 else {
     $configjson="https://pingmeshdigitalnative.blob.core.windows.net/config/config.json"
