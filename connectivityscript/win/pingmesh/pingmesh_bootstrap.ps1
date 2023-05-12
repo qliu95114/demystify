@@ -108,6 +108,15 @@ Function Send-AIEvent{
 # please add retry logic in case of download failed to download $configjson and send to $config
 
 $retry_delay = 10
+
+if (Test-path "c:\pingmesh_config.txt")
+{
+    $configjson=Get-Content "c:\pingmesh_config.txt"
+}
+else {
+    $configjson="https://pingmeshdigitalnative.blob.core.windows.net/config/config.json"
+}
+
 while ($true) {
     try {
         $response = Invoke-WebRequest -Uri $configjson
@@ -122,14 +131,6 @@ while ($true) {
         Write-UTCLog "Retrying in $($retry_delay) seconds..."
         Start-Sleep -Seconds $retry_delay
     }
-}
-
-if (Test-path "c:\pingmesh_config.txt")
-{
-    $configjson=Get-Content "c:\pingmesh_config.txt"
-}
-else {
-    $configjson="https://pingmeshdigitalnative.blob.core.windows.net/config/config.json"
 }
 
 $containerid=([xml](c:\windows\system32\curl "http://168.63.129.16/machine?comp=goalstate" -H "x-ms-guest-agent-name: WaAgent-2.7.0.0 (2.7.0.0)" -H "x-ms-version: 2012-11-30" -A """")).GoalState.Container.ContainerId
