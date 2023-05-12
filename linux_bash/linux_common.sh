@@ -8,7 +8,7 @@ echo $learningbash
 # installation, when install tshark it will prompt diaglog for dumpcap setting, 
 sudo apt update -y
 sudo apt upgrade -y
-sudo apt install netfilter-persistent net-tools iptables tcpdump nano vim iputils-ping cron inetutils-traceroute iotop iftop iperf3 netcat moreutils ufw nginx -y
+sudo apt install netfilter-persistent net-tools iptables tcpdump nano vim iputils-ping cron inetutils-traceroute iotop iftop iperf3 netcat moreutils ufw nginx samba -y
 
 # add powershell 
 sudo snap install powershell --classic  # LEGACY, but working in Ubuntu 22
@@ -41,7 +41,7 @@ fi
 # create a default webpage to show hostname in nginx
 sudo echo "<html><body><h1>$(hostname)</h1></body></html>" | sudo tee /var/www/html/hostname.html
 
-# Generate a random number between 0 and 1024
+# Generate a random size html with size between 0 and 1024
 RANDOM_SIZE=$(( ( RANDOM % 1024 )  + 1 ))
 
 # Fill the file with random number of "A" characters
@@ -61,3 +61,26 @@ sudo systemctl enable nginx
 # supress wireshark installation
 #echo "wireshark-common wireshark-common/install-setuid boolean true" | sudo debconf-set-selections
 #sudo DEBIAN_FRONTEND=noninteractive apt-get -y install wireshark tshark
+
+# Create a backup of the original Samba configuration file
+sudo cp /etc/samba/smb.conf /etc/samba/smb.conf.bak
+
+# Configure Samba by editing the smb.conf file
+mkdir /tmp/logfolder
+sudo tee /etc/samba/smb.conf > /dev/null <<EOF
+[logfolder]
+  comment = this is folder for logging
+  path = /tmp/logfolder
+  browseable = yes
+  guest ok = yes
+  read only = no
+  create mask = 0777
+  directory mask = 0777
+EOF
+
+# Restart the Samba service
+sudo systemctl restart smbd
+
+# Enable the firewall to allow Samba traffic
+sudo ufw allow samba
+sudo ufw reload
