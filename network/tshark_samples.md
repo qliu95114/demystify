@@ -279,9 +279,9 @@ trace
 ```
 ![image](./.image/ab.png?raw=true)
 
-## Sample 7 - Use tshark to take rolling capture
+## Sample 7 - Use tshark to take rolling capture, host IP Filter -f "host x.x.x.x"
 
-For long run capture, we can use rolling capture. the following sample will take 100 capture files and each file is set to 200MB
+For long run capture, we can use rolling capture. the following sample will take 100 capture files and each file is set to 200MB, you can also include filter to furthe reduce the scope of the trace file
 
 ```bash
 C:\temp>d:\Wireshark\tshark -D
@@ -295,6 +295,9 @@ C:\temp>d:\wireshark\tshark -i 2 -n -b filesize:204800 -w "C:\temp\%COMPUTERNAME
 -b filesize:204800 (max size per file : 200MB)
 -b files:100  (max files: 100)
 -s 128   packet lenght, take 128 including eth header. 
+
+Enable tshark capture. Rolling tracking 
+C:\temp>d:\wireshark\tshark -i 1 -n -b filesize:204800 -w "C:\temp\%COMPUTERNAME%.pcap" -b files:100 -s 128 -f "host 8.8.4.4"
 ```
 
 ## Sample 8 - Reduce file size - Truncate packet lengths
