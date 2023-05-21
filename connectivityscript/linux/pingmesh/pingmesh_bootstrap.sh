@@ -64,8 +64,8 @@ interval=$(awk -F "=" '/interval/ {print $2}' /tmp/config.ini)
 timedlog=$(awk -F "=" '/timedlog/ {print $2}' /tmp/config.ini)
 
 echo "iplist is ${iplist[@]}"
-echo "interval is ${interval}"
-echo "timedlog is ${timedlog}"
+echo "interval is $interval"
+echo "timedlog is $timedlog"
 
 #ping all ip addresses
 
@@ -82,7 +82,7 @@ else
   # ping ip address
   echo "bash /tmp/test_ping.sh $ip ...."
   #nohup ../test_ping.sh $ip 2>&1 &
-  bash /tmp/test_ping.sh -ip ${ip} -timedlog ${timedlog} -interval ${interval}> /dev/null 2>&1 &
+  bash /tmp/test_ping.sh -ip $ip -timedlog $timedlog -interval $interval > /dev/null 2>&1 &
 fi
 done
 
