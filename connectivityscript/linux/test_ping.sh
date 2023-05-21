@@ -190,4 +190,4 @@ write-utclog "aikey : ${ikey}"  "cyan"
 write-utclog "containerid : ${cid}"  "cyan"
 
 # main function of ping
-ping -O $ipaddr -W 1 -i 1 | while read pong; do echo "$(date -u +'%F %H:%M:%S.%3N'),${tid},${pong}"; echo "$(date -u +'%F %H:%M:%S,%3N'),${tid},${pong}" | iconv -t UTF-8 >> $logfile ; send-aievent "${ikey}" "${pong}" "${ipaddr}" "${tid}" "${cid}"; done 2>&1 
+ping -O $ipaddr -W 1 -i 1 | while read pong; do echo "$(date -u +'%F %H:%M:%S.%3N'),${cid},$(hostname -s),${tid},${pong}"; echo "$(date -u +'%F %H:%M:%S,%3N'),${tid},${pong}" | iconv -t UTF-8 >> $logfile ; send-aievent "${ikey}" "${pong}" "${ipaddr}" "${tid}" "${cid}"; done 2>&1 
