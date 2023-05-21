@@ -25,6 +25,8 @@ fi
 # sample add cron job and lanuch /etc/init.d/pingmesh_core on every reboot
 sudo crontab -l | { cat; echo "@reboot /etc/init.d/pingmesh_core"; } | crontab -
 
+chmod +x /etc/init.d/pingmesh_core
+
 bash /etc/init.d/pingmesh_core
 
 
