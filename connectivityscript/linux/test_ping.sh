@@ -120,36 +120,74 @@ function send-aievent {
 # Creates random 8-bytes characters to track ping thread in Application Insight 
 tid=$(head /dev/urandom | tr -dc A-Za-z0-9 | head -c 8 ; echo '')  
 
+#parse input parameters
+while [[ $# -gt 0 ]]; do
+  key="$1"
+
+  case $key in
+    -ip)
+      ipaddr="$2"
+      shift # past argument
+      shift # past value
+      ;;
+    -logpath)
+      logpath="$2"
+      shift # past argument
+      shift # past value
+      ;;
+    -aikey)
+      ikey="$2"
+      shift # past argument
+      shift # past value
+      ;;
+    -dnsname)      
+      ipaddr="$2"
+      shift # past argument
+      shift # past value
+      ;;
+    *)    # unknown option
+      echo "invalid option: $key"
+      echo "help: -ip [ipaddress] -logpath [logpath] -aikey [aikey] -dnsname [dnsname]"
+      exit 1
+      ;;
+  esac
+done
+
 # azure get containerid from a vm
-cid=$(sudo curl -s --connect-timeout 1 http://168.63.129.16/machine?comp=goalstate -H "x-ms-guest-agent-name: WaAgent-2.7.0.0 (2.7.0.0)" -H "x-ms-version: 2012-11-30" |sed -n 's:.*<ContainerId>\([^<]*\)</ContainerId>.*:\1:p')
+curl -s --connect-timeout 0.2 http://168.63.129.16/machine?comp=goalstate -H "x-ms-guest-agent-name: WaAgent-2.7.0.0 (2.7.0.0)" -H "x-ms-version: 2012-11-30" -o /tmp/cid.xml
+cid=$(sed -n 's:.*<ContainerId>\([^<]*\)</ContainerId>.*:\1:p' /tmp/cid.xml)
+#cid=$(sudo curl -s --connect-timeout 0.2 http://168.63.129.16/machine?comp=goalstate -H "x-ms-guest-agent-name: WaAgent-2.7.0.0 (2.7.0.0)" -H "x-ms-version: 2012-11-30" |sed -n 's:.*<ContainerId>\([^<]*\)</ContainerId>.*:\1:p')
 
 #1 is target ip address or fqdn dns name
-if [ -z "$1" ] 
+if [ -z "$ipaddr" ] 
 then
   read -p "Enter your target ip address or dns name (e.g. 8.8.8.8 or dns.google):" ipaddr
-else
-  ipaddr=$1
 fi
 
 #3 is logfile
-if [ -z "$3" ]
+if [ -z "$logpath" ]
 then
   logfile="/tmp/$(hostname -s)_test_ping_sh_${ipaddr}.log"
 else
-  logfile=$3
+  logfile="/$(logpath)/$(hostname -s)_test_ping_sh_${ipaddr}.log"
 fi
 
 #2 is instrumentation key
-if [ -z "$2" ]
+if [ -z "$ikey" ]
 then
   ikey="0"
 else
-  ikey=$2  
   send-aievent "${ikey}" "test_ping_sh started, logfile: ${logfile}" "${ipaddr}" "${tid}" "${cid}"
 fi
 
+#echo "ip or dnsname address: $ipaddr"
+#echo "Log path: $logpath"
+#echo "AI key: $aikey"
+
 write-utclog "target dns or ip : ${ipaddr}" "cyan"
 write-utclog "log file : ${logfile}"  "cyan"
+write-utclog "aikey : ${ikey}"  "cyan"
+write-utclog "containerid : ${cid}"  "cyan"
 
 # main function of ping
 ping -O $ipaddr -W 1 -i 1 | while read pong; do echo "$(date -u +'%F %H:%M:%S.%3N'),${tid},${pong}"; echo "$(date -u +'%F %H:%M:%S,%3N'),${tid},${pong}" | iconv -t UTF-8 >> $logfile ; send-aievent "${ikey}" "${pong}" "${ipaddr}" "${tid}" "${cid}"; done 2>&1 
