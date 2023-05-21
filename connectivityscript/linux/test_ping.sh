@@ -4,25 +4,30 @@
 # test_ping - This script will run ping test, save result to logfile and send result to Application Insight (via instrumentation key)
 
 # SYNOPSIS
-# bash test_ping.sh -ip [ipaddress] -dnsname [dnsname] -aikey [aikey or (0||empty)] -logpath [logpath, default: /tmp/]
+# bash test_ping.sh -ip [ipaddress] -dnsname [dnsname] -aikey [aikey or (0||empty)] -logpath [logpath, default: /tmp/] -pingtimeout [seconds: 1 (default)] -timedlog [0 : Disable(default)]
 
 # Options: 
 # -ip or -dnsname : IP Address or FQDN DNS Name
 # -aikey : Application Insight instrumentation key (aikey, 48 Guid) , 0 or leave empty will skip send-aievent()
-# -logpath : logpath , filename convention: $(hostname -s)_test_ping_sh_${ipaddr}.log
+# -logpath : where log file to be saved, filename convention: $(hostname -s)_test_ping_sh_${ipaddr}.log
+# -pingtimeout : ping timeout in seconds, default 1 seconds
+# -timedlog : 0: Disable(default), 1: Every Minutes, 2, Every 10 Minutes: 3: Every 1 Hour, 4: Every 1 Day
 
 # Examples:
-# Ping 8.8.4.4, save result to default logfile /tmp/
-# ./test_ping.sh -ip 8.8.4.4 
+# Ping 8.8.4.4, save result to default logpath /tmp/$(hostname -s)_test_ping_sh_${ipaddr}.log,  icmp timeout is 3 seconds
+# ./test_ping.sh -ip 8.8.4.4 -pingtimeout 3
 
-# Ping 8.8.4.4, save result to custom logfile /tmp/myping.log.
+# Ping 8.8.4.4, save result to custom logfile /mnt/$(hostname -s)_test_ping_sh_${ipaddr}.log.
 # ./test_ping.sh -ip 8.8.4.4 -logpath /mnt
 
 # Ping 8.8.4.4, send result to Application Insight and save result to default logfile /tmp/$(hostname -s)_test_ping_sh_${ipaddr}.log
 # ./test_ping.sh -ip 8.8.4.4 -aikey 11111111-1111-1111-1111-111111111111
 
-# Ping 8.8.4.4, send result to Application Insight and save result to custom logfile /tmp/myping.log.
+# Ping 8.8.4.4, send result to Application Insight and save result to custom logfile /tmp/$(hostname -s)_test_ping_sh_${ipaddr}.log.
 # ./test_ping.sh -ip 8.8.4.4 -aikey 11111111-1111-1111-1111-111111111111 -logpath /mnt
+
+# Ping 8.8.4.4, send result to Application Insight and save result to custom logfile /tmp/$(hostname -s)_test_ping_sh_${ipaddr}_%yyyy-mm-dd_hhmm%.log, log interval is 10 minutes. 
+# ./test_ping.sh -ip 8.8.4.4 -logpath /mnt -timedlog 2
 
 # Author: Qing Liu
 
@@ -76,14 +81,14 @@ function write-utclog() {
 function send-aievent {
   if [[ "$1" = "0" || -z "$1" ]]
   then 
-    echo "Info : Aikey is 0 or Not Specified, send-aievent() is skipped." 
+    a="nothing"
   else
     cname=$(hostname -s)
     uname=$(id -un)
     clientos=$(cat /etc/os-release | grep "PRETTY_NAME" | sed 's/PRETTY_NAME=//g' | sed 's/["]//g')
     clientmodel=$(uname -r)
     #clientip=$(ip addr show dev eth0 | grep 'inet '|awk '{print $2}'|awk -F '/' '{print $1}')
-    aikey=$1; message=$2; target=$3; tid=$4; containerid=$5
+    aikey=$1; message=$2; target=$3; tid=$4; containerid=$5 ; pingtimeout=$6; timedlog=$7
     utc_time=$(date -u +"%Y-%m-%d %H:%M:%S.%3N")    
     telemetry='{
                 "name":"Microsoft.ApplicationInsights.'${aiKey}'.Event",
@@ -106,7 +111,9 @@ function send-aievent {
                               "message":"'${message}'",
                               "target":"'${target}'",
                               "tid":"'${tid}'",
-                              "cid":"'${containerid}'"
+                              "cid":"'${containerid}'",
+                              "pingtimeout":"'${pingtimeout}'",
+                              "timedlog":"'${timedlog}'"
                             }
                       }
                   }
@@ -115,6 +122,40 @@ function send-aievent {
     echo "Info : aikey is specified, send-aievent() is called"    
   fi
 }
+
+#appedtimedlog() is used to create log in different time range 
+function appendtimedlog
+{
+  message=$1; logfile=$2; timedlog=$3
+  #switch timedlog 0,1,2,3,4 and generate utc_timestamp different 
+  case $timedlog in
+    1) 
+      utc_timestamp=$(date -u +"%Y-%m-%d_%H%M")
+      #remove logfile extension .log and add utc_timestamp to the end of logfile and then add .log back
+      logfilename=${logfile%.*}_${utc_timestamp}.log
+      ;;
+    2) 
+      utc_timestamp=$(date -u +"%Y-%m-%d_%H%M") 
+      utc_timestamp=${utc_timestamp%?}0
+      #replace utc_timestamp's last digit with 0 
+      logfilename=${logfile%.*}_${utc_timestamp}.log
+      ;;
+    3) 
+      utc_timestamp=$(date -u +"%Y-%m-%d_%H00")
+      logfilename=${logfile%.*}_${utc_timestamp}.log 
+      ;;
+    4) 
+      utc_timestamp=$(date -u +"%Y-%m-%d_0000") 
+      logfilename=${logfile%.*}_${utc_timestamp}.log
+      ;;
+    *) 
+      logfilename=${logfile}
+      ;;
+  esac
+  # append message to logfile in UTF-8 format
+  echo -e "${message}" >> $logfilename
+}
+
 
 # main routing 
 # Creates random 8-bytes characters to track ping thread in Application Insight 
@@ -145,9 +186,19 @@ while [[ $# -gt 0 ]]; do
       shift # past argument
       shift # past value
       ;;
+    -timedlog)      
+      timedlog="$2"
+      shift # past argument
+      shift # past value
+      ;;
+    -pingtimeout)      
+      pingtimeout="$2"
+      shift # past argument
+      shift # past value
+      ;;
     *)    # unknown option
       echo "invalid option: $key"
-      echo "help: -ip [ipaddress] -logpath [logpath] -aikey [aikey] -dnsname [dnsname]"
+      echo "help: -ip [ipaddress] -logpath [logpath] -aikey [aikey] -dnsname [dnsname] -timedlog [timedlog  # 0: Disable, 1: Every Minutes, 2, Every 10 Minutes: 3: Every 1 Hour, 4: Every 1 Day] -pingtimeout [seconds]"
       exit 1
       ;;
   esac
@@ -156,15 +207,25 @@ done
 # azure get containerid from a vm
 curl -s --connect-timeout 0.2 http://168.63.129.16/machine?comp=goalstate -H "x-ms-guest-agent-name: WaAgent-2.7.0.0 (2.7.0.0)" -H "x-ms-version: 2012-11-30" -o /tmp/cid.xml
 cid=$(sed -n 's:.*<ContainerId>\([^<]*\)</ContainerId>.*:\1:p' /tmp/cid.xml)
-#cid=$(sudo curl -s --connect-timeout 0.2 http://168.63.129.16/machine?comp=goalstate -H "x-ms-guest-agent-name: WaAgent-2.7.0.0 (2.7.0.0)" -H "x-ms-version: 2012-11-30" |sed -n 's:.*<ContainerId>\([^<]*\)</ContainerId>.*:\1:p')
 
-#1 is target ip address or fqdn dns name
+#if ipaddr is empty , we need read from console
 if [ -z "$ipaddr" ] 
 then
   read -p "Enter your target ip address or dns name (e.g. 8.8.8.8 or dns.google):" ipaddr
 fi
 
-#3 is logfile
+# check pingtimeout is empty or number or not
+if [ -z "$pingtimeout" ] || [ "$pingtimeout" -eq "0" ]
+then
+  pingtimeout="1"
+else
+  if ! [[ "$pingtimeout" =~ ^[0-9]+$ ]]
+  then
+    write-utclog "Warning : pingtimeout is not a number, set to 1 second" "Yellow"
+  fi
+fi
+
+#create log file nanme
 if [ -z "$logpath" ]
 then
   logfile="/tmp/$(hostname -s)_test_ping_sh_${ipaddr}.log"
@@ -172,22 +233,60 @@ else
   logfile="/${logpath}/$(hostname -s)_test_ping_sh_${ipaddr}.log"
 fi
 
-#2 is instrumentation key
+#check if timedlog is empty
+if [ -z "$timedlog" ]
+then
+  timedlog="0"
+  loginterval="None"  
+else
+  #determine timedlog is 0,1,2,3,4 or not
+  if [ "$timedlog" -eq "0" ] || [ "$timedlog" -eq "1" ] || [ "$timedlog" -eq "2" ] || [ "$timedlog" -eq "3" ] || [ "$timedlog" -eq "4" ]
+  then
+    if [ "$timedlog" -eq "0" ]
+    then
+      loginterval="None"
+    elif [ "$timedlog" -eq "1" ]
+    then
+      loginterval="Every Minutes"
+    elif [ "$timedlog" -eq "2" ]
+    then
+      loginterval="Every 10 Minutes"
+    elif [ "$timedlog" -eq "3" ]
+    then
+      loginterval="Every 1 Hour"
+    elif [ "$timedlog" -eq "4" ]
+    then
+      loginterval="Every 1 Day"
+    fi
+  else
+    write-utclog "timedlog ${timedlog} is invalid, set to 0" "yellow"
+    timedlog="0"
+    loginterval="None"
+  fi
+fi
+
+#check if aikey is empty
 if [ -z "$ikey" ]
 then
   ikey="0"
+  write-utclog "Info : Aikey is 0 or Not Specified, send-aievent() is skipped." "yellow"
 else
-  send-aievent "${ikey}" "test_ping_sh started, logfile: ${logfile}" "${ipaddr}" "${tid}" "${cid}"
+  send-aievent "${ikey}" "test_ping_sh started, logfile: ${logfile}" "${ipaddr}" "${tid}" "${cid}" "${timedlog}" "${pingtimeout}" 
 fi
 
-#echo "ip or dnsname address: $ipaddr"
-#echo "Log path: $logpath"
-#echo "AI key: $aikey"
-
 write-utclog "target dns or ip : ${ipaddr}" "cyan"
-write-utclog "log file : ${logfile}"  "cyan"
+write-utclog "timed log : ${timedlog} , loginterval : ${loginterval}"  "cyan"
+# if timedlog is not 0
+if [ "$timedlog" -ne "0" ]
+then
+  write-utclog "log file : ${logfile%.*}_%yyyy-mm-dd_hhmm%.log"  "cyan"  
+else
+  write-utclog "log file : ${logfile}"  "cyan"  
+fi
 write-utclog "aikey : ${ikey}"  "cyan"
 write-utclog "containerid : ${cid}"  "cyan"
+write-utclog "ping timeout(s) : ${pingtimeout}"  "cyan"
 
 # main function of ping
-ping -O $ipaddr -W 1 -i 1 | while read pong; do echo "$(date -u +'%F %H:%M:%S.%3N'),${cid},$(hostname -s),${tid},${pong}"; echo "$(date -u +'%F %H:%M:%S,%3N'),${tid},${pong}" | iconv -t UTF-8 >> $logfile ; send-aievent "${ikey}" "${pong}" "${ipaddr}" "${tid}" "${cid}"; done 2>&1 
+#ping -O $ipaddr -W 1 -i $pingtimeout | while read pong; do echo "$(date -u +'%F %H:%M:%S.%3N'),${cid},$(hostname -s),${tid},${pong}"; echo "$(date -u +'%F %H:%M:%S,%3N'),${tid},${pong}" | iconv -t UTF-8 >> $logfile ; send-aievent "${ikey}" "${pong}" "${ipaddr}" "${tid}" "${cid}"; done 2>&1 
+ping -O $ipaddr -W 1 -i $pingtimeout | while read pong; do echo "$(date -u +'%F %H:%M:%S.%3N'),${cid},$(hostname -s),${tid},${ipaddr},${pong}"; appendtimedlog "$(date -u +'%F %H:%M:%S,%3N'),${cid},$(hostname -s),${tid},${ipaddr},${pong}" "${logfile}" "${timedlog}" ; send-aievent "${ikey}" "${pong}" "${ipaddr}" "${tid}" "${cid}"; done 2>&1 

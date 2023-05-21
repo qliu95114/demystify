@@ -121,7 +121,8 @@ function send-aievent {
 
 # main program
 # azure get containerid from a vm
-cid=$(sudo curl -s --connect-timeout 1 http://168.63.129.16/machine?comp=goalstate -H "x-ms-guest-agent-name: WaAgent-2.7.0.0 (2.7.0.0)" -H "x-ms-version: 2012-11-30" |sed -n 's:.*<ContainerId>\([^<]*\)</ContainerId>.*:\1:p')
+curl -s --connect-timeout 0.2 http://168.63.129.16/machine?comp=goalstate -H "x-ms-guest-agent-name: WaAgent-2.7.0.0 (2.7.0.0)" -H "x-ms-version: 2012-11-30" -o /tmp/cid.xml
+cid=$(sed -n 's:.*<ContainerId>\([^<]*\)</ContainerId>.*:\1:p' /tmp/cid.xml)
 
 #1 is target ip address or fqdn dns name
 if [ -z "$1" ] 
