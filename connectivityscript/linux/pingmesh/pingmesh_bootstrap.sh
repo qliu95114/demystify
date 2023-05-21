@@ -48,6 +48,7 @@ if [ -z "$containerid" ]; then
 fi
 echo "containerid is $containerid"
 
+
 #read config.ini to settings   
 # config.ini format
 #[iplist]
@@ -56,7 +57,15 @@ echo "containerid is $containerid"
 #read all ip addresses from config.ini
 iplist=($(awk -F "=" '/ip/ {print $2}' /tmp/config.ini | sed 's/,/ /g'))
 
+#read interval from config.ini
+interval=$(awk -F "=" '/interval/ {print $2}' /tmp/config.ini)
+
+#read timedlog from config.ini
+timedlog=$(awk -F "=" '/timedlog/ {print $2}' /tmp/config.ini)
+
 echo "iplist is ${iplist[@]}"
+echo "interval is ${interval}"
+echo "timedlog is ${timedlog}"
 
 #ping all ip addresses
 
@@ -73,7 +82,7 @@ else
   # ping ip address
   echo "bash /tmp/test_ping.sh $ip ...."
   #nohup ../test_ping.sh $ip 2>&1 &
-  bash /tmp/test_ping.sh -ip $ip -timedlog 2 > /dev/null 2>&1 &
+  bash /tmp/test_ping.sh -ip $ip -timedlog $timedlog -interval $interval> /dev/null 2>&1 &
 fi
 done
 
