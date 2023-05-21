@@ -4,25 +4,25 @@
 # test_ping - This script will run ping test, save result to logfile and send result to Application Insight (via instrumentation key)
 
 # SYNOPSIS
-# bash test_ping.sh  [ipaddress||dnsname] [aikey or (0||empty)] [logfile]
+# bash test_ping.sh -ip [ipaddress] -dnsname [dnsname] -aikey [aikey or (0||empty)] -logpath [logpath, default: /tmp/]
 
 # Options: 
-# $1 : IP Address or FQDN DNS Name
-# $2 : Application Insight instrumentation key (aikey, 48 Guid) , 0 or leave empty will skip send-aievent()
-# $3 : logfile, include path and file name
+# -ip or -dnsname : IP Address or FQDN DNS Name
+# -aikey : Application Insight instrumentation key (aikey, 48 Guid) , 0 or leave empty will skip send-aievent()
+# -logpath : logpath , filename convention: $(hostname -s)_test_ping_sh_${ipaddr}.log
 
 # Examples:
-# Ping 8.8.4.4, save result to default logfile /tmp/$(hostname -s)_test_ping_sh_${ipaddr}.log.
-# ./test_ping.sh 8.8.4.4 
+# Ping 8.8.4.4, save result to default logfile /tmp/
+# ./test_ping.sh -ip 8.8.4.4 
 
 # Ping 8.8.4.4, save result to custom logfile /tmp/myping.log.
-# ./test_ping.sh 8.8.4.4 0 /tmp/myping.log
+# ./test_ping.sh -ip 8.8.4.4 -logpath /mnt
 
 # Ping 8.8.4.4, send result to Application Insight and save result to default logfile /tmp/$(hostname -s)_test_ping_sh_${ipaddr}.log
-# ./test_ping.sh 8.8.4.4 11111111-1111-1111-1111-111111111111
+# ./test_ping.sh -ip 8.8.4.4 -aikey 11111111-1111-1111-1111-111111111111
 
 # Ping 8.8.4.4, send result to Application Insight and save result to custom logfile /tmp/myping.log.
-# ./test_ping.sh 8.8.4.4 11111111-1111-1111-1111-111111111111 /tmp/myping.log
+# ./test_ping.sh -ip 8.8.4.4 -aikey 11111111-1111-1111-1111-111111111111 -logpath /mnt
 
 # Author: Qing Liu
 
@@ -169,7 +169,7 @@ if [ -z "$logpath" ]
 then
   logfile="/tmp/$(hostname -s)_test_ping_sh_${ipaddr}.log"
 else
-  logfile="/$(logpath)/$(hostname -s)_test_ping_sh_${ipaddr}.log"
+  logfile="/${logpath}/$(hostname -s)_test_ping_sh_${ipaddr}.log"
 fi
 
 #2 is instrumentation key
