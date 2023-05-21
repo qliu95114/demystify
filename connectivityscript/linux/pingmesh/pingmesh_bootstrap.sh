@@ -73,7 +73,7 @@ else
   # ping ip address
   echo "bash /tmp/test_ping.sh $ip ...."
   #nohup ../test_ping.sh $ip 2>&1 &
-  bash /tmp/test_ping.sh $ip > /dev/null 2>&1 &
+  bash /tmp/test_ping.sh -ip $ip -timedlog 2 > /dev/null 2>&1 &
 fi
 done
 
