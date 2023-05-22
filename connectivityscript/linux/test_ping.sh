@@ -289,4 +289,4 @@ write-utclog "ping interval : ${interval}"  "cyan"
 
 # main function of ping
 #ping -O $ipaddr -W 1 -i $interval | while read pong; do echo "$(date -u +'%F %H:%M:%S.%3N'),${cid},$(hostname -s),${tid},${pong}"; echo "$(date -u +'%F %H:%M:%S,%3N'),${tid},${pong}" | iconv -t UTF-8 >> $logfile ; send-aievent "${ikey}" "${pong}" "${ipaddr}" "${tid}" "${cid}"; done 2>&1 
-ping -O $ipaddr -W 1 -i $interval | while read pong; do echo "$(date -u +'%F %H:%M:%S.%3N'),${cid},$(hostname -s),${tid},${ipaddr},${pong}"; appendtimedlog "$(date -u +'%F %H:%M:%S,%3N'),${cid},$(hostname -s),${tid},${ipaddr},${pong}" "${logfile}" "${timedlog}" ; send-aievent "${ikey}" "${pong}" "${ipaddr}" "${tid}" "${cid}"; done 2>&1 
+ping -O $ipaddr -W 1 -i $interval | while read pong; do echo "$(date -u +'%F %H:%M:%S.%3N'),${cid},$(hostname -s),${tid},${ipaddr},${pong}"; appendtimedlog "$(date -u +'%F %H:%M:%S.%3N'),${cid},$(hostname -s),${tid},${ipaddr},${pong}" "${logfile}" "${timedlog}" ; send-aievent "${ikey}" "${pong}" "${ipaddr}" "${tid}" "${cid}"; done 2>&1 
