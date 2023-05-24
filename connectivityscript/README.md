@@ -137,7 +137,7 @@ paping [-c count]
 Output paping result with UTC timestamp
 Console & LogFile : "$(hostname -s)_nc.log"
 ```
-target="www.bing.com";while true; do echo "`date -u +'%F %H:%M:%S'` - `nc -vvzw 2 $target 443 2>&1`";sleep 1; done 2>&1 | tee -a "$(hostname -s)_nc_${target}.log"
+target="www.bing.com";port=443;while true; do echo "`date -u +'%F %H:%M:%S'` - `nc -vvzw 2 $target $port 2>&1`";sleep 1; done 2>&1 | tee -a "$(hostname -s)_nc_${target}_${port}.log"
 ```
 
 ## Linux - Script (ICMP - ping)
