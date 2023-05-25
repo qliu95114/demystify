@@ -12,6 +12,7 @@
 1. Linux_bash: Post-boot script for Azure VMs.
 1. network\pcap2kusto\pcap2kusto.ps1 : import PCAP to Kusto
 1. network\pcap2kusto\mergecapfiles.ps1 : merge all pcap files under one folder to one pcap file
+1. connectivityscript\linux\pingmesh or connectivityscript\win\pingmesh : pingmesh script for linux/windows, build for cloud env.
 
 ## Things are NOT related to Azure Platform 
 
