@@ -50,4 +50,5 @@ app.Map("/ws", async context =>
 		Console.WriteLine($"{DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff")} - Connection terminated because of: {e.Message}");
 	}
 });
-app.Run("http://localhost:8040");
+//app.Run("http://localhost:8040");
+app.Run("http://0.0.0.0:8040");
