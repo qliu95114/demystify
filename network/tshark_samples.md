@@ -144,7 +144,8 @@ trace
 | extend SourceCA=split(Source,',')[countof(Source,',')]//if this is encap traffic, get inner ip addres only
 | extend DestCA=split(Destination,',')[countof(Destination,',')]//if this is encap traffic, get inner ip addres only
 | extend ipidinnner=split(ipid,',')[countof(ipid,',')] //if this is encap traffic, get inner ipid only
-| project TT,DeltaDisplayed, SourceCA, DestCA, ipidinnner, Protocol,tcpseq, tcpack, Length, Info, tcpsrcport, tcpdstport, udpdstport, udpsrcport//,ethsrc, ethdst, frameprotocol
+| extend ipTTLInner=split(ipTTL,',')[countof(ipTTL,',')] //if this is encap traffic, get inner ipTTL only
+| project TT,DeltaDisplayed, SourceCA, DestCA, ipidinnner,ipTTLInner, Protocol,tcpseq, tcpack, Length, Info, tcpsrcport, tcpdstport, udpdstport, udpsrcport,ipTTLInner,tcpFlags//,ethsrc, ethdst, frameprotocol
 | take 20
 ```
 Result:
