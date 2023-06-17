@@ -28,11 +28,10 @@ The Target folder we will save the cutted file, Default \\192.168.3.17\g$\DOWNLO
 The Log folder we will save the FFMPEG log file, Default \\192.168.3.17\g$\DOWNLOADS\ffmpeg_log\cut
 
 .PARAMETER bitrate
-Bitrate control if you want to change , default is 2000, (=2000Kbps)
-
+set Bitrate value to control output video quality , default is 2000, (=2000Kbps)
 
 .EXAMPLE
-.\Video_Header_Trail_remove.ps1 -filename G:\DOWNLOADS\transfer\ffmpeg\video.23.1080p.HD.mp4 -outputfolder "E:\TV.Asia" -startsecs 105  -lastsecs 145 -logfolder E:\TV.Asia
+.\Video_Header_Trail_remove.ps1 -filename G:\DOWNLOADS\transfer\ffmpeg\video.23.1080p.HD.mp4 -outputfolder "E:\TV.Asia" -startsecs 105  -lastsecs 145 -logfolder E:\TV.Asia -bitrate 2000
 #>
 
 Param (
@@ -121,8 +120,10 @@ if (($startsecs -ge 86400) -or ($lastsecs -ge 86400)) {Write-UTCLog "Start / Las
 
 If ((Test-Path $filename) -and (Test-Path $outputfolder))
 {
-    $VideoLength=((Get-ExtendedProperties  $filename)| where {$_.Property -eq "Length"}).Value
-    $videoduration=[int]$VideoLength.split(":")[0]*3600+[int]$VideoLength.split(":")[1]*60+[int]$VideoLength.split(":")[2]
+    #$VideoLength=((Get-ExtendedProperties  $filename)| where {$_.Property -eq "Length"}).Value
+    #$videoduration=[int]$VideoLength.split(":")[0]*3600+[int]$VideoLength.split(":")[1]*60+[int]$VideoLength.split(":")[2]
+
+    $videoduration=ffprobe ""$($filename)"" -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 -v error
     #Error handling
     if ($startsecs -ge $videoduration) { Write-UTCLog "Cut Start seconds cannot be greater than Vidoe Length!" "red"; exit}
     if ($lastsecs -ge $videoduration) { Write-UTCLog "Cut Last seconds cannot ber greater than Vidoe Length!" "red"; exit}
@@ -142,7 +143,7 @@ If ((Test-Path $filename) -and (Test-Path $outputfolder))
 
     #direct cut without encoding, this will cause a few seconds black screen for target file. 
     #$ffcmd="ffmpeg.exe -y -i ""$($filename)"" -ss $($starttime).000 -to $($endtime).000  -c:v copy -map 0:v:0? -c:a copy -map 0:a? -c:s copy -map 0:s? -map_chapters 0 -map_metadata 0 -f mp4 -threads 0 ""$($outputfile)"" 2> ""$($logfile)"""
-    $ffcmd="ffmpeg.exe -y -i ""$($filename)"" -ss $($starttime).000 -to $($endtime).000  -c:v h264_nvenc -b:v $($bitrate)k -pix_fmt yuv420p -vf ""scale=1920:-2"" -map 0:v:0? -c:a copy -map 0:1 -c:a aac -b:a 128k -map 0:s? -map_chapters 0 -map_metadata 0 -f mp4 -threads 0 ""$($outputfile)"" 2> ""$($logfile)"""
+    $ffcmd="ffmpeg.exe -y -i ""$($filename)"" -ss $($starttime).000 -to $($endtime).000  -c:v h264_nvenc -b:v $($bitrate)k -pix_fmt yuv420p -vf ""scale=1920:-2"" -map 0:v:0? -c:a copy -map 0:1 -c:a aac -b:a 128k -c:s mov_text -map 0:s? -map_chapters 0 -map_metadata 0 -f mp4 -threads 0 ""$($outputfile)"" 2> ""$($logfile)"""
     Write-UTCLog "CMD: $($ffcmd)" "Yellow"
     Write-UTCLog "Begining Cut $($filename) " "Cyan"
     $st=Get-date
