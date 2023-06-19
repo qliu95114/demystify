@@ -15,7 +15,7 @@ Param (
     [int]$concurrent=10,
     [int]$Repeat=100,
     [int]$RepeatDelayInSec=0,
-    [ValidateRange(1,1400)][Int]$payloadsize=16
+    [ValidateRange(1,1500)][Int]$payloadsize=16
 )
 
 #Send-UdpDatagram -EndPoint $Endpoint -Port $port -Message "test.mymetric:0|c"      
@@ -80,6 +80,7 @@ $Jobs = @()
 1..$concurrent| % {
     $Job = [powershell]::Create().AddScript($ScriptBlock).AddParameter("EndPoint", $EndPoint).AddParameter("Port", $Port).AddParameter("Repeat", $Repeat).AddParameter("payloadsize", $payloadsize).AddParameter("RepeatDelayInSec", $RepeatDelayInSec)
     $Job.RunspacePool = $RunspacePool
+    Write-UTCLog "Starting Runspace $_" -color Yellow    
     $Jobs += New-Object PSObject -Property @{
       RunNum = $_
       Job = $Job

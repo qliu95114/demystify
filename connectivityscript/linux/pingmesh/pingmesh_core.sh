@@ -3,7 +3,7 @@ retry=0
 # Loop until file download is successful or retry limit is reached
 while [ $retry -lt 10 ]; do
   # Download the config.ini file
-  wget "https://pingmeshdigitalnative.blob.core.windows.net/config/config.ini" -O /tmp/config.ini
+  wget "https://raw.githubusercontent.com/qliu95114/demystify/main/connectivityscript/linux/config.ini" -O /tmp/config.ini
    # Check if download was successful
   if [ $? -eq 0 ]; then
     break
@@ -40,14 +40,14 @@ if [ $retry -eq 10 ]; then
   exit 1
 fi
 
-
-containerid=$(curl -s -H "x-ms-guest-agent-name: WaAgent-2.7.0.0 (2.7.0.0)" -H "x-ms-version: 2012-11-30" -A "" "http://168.63.129.16/machine?comp=goalstate" --connect-timeout 3| grep -oPm1 "(?<=<ContainerId>)[^<]+")
+# azure get containerid from a vm
+curl -s --connect-timeout 0.2 http://168.63.129.16/machine?comp=goalstate -H "x-ms-guest-agent-name: WaAgent-2.7.0.0 (2.7.0.0)" -H "x-ms-version: 2012-11-30" -o /tmp/cid.xml
+containerid=$(sed -n 's:.*<ContainerId>\([^<]*\)</ContainerId>.*:\1:p' /tmp/cid.xml)
 
 if [ -z "$containerid" ]; then
     containerid="00000000-0000-0000-0000-000000000000"
 fi
 echo "containerid is $containerid"
-
 
 #read config.ini to settings   
 # config.ini format
@@ -57,11 +57,12 @@ echo "containerid is $containerid"
 #read all ip addresses from config.ini
 iplist=($(awk -F "=" '/ip/ {print $2}' /tmp/config.ini | sed 's/,/ /g'))
 
-#read interval from config.ini
-interval=$(awk -F "=" '/interval/ {print $2}' /tmp/config.ini)
+#read interval from config.ini and remove the last character
+interval=$(awk -F "=" '/interval/ {print $2}' /tmp/config.ini | sed 's/.$//')
 
-#read timedlog from config.ini
-timedlog=$(awk -F "=" '/timedlog/ {print $2}' /tmp/config.ini)
+#read timedlog from config.ini and remove the last character
+timedlog=$(awk -F "=" '/timedlog/ {print $2}' /tmp/config.ini | sed 's/.$//')
+
 
 echo "iplist is ${iplist[@]}"
 echo "interval is $interval"
@@ -82,7 +83,7 @@ else
   # ping ip address
   echo "bash /tmp/test_ping.sh $ip ...."
   #nohup ../test_ping.sh $ip 2>&1 &
-  bash /tmp/test_ping.sh -ip $ip -timedlog $timedlog -interval $interval > /dev/null 2>&1 &
+  bash /tmp/test_ping.sh -ip "$ip" -timedlog $timedlog -interval $interval -logpath "/mnt/$folder" > /dev/null 2>&1 &
 fi
 done
 
