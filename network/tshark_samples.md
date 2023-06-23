@@ -145,8 +145,13 @@ trace
 | extend DestCA=split(Destination,',')[countof(Destination,',')]//if this is encap traffic, get inner ip addres only
 | extend ipidinnner=split(ipid,',')[countof(ipid,',')] //if this is encap traffic, get inner ipid only
 | extend ipTTLInner=split(ipTTL,',')[countof(ipTTL,',')] //if this is encap traffic, get inner ipTTL only
-| project TT,DeltaDisplayed, SourceCA, DestCA, ipidinnner,ipTTLInner, Protocol,tcpseq, tcpack, Length, Info, tcpsrcport, tcpdstport, udpdstport, udpsrcport,ipTTLInner,tcpFlags//,ethsrc, ethdst, frameprotocol
-| take 20
+| order by TT asc // sort by timestamp
+| extend  delta_in_ms=toreal(datetime_diff('nanosecond',TT, prev(TT)))/1000000  //get DeltaTimeDisplayed in Kusto Way
+| project TT,delta_in_ms, SourceCA, DestCA, ipidinnner,ipTTLInner, Protocol,tcpseq, tcpack, Length, Info, tcpsrcport, tcpdstport, udpdstport, udpsrcport,ipTTLInner,tcpFlags//,ethsrc, ethdst, frameprotocol
+| take 20  //get 20 record from top
+
+//to take last 10 record
+| order by TT desc | take 10 | order by TT asc // take last 7 records
 ```
 Result:
 ```
