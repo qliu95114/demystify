@@ -21,6 +21,6 @@ $InstanceId=([xml](c:\windows\system32\curl "http://168.63.129.16/machine?comp=g
 
 $logdate = ((get-date).ToUniversalTime()).ToString("yyyy-MM-dd HH:mm:ss")
 
-Write-Host "[$($logdate)],HostName: $env:computername" -ForegroundColor Cyan
-Write-Host "[$($logdate)],ContainerId: $containerid" -ForegroundColor Cyan
-Write-Host "[$($logdate)],InstanceId: $InstanceId" -ForegroundColor Cyan
+Write-Host "[$($logdate)],HostName    :$env:computername" -ForegroundColor Cyan
+Write-Host "[$($logdate)],ContainerId :$containerid" -ForegroundColor Cyan
+Write-Host "[$($logdate)],InstanceId  :$InstanceId" -ForegroundColor Cyan
