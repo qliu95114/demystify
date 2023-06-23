@@ -5,6 +5,14 @@
 # 3. print the container id
 # 4. you can use this script to get the container id from Azure VM
 
+# To use the script
+# a. Open Azure VM
+# b. Open Powershell
+# c. Run 
+#     iex (new-object net.webclient).downloadstring("https://aka.ms/getcid")
+#     iex (new-object net.webclient).downloadstring("https://raw.githubusercontent.com/qliu95114/demystify/main/connectivityscript/win/get-containerid.ps1")
+# d. you will get the container id  
+
 # author : qliu
 # time : 2023-06-23
 
