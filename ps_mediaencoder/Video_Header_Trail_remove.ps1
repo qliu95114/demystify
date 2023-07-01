@@ -38,11 +38,12 @@ Param (
     [Parameter(Mandatory=$true)][string]$filename,
     [string]$outputfolder="\\192.168.3.17\g$\DOWNLOADS\transfer\ffmpeg",
     [string]$logfolder="\\192.168.3.17\g$\DOWNLOADS\ffmpeg_log\cut",
-    [int]$bitrate=2000,
+    [int]$bitrate, # in Kbps
     [int]$startsecs=0,
     [int]$lastsecs=0
 )
 
+# function is deprecated as we use ffprobe to get video duration that support more file format
 Function Get-ExtendedProperties
 {
     [CmdletBinding()]
@@ -123,7 +124,20 @@ If ((Test-Path $filename) -and (Test-Path $outputfolder))
     #$VideoLength=((Get-ExtendedProperties  $filename)| where {$_.Property -eq "Length"}).Value
     #$videoduration=[int]$VideoLength.split(":")[0]*3600+[int]$VideoLength.split(":")[1]*60+[int]$VideoLength.split(":")[2]
 
+    #use ffprobe to get video duration
     $videoduration=ffprobe ""$($filename)"" -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 -v error
+    # convert video duration from seconds to hh:mm:ss
+    $VideoLength = "{0:hh\:mm\:ss}" -f (New-Object System.TimeSpan 0,0,$videoduration)
+
+    #Get Video Bitrate if not specified
+    if ($bitrate -eq 0)
+	{
+		$bitrate=[int]((ffprobe ""$($filename)"" -show_entries format=bit_rate -of default=noprint_wrappers=1:nokey=1 -v error)/1000)
+	} 
+	else{	
+        Write-UTCLog  "-bitrate : $($bitrate) K"
+	}
+
     #Error handling
     if ($startsecs -ge $videoduration) { Write-UTCLog "Cut Start seconds cannot be greater than Vidoe Length!" "red"; exit}
     if ($lastsecs -ge $videoduration) { Write-UTCLog "Cut Last seconds cannot ber greater than Vidoe Length!" "red"; exit}
@@ -134,22 +148,21 @@ If ((Test-Path $filename) -and (Test-Path $outputfolder))
     $logfile=$logfolder.TrimEnd("\")+"\"+$truename.TrimEnd($truename.split(".")[$truename.split(".").count-1])+"cut.log" # remove file extension and append "cut.log"
 
     Write-UTCLog "Cut Start Seconds from the begin : $($startsecs)  -   Cut Last Seconds at the end : $($lastsecs)"  "Green"
-    Write-UTCLog "Source Video ($($fileName)) : $($VideoLength) - $($videoduration) seconds"  "Green"
+    Write-UTCLog "Source Video ($($fileName)) : $($VideoLength) - $($videoduration) s"  "Green"
 
     $endsecs = $videoduration-$lastsecs
     $starttime=([timespan]::fromseconds($startsecs)).ToString().split(".")[0]
     $endtime = ([timespan]::fromseconds($endsecs)).ToString().split(".")[0]
-    Write-UTCLog "Target Video ($($outputfile)): $($starttime) - $($endtime)  ; $($startsecs) - $($endsecs)"  "Green"
+    Write-UTCLog "Target Video ($($outputfile)): $($starttime)($($startsecs)) - $($endtime)($($endsecs)), Bitrate: $($bitrate)k"  "Yellow"
 
     #direct cut without encoding, this will cause a few seconds black screen for target file. 
     #$ffcmd="ffmpeg.exe -y -i ""$($filename)"" -ss $($starttime).000 -to $($endtime).000  -c:v copy -map 0:v:0? -c:a copy -map 0:a? -c:s copy -map 0:s? -map_chapters 0 -map_metadata 0 -f mp4 -threads 0 ""$($outputfile)"" 2> ""$($logfile)"""
     $ffcmd="ffmpeg.exe -y -i ""$($filename)"" -ss $($starttime).000 -to $($endtime).000  -c:v h264_nvenc -b:v $($bitrate)k -pix_fmt yuv420p -vf ""scale=1920:-2"" -map 0:v:0? -c:a copy -map 0:1 -c:a aac -b:a 128k -c:s mov_text -map 0:s? -map_chapters 0 -map_metadata 0 -f mp4 -threads 0 ""$($outputfile)"" 2> ""$($logfile)"""
-    Write-UTCLog "CMD: $($ffcmd)" "Yellow"
-    Write-UTCLog "Begining Cut $($filename) " "Cyan"
-    $st=Get-date
-    Invoke-Expression $ffcmd
-    $et=Get-date
-    Write-UTCLog "Complete Cut $($outputfile) , time : $(($et-$st).TotalSeconds) (secs)" "Cyan"
+    Write-UTCLog "CMD: $($ffcmd)" "Green"
+    Write-UTCLog "Cut/Encode Start : $($filename) " "Green"
+    $st=Get-date;  Invoke-Expression $ffcmd; $et=Get-date
+    Write-UTCLog "Cut/Encode Complete : $($outputfile)" "Cyan"
+    Write-UTCLog "Total time : $(($et-$st).TotalSeconds) (secs)" "Cyan"
 }
 else
 {
