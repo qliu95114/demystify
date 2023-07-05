@@ -323,18 +323,20 @@ if (Test-Path $tracefolder)  #validate
                     $totalsize+=$pcapfile.Length
                 }
                 Write-UTCLog " Pcap Files (Total): $($pcapfilelist.count) , File Size (Total): $($totalsize)bytes ($("{0:F2}" -f $($totalsize/1024/1024)) MBs), Required Disk Space (Estimate): ($("{0:F2}" -f $($totalsize/1024/1024*2.2)) MBs) " "Yellow"
-
+                
+                $j=1
                 foreach ($pcapfile in $pcapfilelist)
                 {
-                    Write-UTCLog " Processing : $($pcapfile.FullName) " "Gree"
+                    Write-UTCLog " Processing $($j)/$($pcapfilelist.count) : $($pcapfile.FullName) " "Green"
                     $csvfilename="$($pcapfile.basename).csv"
                     pcap2kustocore -pcapfile "$($pcapfile.FullName)" -csvfile "$($csvfolder)\$($csvfilename)" -kustoendpoint $kustoendpoint -kustotable $kustotable -sastoken $sastoken
+                    $j++
                     #PT1H2CSV -srcpt1h $nsgfile.FullName -csvfile $destfile
                     #PT1H2CSV_Memory -srcpt1h $nsgfile.FullName -csvfile $destfile2
                 }
             }
             else {
-                Write-UTCLog " Pcap $($tracefile)\$($tracefile) Total : $($pcapfilelist.count) File(s) , existing... " "Red "
+                Write-UTCLog " Pcap $($tracefile)\$($tracefile) Total : $($pcapfilelist.count) File(s) , existing... " "Red"
             }        
         }
     else {
