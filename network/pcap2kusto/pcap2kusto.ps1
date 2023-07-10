@@ -85,7 +85,7 @@ Function pcap2csv ([string]$pcapfile,[string]$csvfile,[string]$jobid)  #FlatJSON
     
     if (Test-path $csvfile)
     {
-        if ($csvoverwrite) {remove-item $csvfile} 
+        if ($csvoverwrite) { remove-item $csvfile -Force} 
         else 
         {
             Write-UTCLog "  ++csv: $($csvfile) already exist, skipping" "Yellow"
@@ -97,8 +97,8 @@ Function pcap2csv ([string]$pcapfile,[string]$csvfile,[string]$jobid)  #FlatJSON
     $cmdtshark|out-file "$($env:temp)\$($pcapfilename)_$($jobid)_0_pcap2csv.cmd" -Encoding ascii
     if ($debug) 
         {   
-            Write-UTCLog " ++ JobCMD : $($env:temp)\$($pcapfilename)_$($jobid)_0_pcap2csv.cmd.cmd" "cyan"
-            Write-UTCLog " ++ $cmdtshark " "cyan"
+            Write-UTCLog "  ++JobCMD : $($env:temp)\$($pcapfilename)_$($jobid)_0_pcap2csv.cmd" "cyan"
+            Write-UTCLog "  ++ $cmdtshark " "cyan"
         }
     if ($debug) {
         Invoke-Expression "cmd /c $($env:temp)\$($pcapfilename)_$($jobid)_0_pcap2csv.cmd"
@@ -112,7 +112,7 @@ Function pcap2csv ([string]$pcapfile,[string]$csvfile,[string]$jobid)  #FlatJSON
 
 function CSVtoKustoEmulator([string]$csvfile,[string]$kustoendpoint,[string]$kustotable,[string]$jobid)
 {
-    if ($debug) {Write-UTCLog " ++function:CSVtoKustoEmulator " "cyan"}
+    if ($debug) {Write-UTCLog " ++function:CSVtoKustoEmulator " "Cyan"}
     #create ingress kql file
     $csvfilename=(Get-ChildItem $csvfile).fullname
 
@@ -173,30 +173,83 @@ function CSVtoKustoCluster([string]$csvfile,[string]$kustoendpoint,[string]$kust
 function pcap2kustocore([string]$pcapfile,[string]$csvfile,[string]$kustoendpoint,[string]$kustotable,[string]$sastoken) # this handle one file only
 {
     if ($debug) {Write-UTCLog  " +function:pcap2kustocore '$($pcapfile)'" "cyan"}
-    $jobid= New-Guid
-    pcap2csv -pcapfile $pcapfile -csvfile $csvfile -jobid $jobid
+    
+    #config capinfos 
+    set-alias capinfos "c:\Program Files\Wireshark\capinfos.exe"
+    $pcapacketcount=[int][regex]::Match(((capinfos $pcapfile)|Select-String "Number of Packets ="), '\d+').Value
 
-
-    if ([string]::IsNullOrEmpty($kustoendpoint))
+    #determine $pcapfile packet count if this is > 1500000, we will split orginial file into multiple and once it is complete the orginial file will get removed. 
+    if ($pcapacketcount -le 1500000)
     {
-        #Write-UTCLog " +KustoEndpoint is not specified, only pcap2csv only" "Red"
-        return
-    }
-    else {
-        if ($kustoendpoint.contains("kusto.windows.net") -or $kustoendpoint.contains("kusto.chinacloudapi.cn"))
+        $jobid= New-Guid
+        pcap2csv -pcapfile $pcapfile -csvfile $csvfile -jobid $jobid
+        if ([string]::IsNullOrEmpty($kustoendpoint))
         {
-            if ([string]::IsNullOrEmpty($sastoken))
-            {
-                Write-UTCLog " +$($kustoendpoint) is used, but SAS token is not specified, existing..." "Red"
-            }
-            else {
-                CSVtoKustoCluster -csvfile $csvfile -kustoendpoint $kustoendpoint -kustotable $kustotable -sastoken $sastoken -jobid $jobid #
-            }
+            #Write-UTCLog " +KustoEndpoint is not specified, only pcap2csv only" "Red"
+            return
         }
         else {
-            CSVtoKustoEmulator -csvfile $csvfile -kustoendpoint $kustoendpoint -kustotable $kustotable -jobid $jobid 
+            if ($kustoendpoint.contains("kusto.windows.net") -or $kustoendpoint.contains("kusto.chinacloudapi.cn"))
+            {
+                if ([string]::IsNullOrEmpty($sastoken))
+                {
+                    Write-UTCLog " +$($kustoendpoint) is used, but SAS token is not specified, existing..." "Red"
+                }
+                else {
+                    CSVtoKustoCluster -csvfile $csvfile -kustoendpoint $kustoendpoint -kustotable $kustotable -sastoken $sastoken -jobid $jobid #
+                }
+            }
+            else {
+                CSVtoKustoEmulator -csvfile $csvfile -kustoendpoint $kustoendpoint -kustotable $kustotable -jobid $jobid 
+            }
         }
     }
+    else {
+        # split pcap file into multiple pcap files. 
+        Write-UTCLog " $($pcapfile) has more than 1.5M packets, spliting..." "Yellow"
+        Set-Alias editcap "c:\Program Files\Wireshark\editcap.exe"
+        $splitcmd="editcap -c 1500000 $($pcapfile) $(Split-Path -Parent -path $pcapfile)\$(Split-Path -Leaf -path $pcapfile)"
+        Invoke-Expression $splitcmd
+        Write-UTCLog " splitcmd: $($splitcmd)" "Yellow"
+        $filename = Split-Path -Leaf -path $pcapfile
+        $pcapfiles=Get-ChildItem "$(Split-Path -Parent -path $pcapfile)\$([System.IO.Path]::GetFileNameWithoutExtension($filename))_*.*"
+        
+        if ($pcapfiles.count -ge 1) 
+        {
+            Write-UTCLog " Deleting $($pcapfile), we already have splitted files $($pcapfiles.count)" "Red"
+            Remove-Item $pcapfile -Force # remove the original pcap file as we have split files
+        }
+
+        $k=0
+        foreach ($pcap in $pcapfiles)
+        {
+            $k++
+            $jobid= New-Guid
+            Write-UTCLog "  +++pcap2csv(split): $($k)/$($pcapfiles.count) - $($pcap) " "Yellow"
+            pcap2csv -pcapfile $pcap -csvfile "$(Split-Path -Parent -path $csvfile)\$($pcap.basename).csv" -jobid $jobid
+            if ([string]::IsNullOrEmpty($kustoendpoint))
+            {
+                #if ($debug) {Write-UTCLog " +KustoEndpoint is not specified, only pcap2csv only" "Red"}
+            }
+            else {
+                if ($kustoendpoint.contains("kusto.windows.net") -or $kustoendpoint.contains("kusto.chinacloudapi.cn"))
+                {
+                    if ([string]::IsNullOrEmpty($sastoken))
+                    {
+                        Write-UTCLog " +$($kustoendpoint) is used, but SAS token is not specified, existing..." "Red"
+                    }
+                    else {
+                        CSVtoKustoCluster -csvfile "$(Split-Path -Parent -path $csvfile)\$($pcap.basename).csv" -kustoendpoint $kustoendpoint -kustotable $kustotable -sastoken $sastoken -jobid $jobid #
+                    }
+                }
+                else {
+                    CSVtoKustoEmulator -csvfile "$(Split-Path -Parent -path $csvfile)\$($pcap.basename).csv" -kustoendpoint $kustoendpoint -kustotable $kustotable -jobid $jobid 
+                }
+            }
+        }
+
+    }
+
 }
 
 
@@ -327,7 +380,7 @@ if (Test-Path $tracefolder)  #validate
                     Write-UTCLog "$($pcapfile),$($pcapfile.Length)"
                     $totalsize+=$pcapfile.Length
                 }
-                Write-UTCLog " Pcap Files (Total): $($pcapfilelist.count) , File Size (Total): $($totalsize)bytes ($("{0:F2}" -f $($totalsize/1024/1024)) MBs), Required Disk Space (Estimate): ($("{0:F2}" -f $($totalsize/1024/1024*2.2)) MBs) " "Yellow"
+                Write-UTCLog " Pcap Files (Total): $($pcapfilelist.count) , File Size (Total): $($totalsize)bytes ($("{0:F2}" -f $($totalsize/1024/1024)) MBs), Required Disk Space (Estimate): ($("{0:F2}" -f $($totalsize/1024/1024*2.40)) MBs) " "Yellow"
                 
                 $j=1
                 foreach ($pcapfile in $pcapfilelist)
@@ -348,7 +401,7 @@ if (Test-Path $tracefolder)  #validate
         if (Test-Path "$($tracefolder)\$($tracefile)"){
             $pcapfile=Get-ChildItem "$($tracefolder)\$($tracefile)"
             $csvfilename="$($pcapfile.basename).csv"
-            Write-UTCLog " Pcap File : 1, File Size : $($pcapfile.Length)bytes ($("{0:F2}" -f $($pcapfile.Length/1024/1024)) MBs), Required Disk Space (Estimate): $("{0:F2}" -f $($pcapfile.Length/1024/1024*2.2)) MBs " "Yellow"
+            Write-UTCLog " Pcap File : 1, File Size : $($pcapfile.Length)bytes ($("{0:F2}" -f $($pcapfile.Length/1024/1024)) MBs), Required Disk Space (Estimate): $("{0:F2}" -f $($pcapfile.Length/1024/1024*2.40)) MBs " "Yellow"
             Write-UTCLog "$($pcapfile),$($pcapfile.Length)"
             pcap2kustocore -pcapfile "$($tracefolder)\$($tracefile)" -csvfile "$($csvfolder)\$($csvfilename)" -kustoendpoint $kustoendpoint -kustotable $kustotable -sastoken $sastoken
         }
