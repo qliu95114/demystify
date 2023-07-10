@@ -116,6 +116,11 @@ function CSVtoKustoEmulator([string]$csvfile,[string]$kustoendpoint,[string]$kus
     #create ingress kql file
     $csvfilename=(Get-ChildItem $csvfile).fullname
 
+    # replace "-" "." "," with _ in table name
+    $kustotable=$kustotable.replace("-","_")
+    $kustotable=$kustotable.replace(".","_")
+    $kustotable=$kustotable.replace(",","_")
+
     #generate kql file
     $kqlcsv=".ingest into table $($kustotable) (@""$($csvfilename)"") with (format='csv',ignoreFirstRecord=true)"
     if ($debug) {Write-UTCLog "  ++kql: $($kqlcsv)"  "cyan"}
