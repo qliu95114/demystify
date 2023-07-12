@@ -157,6 +157,11 @@ function CSVtoKustoCluster([string]$csvfile,[string]$kustoendpoint,[string]$kust
     #create ingress kql file
     $csvfilename=(Get-ChildItem $csvfile).name
 
+    # replace "-" "." "," with _ in table name
+    $kustotable=$kustotable.replace("-","_")
+    $kustotable=$kustotable.replace(".","_")
+    $kustotable=$kustotable.replace(",","_")
+    
     #generate SAS token and kql file
     $csvsas="$($sastoken.split('?')[0])/$($csvfilename)?$($sastoken.split('?')[1])"  
     $kqlcsvblob=".ingest into table $($kustotable) (@""$($csvsas)"") with (format='csv',ignoreFirstRecord=true)"
