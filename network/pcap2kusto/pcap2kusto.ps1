@@ -300,6 +300,11 @@ else {
     Write-UTCLog " $((tshark --version)[0]) is installed.  Location: '$($tsharkcli)'"  "Green"
 }
 
+# search for azcopy.exe in temp folder if found, use Set-Alilas to config azcopy alias
+if ((Get-ChildItem "$($env:temp)\azcopy.exe" -Recurse).count -ne 0)
+{
+    Set-Alias -Name azcopy -Value (Get-ChildItem "$($env:temp)\azcopy.exe" -Recurse)[0].FullName -ErrorAction SilentlyContinue 
+}
 
 # Check if AzCopy is already installed
 if (-not (Get-Command azcopy -ErrorAction SilentlyContinue)) {
