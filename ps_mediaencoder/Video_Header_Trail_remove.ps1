@@ -129,18 +129,27 @@ If ((Test-Path $filename) -and (Test-Path $outputfolder))
     # convert video duration from seconds to hh:mm:ss
     $VideoLength = "{0:hh\:mm\:ss}" -f (New-Object System.TimeSpan 0,0,$videoduration)
 
-    #two steps to get video bitrate and audio bitrate sperately
-    #use stream bitrate as primary choice if that is available
-    $videobitrate=[int]((ffprobe ""$($filename)"" -show_entries stream=bit_rate -select_streams v:0 -of default=noprint_wrappers=1:nokey=1 -v error)/1000) 
+    #two steps to get video bitrate and audio bitrate separately
+    #use stream bitrate as primary choice if that is available, for mkv file, audio stream bitrate may not available, we use hard code 96kbps for audio bitrate
+    try 
+    { 
+        $videobitrate=[int]((ffprobe ""$($filename)"" -show_entries stream=bit_rate -select_streams v:0 -of default=noprint_wrappers=1:nokey=1 -v error)/1000) 
+    }
+    catch
+    {    
+        $videobitrate=0 
+    }
+
     if ($videobitrate -eq 0) 
     {
         #Use bit_rate of the file for Video Bitrate
         $videobitrate=[int]((ffprobe ""$($filename)"" -show_entries format=bit_rate -of default=noprint_wrappers=1:nokey=1 -v error)/1000)
     }
 
-    $audiobitrate=[int]((ffprobe ""$($filename)"" -show_entries stream=bit_rate -select_streams a:0 -of default=noprint_wrappers=1:nokey=1 -v error)/1000)
-    if ($audiobitriate -eq 0) 
-    {
+    try {
+        $audiobitrate=[int]((ffprobe ""$($filename)"" -show_entries stream=bit_rate -select_streams a:0 -of default=noprint_wrappers=1:nokey=1 -v error)/1000)    
+    }
+    catch {
         $audiobitrate=96
     }
 
@@ -149,9 +158,6 @@ If ((Test-Path $filename) -and (Test-Path $outputfolder))
         $bitrate=$videobitrate
     } 
     
-    Write-UTCLog "Video Bitrate : $($videobitrate) K and bitrate(used for encoding) : $($bitrate) K"
-    Write-UTCLog "Audio Bitrate : $($audiobitrate) K"
-
     #Error handling
     if ($startsecs -ge $videoduration) { Write-UTCLog "Cut Start seconds cannot be greater than Vidoe Length!" "red"; exit}
     if ($lastsecs -ge $videoduration) { Write-UTCLog "Cut Last seconds cannot ber greater than Vidoe Length!" "red"; exit}
@@ -164,13 +170,15 @@ If ((Test-Path $filename) -and (Test-Path $outputfolder))
     $outputfile=$outputfolder.TrimEnd("\")+"\"+$truename
     $logfile=$logfolder.TrimEnd("\")+"\"+$truename.TrimEnd($truename.split(".")[$truename.split(".").count-1])+"cut.log" # remove file extension and append "cut.log"
 
-    Write-UTCLog "Cut Start Seconds from the begin : $($startsecs)  -   Cut Last Seconds at the end : $($lastsecs)"  "Green"
-    Write-UTCLog "Source Video ($($fileName)) : $($VideoLength) - $($videoduration) s"  "Green"
+    Write-UTCLog "Source : ($($fileName)) : $($VideoLength) - $($videoduration) s"  "Green"
+    Write-UTCLog " - Video Bitrate : $($videobitrate) K and bitrate(used for encoding) : $($bitrate) K"
+    Write-UTCLog " - Audio Bitrate : $($audiobitrate) K"
+    Write-UTCLog " Cut from the begin : $($startsecs)  -   Cut from the end : $($lastsecs)"  "Green"
 
     $endsecs = $videoduration-$lastsecs
     $starttime=([timespan]::fromseconds($startsecs)).ToString().split(".")[0]
     $endtime = ([timespan]::fromseconds($endsecs)).ToString().split(".")[0]
-    Write-UTCLog "Target Video ($($outputfile)): $($starttime)($($startsecs)) - $($endtime)($($endsecs)), Bitrate: $($bitrate)k"  "Yellow"
+    Write-UTCLog "Target : ($($outputfile)): $($starttime)($($startsecs)) - $($endtime)($($endsecs)), Bitrate: $($bitrate)k"  "Yellow"
 
     #direct cut without encoding, this will cause a few seconds black screen for target file. 
     #$ffcmd="ffmpeg.exe -y -i ""$($filename)"" -ss $($starttime).000 -to $($endtime).000  -c:v copy -map 0:v:0? -c:a copy -map 0:a? -c:s copy -map 0:s? -map_chapters 0 -map_metadata 0 -f mp4 -threads 0 ""$($outputfile)"" 2> ""$($logfile)"""
