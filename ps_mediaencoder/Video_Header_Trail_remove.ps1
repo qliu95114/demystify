@@ -144,6 +144,9 @@ If ((Test-Path $filename) -and (Test-Path $outputfolder))
     if (($startsecs+$lastsecs) -ge $videoduration){ Write-UTCLog "Cut Start + Last seconds cannot be greater than Vidoe Length!" "red"; exit}
 
     $truename=$filename.split("\")[$filename.split("\").count-1]
+    # replace truename file extension with mp4
+    $truename=$truename.TrimEnd($truename.split(".")[$truename.split(".").count-1])+"mp4"
+    # create output file name with path
     $outputfile=$outputfolder.TrimEnd("\")+"\"+$truename
     $logfile=$logfolder.TrimEnd("\")+"\"+$truename.TrimEnd($truename.split(".")[$truename.split(".").count-1])+"cut.log" # remove file extension and append "cut.log"
 
