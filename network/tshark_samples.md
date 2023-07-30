@@ -352,3 +352,33 @@ rem - for one file
 rem - for all files
 for /f "delims=" %a in ('dir /b /o *.pcap') do "c:\program files\wireshark\tshark.exe" -r "%a" -Y "icmp" -w "icmp\%~na.icmp.pcap"
 ```
+
+## Sample 11 - Find out all DNS NoResponse from trace , assume you already import Network Trace to Kusto
+
+```kql
+trace
+| where Protocol == 'DNS' and udpdstport == 53
+//| where dnsid contains "0xb4d9"// and udpsrcport == '43815'
+| extend aa=tolong(replace_string(frametime,'.',''))/1000
+| extend TT=unixtime_microseconds_todatetime(aa   )
+| extend SourceCA=tostring(split(Source,',')[countof(Source,',')])//if this is encap traffic, get inner ip addres only
+| extend DestCA=tostring(split(Destination,',')[countof(Destination,',')])//if this is encap traffic, get inner ip addres only
+| extend ipidinnner=tostring(split(ipid,',')[countof(ipid,',')]) //if this is encap traffic, get inner ipid only
+| extend ipTTLInner=tostring(split(ipTTL,',')[countof(ipTTL,',')]) //if this is encap traffic, get inner ipTTL only
+| extend DeviceIp=tostring(split(Source,',')[0])//if this is encap traffic, get inner ip addres only
+| order by TT asc // sort by timestamp
+| extend  delta_in_ms=toreal(datetime_diff('nanosecond',TT, prev(TT)))/1000000  //get DeltaTimeDisplayed in Kusto Way
+| project TT,delta_in_ms, DeviceIp,SourceCA, DestCA, ipidinnner,ipTTLInner, Protocol, Length, Info, dnsid, udpdstport, udpsrcport//,ethsrc, ethdst, frameprotocol
+//| distinct SourceCA, DestCA, dnsid, udpdstport, udpsrcport//, udpsrcport
+| join kind=leftouter (trace 
+| where Protocol == 'DNS' and udpsrcport == 53
+| extend SourceCA=tostring(split(Source,',')[countof(Source,',')])//if this is encap traffic, get inner ip addres only
+| extend DestCA=tostring(split(Destination,',')[countof(Destination,',')])//if this is encap traffic, get inner ip addres only
+| distinct SourceCA, DestCA, dnsid, udpdstport, udpsrcport
+| extend Paired="True"
+) on $left.SourceCA==$right.DestCA and $left.dnsid==$right.dnsid and $left.udpdstport==$right.udpsrcport and $left.udpsrcport==$right.udpdstport
+| project-away SourceCA1, DestCA1, dnsid1, udpdstport1, udpsrcport1
+| where isempty(Paired)
+
+```
+![image](./.image/kql_dnsquery_noresponse.png?raw=true)
