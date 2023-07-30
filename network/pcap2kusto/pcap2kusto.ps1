@@ -472,8 +472,11 @@ if (Test-Path $tracefolder)  #validate
                         $j++
                     }
                     
-                    #multithread clean up
-                    if ($tsharkcount -gt 1) #when multithread > 1, we need wait all threads job to be finished before processing azcopy and kqlcli. 
+                    #need review the tshark process count, if the count is not 0, we need wait until all tshark process exit.
+                    $tsharkcount=get-process|where-object {($_.name -eq "tshark") -or ($_.name -eq "editcap")}|measure-object|select-object -expandproperty count
+                    Write-UTCLog " tshark count: $($tsharkcount)  " "Yellow"
+
+                    if ($tsharkcount -ge 1) #when multithread > 1, we need wait all threads job to be finished before processing azcopy and kqlcli. 
                     {
                         $tsharkcount=get-process|where-object {($_.name -eq "tshark") -or ($_.name -eq "editcap")}|measure-object|select-object -expandproperty count
                         #wait loop to hold execution of azcopy if the total count exceed thread count
@@ -503,7 +506,7 @@ if (Test-Path $tracefolder)  #validate
                             while ($azcopy -ge $cores*5)
                             {
                                 Write-UTCLog " azcopy count: $($azcopy) , sleep 1 seconds " "Yellow"
-                                start-sleep -s 1
+                                start-sleep -Seconds 1
                                 $azcopy=get-process|where-object {$_.name -eq "azcopy"}|measure-object|select-object -expandproperty count
                             }
                             Write-UTCLog " azcopy $($j)/$($pcapfilelist.count) (m): $($pcapfile.FullName) " "Green"
@@ -513,8 +516,10 @@ if (Test-Path $tracefolder)  #validate
                             $j++
                         }
 
-                        #multithread azcopy cleanup 
-                        if ($azcopy -gt 1) #when multithread > 1, we need wait all threads job to be finished before processing kqlcli. 
+                        #multi-thread azcopy cleanup 
+                        $azcopy=get-process|where-object {$_.name -eq "azcopy"}|measure-object|select-object -expandproperty count
+
+                        if ($azcopy -ge 1) #when multithread > 1, we need wait all threads job to be finished before processing kqlcli. 
                         {
                             $azcopy=get-process|where-object {$_.name -eq "azcopy"}|measure-object|select-object -expandproperty count
                             #wait loop to hold execution of kqlcli if the total count exceed thread count
