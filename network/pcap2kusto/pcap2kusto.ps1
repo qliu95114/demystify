@@ -26,8 +26,11 @@ The name of the Kusto table (case-sensitive).
 .PARAMETER -sastoken
 A valid SASTOKEN is required for Azure Storage Account at the Container level, with permissions for read/write/list.
 
+.PARAMETER -multithread
+If multithread is enabled, the script will use multiple threads to convert the trace files.
+
 .PARAMETER -logfile 
-The default option is $($env:temp)\pcap2kusto_timestamp.log.
+The default option is $($workingfolder)\pcap2kusto_timestamp.log.
 
 .EXAMPLE
 convert e:\share\*.pcap to e:\share\csv\*.csv 
@@ -52,6 +55,7 @@ Create kusto table
 
 <#
 author: qliu 
+2023-07-30, Enable Multithread, add -multithread switch
 2023-03-25, Fix a few bugs & comments 
 2023-03-18, FIRST VERSION
 #>
@@ -59,7 +63,6 @@ author: qliu
 Param (
     [string]$tracefolder="e:\share",
 	[string]$tracefile="*.pcap",
-	[string]$csvfolder="$($tracefolder)\csv",
     [switch]$csvoverwrite, #if target local:csv already exist, skip by default 
 	[string]$kustoendpoint, # http://localhost:8080/public
 	[string]$kustotable, # 
@@ -67,7 +70,10 @@ Param (
 	[string]$sastoken,
     [string]$kustocli="D:\Source_git\Script\KustoCLI\Kusto.Cli.exe",
     [string]$tsharkcli="c:\program files\wireshark\tshark.exe",
+	[string]$csvfolder="$($tracefolder)\csv",    
+    [string]$workingfolder="$($csvfolder)\pcap2kusto",
     [switch]$newtable,
+    [switch]$multithread,
     [switch]$debug  #if debug is enable, will output function callname
 )
 
@@ -76,10 +82,9 @@ Function Write-UTCLog ([string]$message,[string]$color="Green")
     	$logdate = ((get-date).ToUniversalTime()).ToString("yyyy-MM-dd HH:mm:ss")
     	$logstamp = "["+$logdate + "]," + $message
         Write-Host $logstamp -ForegroundColor $color
-#    	Write-Output $logstamp | Out-File $logfile -Encoding ASCII -append
 }
 
-Function pcap2csv ([string]$pcapfile,[string]$csvfile,[string]$jobid)  #FlatJSON 
+Function pcap2csv ([string]$pcapfile,[string]$csvfile,[string]$jobid,[switch]$multithread)  #FlatJSON 
 {
     if ($debug) {Write-UTCLog " ++function:pcap2csv " "cyan"}
     
@@ -94,23 +99,31 @@ Function pcap2csv ([string]$pcapfile,[string]$csvfile,[string]$jobid)  #FlatJSON
     }
     $pcapfilename=(Get-ChildItem $pcapfile).basename
     $cmdtshark="""$($tsharkcli)"" -r ""$($pcapfile)"" -T fields -e frame.number -e frame.time_epoch -e frame.time_delta_displayed -e ip.src -e ip.dst -e ip.id -e _ws.col.Protocol -e tcp.seq -e tcp.ack -e frame.len -e tcp.srcport -e tcp.dstport -e udp.srcport -e udp.dstport -e tcp.analysis.ack_rtt -e frame.protocols -e _ws.col.Info -e eth.src -e eth.dst -e ipv6.src -e ipv6.dst -e ip.proto -e dns.id -e ip.ttl -e ip.flags -e tcp.flags -E header=y -E separator=, -E quote=d > ""$($csvfile)"""    <# Action when all if and elseif conditions are false #>
-    $cmdtshark|out-file "$($env:temp)\$($pcapfilename)_$($jobid)_0_pcap2csv.cmd" -Encoding ascii
+    $cmdtshark|out-file "$($workingfolder)\$($jobid)_0_$($pcapfilename)_pcap2csv.cmd" -Encoding ascii
     if ($debug) 
         {   
-            Write-UTCLog "  ++JobCMD : $($env:temp)\$($pcapfilename)_$($jobid)_0_pcap2csv.cmd" "cyan"
+            Write-UTCLog "  ++JobCMD : $($workingfolder)\$($jobid)_0_$($pcapfilename)_pcap2csv.cmd" "cyan"
             Write-UTCLog "  ++ $cmdtshark " "cyan"
         }
-    if ($debug) {
-        Invoke-Expression "cmd /c $($env:temp)\$($pcapfilename)_$($jobid)_0_pcap2csv.cmd"
+    
+    if ($multithread)
+    {
+        Start-Process "cmd.exe" -ArgumentList "/c $($workingfolder)\$($jobid)_0_$($pcapfilename)_pcap2csv.cmd" -WindowStyle Minimized
+        Write-UTCLog "  ++csv: $($csvfile) convert started in background"  "gray"
     }
     else {
-        Invoke-Expression "cmd /c $($env:temp)\$($pcapfilename)_$($jobid)_0_pcap2csv.cmd" | Out-Null
+        if ($debug) {
+            Invoke-Expression "cmd /c $($workingfolder)\$($jobid)_0_$($pcapfilename)_pcap2csv.cmd"
+        }
+        else {
+            Invoke-Expression "cmd /c $($workingfolder)\$($jobid)_0_$($pcapfilename)_pcap2csv.cmd" | Out-Null
+        }        
+        Write-UTCLog "  ++csv: $($csvfile) convert complete"         
     }
-    Write-UTCLog "  ++csv: $($csvfile) convert complete" 
-    return $result
+    return
 }
 
-function CSVtoKustoEmulator([string]$csvfile,[string]$kustoendpoint,[string]$kustotable,[string]$jobid)
+function CSVtoKustoEmulator([string]$csvfile,[string]$kustoendpoint,[string]$kustotable,[string]$jobid,[switch]$multithread=$false)
 {
     if ($debug) {Write-UTCLog " ++function:CSVtoKustoEmulator " "Cyan"}
     #create ingress kql file
@@ -124,35 +137,54 @@ function CSVtoKustoEmulator([string]$csvfile,[string]$kustoendpoint,[string]$kus
     #generate kql file
     $kqlcsv=".ingest into table $($kustotable) (@""$($csvfilename)"") with (format='csv',ignoreFirstRecord=true)"
     if ($debug) {Write-UTCLog "  ++kql: $($kqlcsv)"  "cyan"}
-    $kqlcsv|out-file "$($env:temp)\$($(Get-ChildItem $csvfile).BaseName)_$($jobid)_1_ingress.kql" -Encoding ascii
 
-    $kqlcmd="$($kustocli) ""$kustoendpoint"" -script:""$($env:temp)\$($(Get-ChildItem $csvfile).BaseName)_$($jobid)_1_ingress.kql"""
-    if ($debug) {Write-UTCLog "  ++kqlcmd: $($kqlcmd)" "cyan"}
-    Write-UTCLog "  +++ (Kusto.Cli) (Local) ingress table $($kustotable) from ($($csvfilename))" -color "Green"
-
-    #execute kusto
-    if ($debug) {Invoke-Expression  $kqlcmd} else {Invoke-Expression  $kqlcmd| Out-Null}    
+    if ($multithread)
+    {
+        #multithread mode, append all Kusto query in one file
+        # KQL need be single thread to process as it will lock the table
+        Write-UTCLog "  +++ ksql:$($jobid)_1_ingress.kql, appending($($kustotable)) from blob [$($csvfilename)]" -color "Green"
+        $kqlcsv|out-file "$($workingfolder)\$($jobid)_1_ingress.kql" -Encoding ascii -Append  # append all Kusto query in one file
+    }
+    else {
+        #single thread mode, execute kusto for single thread complete the command 
+        $kqlcsv|out-file "$($workingfolder)\$($jobid)_1_$($(Get-ChildItem $csvfile).BaseName)_ingress.kql" -Encoding ascii #still create the single file for debug purpose
+        if ($debug) {Write-UTCLog "  ++kql: $($kqlcsvblob)"  "cyan"}
+        #execute kusto for single thread complete the command below for multiple thread 
+        $kqlcmd="$($kustocli) ""$kustoendpoint"" -script:""$($workingfolder)\$($jobid)_1_$($(Get-ChildItem $csvfile).BaseName)_ingress.kql"""
+        if ($debug) {Write-UTCLog "  ++kqlcmd: $($kqlcmd)" "cyan"}
+        Write-UTCLog "  +++ (Kusto.Cli) (ADX) ingress table:($($kustotable)) from blob [$($csvfilename)]" -color "Green"
+        if ($debug) {Invoke-Expression  $kqlcmd} else {Invoke-Expression  $kqlcmd| Out-Null}
+    }
 }
 
-function CSVtoContainer([string]$csvfile,[string]$sastoken,[string]$jobid)
+function CSVtoContainer([string]$csvfile,[string]$sastoken,[switch]$multithread)
 {
     if ($debug) {Write-UTCLog " +++function:CSVtoContainer " "cyan"}
-    if (-not ((get-command "azcopy").count -eq 0)) #if we have azcopy installed or use $useWebClient switch is enabled, fall back to System.Net.WebClient download. otherwise use azcopy to speed up the download performance
+    if (-not ((get-command "azcopy").count -eq 0))
     {
         Write-UTCLog "  +++ (azcopy10) upload $csvfile " -color "Green"
-        $cmdazcopy="azcopy copy ""$($csvfile)"" ""$($sastoken)"" --overwrite=ifSourceNewer"  
-        if ($debug) {Invoke-Expression $cmdazcopy} else {Invoke-Expression $cmdazcopy|Out-Null}
+        if ($multithread)
+        {
+            $azcopyarg="copy ""$($csvfile)"" ""$($sastoken)"" --overwrite=ifSourceNewer"  
+            Start-Process "azcopy" -ArgumentList "$($azcopyarg)" -WindowStyle Minimized
+            if ($debug) {Write-UTCLog "  +++: azcopy $($csvfile) in background"  "gray"}
+        }
+        else 
+        {
+            $azcopyarg="azcopy copy ""$($csvfile)"" ""$($sastoken)"" --overwrite=ifSourceNewer"  
+            if ($debug) {Invoke-Expression "$($azcopyarg)"} else {Invoke-Expression "$($azcopyarg)"|Out-Null}
+        }
     }
     else {
         Write-UTCLog "  +++ azcopy(10) cannot be found, please review installation and continue" -color "Red"
-        return
     }
+    return
 }
-function CSVtoKustoCluster([string]$csvfile,[string]$kustoendpoint,[string]$kustotable,[string]$sastoken,[string]$jobid)
+function CSVtoKustoCluster([string]$csvfile,[string]$kustoendpoint,[string]$kustotable,[string]$sastoken,[string]$jobid,[switch]$multithread=$false)
 {
     if ($debug) {Write-UTCLog  " +++function:CSVtoKustoCluster " "cyan"}
-    #use azcopy copy CSV to storage account
-    CSVtoContainer -csvfile $csvfile -sastoken $sastoken -jobid $jobid
+    #use azcopy copy CSV to storage account, if this is thread then skip copy as file should already be there
+    if ($multithread){}else { CSVtoContainer -csvfile $csvfile -sastoken $sastoken }
 
     #create ingress kql file
     $csvfilename=(Get-ChildItem $csvfile).name
@@ -165,19 +197,29 @@ function CSVtoKustoCluster([string]$csvfile,[string]$kustoendpoint,[string]$kust
     #generate SAS token and kql file
     $csvsas="$($sastoken.split('?')[0])/$($csvfilename)?$($sastoken.split('?')[1])"  
     $kqlcsvblob=".ingest into table $($kustotable) (@""$($csvsas)"") with (format='csv',ignoreFirstRecord=true)"
-    if ($debug) {Write-UTCLog "  ++kql: $($kqlcsvblob)"  "cyan"}
-    $kqlcsvblob|out-file "$($env:temp)\$($(Get-ChildItem $csvfile).BaseName)_$($jobid)_1_ingress.kql" -Encoding ascii
-    $kqlcmd="$($kustocli) ""$kustoendpoint"" -script:""$($env:temp)\$($(Get-ChildItem $csvfile).BaseName)_$($jobid)_1_ingress.kql"""
-    if ($debug) {Write-UTCLog "  ++kqlcmd: $($kqlcmd)" "cyan"}
-    Write-UTCLog "  +++ (Kusto.Cli) (ADX) ingress table $($kustotable) from blob $($csvfilename)" -color "Green"
 
-    #execute kusto
-    if ($debug) {Invoke-Expression  $kqlcmd} else {Invoke-Expression  $kqlcmd| Out-Null}
+    if ($multithread)
+    {
+        #multithread mode, append all Kusto query in one file
+        # KQL need be single thread to process as it will lock the table
+        Write-UTCLog "  +++ ksql:$($jobid)_1_ingress.kql, appending($($kustotable)) from blob [$($csvfilename)]" -color "Green"
+        $kqlcsvblob|out-file "$($workingfolder)\$($jobid)_1_ingress.kql" -Encoding ascii -Append  # append all Kusto query in one file
+    }
+    else {
+        #single thread mode, execute kusto for single thread complete the command 
+        $kqlcsvblob|out-file "$($workingfolder)\$($jobid)_1_$($(Get-ChildItem $csvfile).BaseName)_ingress.kql" -Encoding ascii #still create the single file for debug purpose
+        if ($debug) {Write-UTCLog "  ++kql: $($kqlcsvblob)"  "cyan"}
+        #execute kusto for single thread complete the command below for multiple thread 
+        $kqlcmd="$($kustocli) ""$kustoendpoint"" -script:""$($workingfolder)\$($jobid)_1_$($(Get-ChildItem $csvfile).BaseName)_ingress.kql"""
+        if ($debug) {Write-UTCLog "  ++kqlcmd: $($kqlcmd)" "cyan"}
+        Write-UTCLog "  +++ (Kusto.Cli) (ADX) ingress table:($($kustotable)) from blob [$($csvfilename)]" -color "Green"
+        if ($debug) {Invoke-Expression  $kqlcmd} else {Invoke-Expression  $kqlcmd| Out-Null}
+    }
 }
 
-function pcap2kustocore([string]$pcapfile,[string]$csvfile,[string]$kustoendpoint,[string]$kustotable,[string]$sastoken) # this handle one file only
+function pcap2kustocore([string]$pcapfile,[string]$csvfile,[string]$kustoendpoint,[string]$kustotable,[string]$sastoken,[switch]$multithread=$false,[string]$jobid) # this handle one file only
 {
-    if ($debug) {Write-UTCLog  " +function:pcap2kustocore '$($pcapfile)'" "cyan"}
+    if ($debug) {Write-UTCLog  " +function:pcap2kustocore '$($pcapfile)'  multithread: $($multithread)" "cyan"}
     
     #config capinfos 
     set-alias capinfos "c:\Program Files\Wireshark\capinfos.exe"
@@ -186,8 +228,15 @@ function pcap2kustocore([string]$pcapfile,[string]$csvfile,[string]$kustoendpoin
     #determine $pcapfile packet count if this is > 1500000, we will split orginial file into multiple and once it is complete the orginial file will get removed. 
     if ($pcapacketcount -le 1500000)
     {
-        $jobid= New-Guid
-        pcap2csv -pcapfile $pcapfile -csvfile $csvfile -jobid $jobid
+        if ($multithread)
+        {
+            pcap2csv -pcapfile $pcapfile -csvfile $csvfile -jobid $jobid -multithread
+        }
+        else
+        {
+            pcap2csv -pcapfile $pcapfile -csvfile $csvfile -jobid $jobid
+        }
+
         if ([string]::IsNullOrEmpty($kustoendpoint))
         {
             #Write-UTCLog " +KustoEndpoint is not specified, only pcap2csv only" "Red"
@@ -201,12 +250,12 @@ function pcap2kustocore([string]$pcapfile,[string]$csvfile,[string]$kustoendpoin
                     Write-UTCLog " +$($kustoendpoint) is used, but SAS token is not specified, existing..." "Red"
                 }
                 else {
-                    CSVtoKustoCluster -csvfile $csvfile -kustoendpoint $kustoendpoint -kustotable $kustotable -sastoken $sastoken -jobid $jobid #
+                       CSVtoKustoCluster -csvfile $csvfile -kustoendpoint $kustoendpoint -kustotable $kustotable -sastoken $sastoken -jobid $jobid
                 }
             }
             else {
-                CSVtoKustoEmulator -csvfile $csvfile -kustoendpoint $kustoendpoint -kustotable $kustotable -jobid $jobid 
-            }
+                      CSVtoKustoEmulator -csvfile $csvfile -kustoendpoint $kustoendpoint -kustotable $kustotable -sastoken $sastoken -jobid $jobid
+               }
         }
     }
     else {
@@ -229,7 +278,6 @@ function pcap2kustocore([string]$pcapfile,[string]$csvfile,[string]$kustoendpoin
         foreach ($pcap in $pcapfiles)
         {
             $k++
-            $jobid= New-Guid
             Write-UTCLog "  +++pcap2csv(split): $($k)/$($pcapfiles.count) - $($pcap) " "Yellow"
             pcap2csv -pcapfile $pcap -csvfile "$(Split-Path -Parent -path $csvfile)\$($pcap.basename).csv" -jobid $jobid
             if ([string]::IsNullOrEmpty($kustoendpoint))
@@ -244,46 +292,51 @@ function pcap2kustocore([string]$pcapfile,[string]$csvfile,[string]$kustoendpoin
                         Write-UTCLog " +$($kustoendpoint) is used, but SAS token is not specified, existing..." "Red"
                     }
                     else {
-                        CSVtoKustoCluster -csvfile "$(Split-Path -Parent -path $csvfile)\$($pcap.basename).csv" -kustoendpoint $kustoendpoint -kustotable $kustotable -sastoken $sastoken -jobid $jobid #
+                        CSVtoKustoCluster -csvfile "$(Split-Path -Parent -path $csvfile)\$($pcap.basename).csv" -kustoendpoint $kustoendpoint -kustotable $kustotable -sastoken $sastoken -jobid $jobid
                     }
                 }
                 else {
-                    CSVtoKustoEmulator -csvfile "$(Split-Path -Parent -path $csvfile)\$($pcap.basename).csv" -kustoendpoint $kustoendpoint -kustotable $kustotable -jobid $jobid 
+                    CSVtoKustoEmulator -csvfile "$(Split-Path -Parent -path $csvfile)\$($pcap.basename).csv" -kustoendpoint $kustoendpoint -kustotable $kustotable -jobid $jobid
                 }
             }
         }
-
     }
-
 }
-
 
 #Main Program
 #precheck enviornment tshark.exe and kustocli.exe
 
 $tracefolder=$tracefolder.TrimEnd("\")  #remove extra "\"
 $csvfolder=$csvfolder.TrimEnd("\") #remove extra "\"
+$jobid= New-Guid  #everyrun get one unquie guid for job
 
-#determine target folder exist or not
+#If csvfolder folder does not exist, create it
 if (-not (Test-path $csvfolder))
 {
     Write-UTCLog "'$($csvfolder)' does not exsit! Creating" "Yellow"
-    mkdir $csvfolder 
+    mkdir $csvfolder | Out-Null
 }
 
-# check tshark.exe exist, 
+#If workingfolder folder does not exist, create it
+if (-not (Test-path $workingfolder))
+{
+    Write-UTCLog "'$($workingfolder)' does not exsit! Creating" "Yellow"
+    mkdir $workingfolder | Out-Null
+}
+
+#If tshark does not exist, install it
 if (-not (Test-Path $tsharkcli))
 {
     Write-UTCLog "'$($tsharkcli)' wasn't found, download and install Wireshark 3.4.9" "red"
     # Download the Wireshark installer
-    (New-Object System.Net.WebClient).DownloadFile("https://www.wireshark.org/download/win64/all-versions/Wireshark-win64-3.4.9.exe", "$($env:temp)\wireshark.exe")
+    (New-Object System.Net.WebClient).DownloadFile("https://www.wireshark.org/download/win64/all-versions/Wireshark-win64-3.4.9.exe", "$($workingfolder)\wireshark.exe")
 
     # Install Wireshark silently
     $arguments = "/S /D=`"$($env:ProgramFiles)\Wireshark`""
-    Start-Process -FilePath "$($env:temp)\wireshark.exe" -ArgumentList $arguments -Wait
+    Start-Process -FilePath "$($workingfolder)\wireshark.exe" -ArgumentList $arguments -Wait
 
     # Clean up the temporary files
-    Remove-Item -Path "$($env:temp)\wireshark.exe"
+    Remove-Item -Path "$($workingfolder)\wireshark.exe"
 
     if (Test-Path $tsharkcli)
     {
@@ -301,9 +354,9 @@ else {
 }
 
 # search for azcopy.exe in temp folder if found, use Set-Alilas to config azcopy alias
-if ((Get-ChildItem "$($env:temp)\azcopy.exe" -Recurse).count -ne 0)
+if ((Get-ChildItem "$($workingfolder)\azcopy.exe" -Recurse).count -ne 0)
 {
-    Set-Alias -Name azcopy -Value (Get-ChildItem "$($env:temp)\azcopy.exe" -Recurse)[0].FullName -ErrorAction SilentlyContinue 
+    Set-Alias -Name azcopy -Value (Get-ChildItem "$($workingfolder)\azcopy.exe" -Recurse)[0].FullName -ErrorAction SilentlyContinue 
 }
 
 # Check if AzCopy is already installed
@@ -311,16 +364,16 @@ if (-not (Get-Command azcopy -ErrorAction SilentlyContinue)) {
 
     Write-UTCLog "  azcopy wasn't found, download & unzip azcopy" -color "Yellow"
     # Download the AzCopy executable
-    (New-Object System.Net.WebClient).DownloadFile("https://aka.ms/downloadazcopy-v10-windows", "$($env:temp)\azcopy.zip")
+    (New-Object System.Net.WebClient).DownloadFile("https://aka.ms/downloadazcopy-v10-windows", "$($workingfolder)\azcopy.zip")
     
     # Extract the AzCopy executable
-    Expand-Archive -Path "$($env:temp)\azcopy.zip" -DestinationPath $env:temp -Force
+    Expand-Archive -Path "$($workingfolder)\azcopy.zip" -DestinationPath $workingfolder -Force
 
     # Clean up the temporary files
-    Remove-Item -Path "$($env:temp)\azcopy.zip"
+    Remove-Item -Path "$($workingfolder)\azcopy.zip"
 
     #config azcopy alias and we can use in current session
-    Set-Alias -Name azcopy -Value (Get-ChildItem "$($env:temp)\azcopy.exe" -Recurse)[0].FullName
+    Set-Alias -Name azcopy -Value (Get-ChildItem "$($workingfolder)\azcopy.exe" -Recurse)[0].FullName
 
     # Verify that AzCopy is installed
     if (Get-Command azcopy -ErrorAction SilentlyContinue) {
@@ -350,12 +403,12 @@ else {
     else {
         if (($newtable) -and (![string]::IsNullOrEmpty($kustotable)))
         {
-            $globalid=New-Guid
+            # generate creata table kql file
             $kqlnewtable0=".drop table $($kustotable)"
             $kqlnewtable1=".create table $($kustotable) (framenumber:long,frametime:string,DeltaDisplayed:string,Source:string,Destination:string,ipid:string,Protocol:string,tcpseq:string,tcpack:string,Length:int,tcpsrcport:int,tcpdstport:int,udpsrcport:int,udpdstport:int,tcpackrtt:string,frameprotocol:string,Info:string,ethsrc:string,ethdst:string,SourceV6:string,DestinationV6:string,ipProtocol:string,dnsid:string,ipTTL:string,ipFlags:string,tcpFlags:string)"
-            $kqlnewtable0|out-file "$($env:temp)\$($globalid)_0_createtable.kql" -Encoding ascii
-            $kqlnewtable1|out-file "$($env:temp)\$($globalid)_0_createtable.kql" -Encoding ascii -Append
-            $kqlcmd="$($kustocli) ""$kustoendpoint"" -script:""$($env:temp)\$($globalid)_0_createtable.kql"""
+            $kqlnewtable0|out-file "$($workingfolder)\$($jobid)_0_createtable.kql" -Encoding ascii
+            $kqlnewtable1|out-file "$($workingfolder)\$($jobid)_0_createtable.kql" -Encoding ascii -Append
+            $kqlcmd="$($kustocli) ""$kustoendpoint"" -script:""$($workingfolder)\$($jobid)_0_createtable.kql"""
             Write-UTCLog " (Kusto.Cli.exe) create new table $($kustotable) @ $($kustoendpoint)" -color "Green"
             if ($debug) {Write-UTCLog "  ++kqlcmd: $($kqlcmd)" "cyan"}
             #execute kusto
@@ -368,7 +421,7 @@ else {
                 exit
             }
             else {
-                Write-UTCLog " Assume table:$($kustotable) exist. The script may fail if table does not exist..." "Yellow"
+                Write-UTCLog " Assume table:$($kustotable) exist. The Ingress KQL may fail if table does not exist..." "Yellow"
             }
         }
 
@@ -381,6 +434,7 @@ if (Test-Path $tracefolder)  #validate
             Write-UTCLog "Generate a list of $($tracefile) under $($tracefolder) ..."
             $pcapfilelist=(Get-ChildItem "$($tracefolder)\$($tracefile)" -Recurse)
 
+            
             if ($pcapfilelist.count -ne 0)
             {
                 Write-UTCLog " Pcap $($tracefolder)\$($tracefile) Total : $($pcapfilelist.count) File(s)" "Yellow"
@@ -391,16 +445,147 @@ if (Test-Path $tracefolder)  #validate
                     $totalsize+=$pcapfile.Length
                 }
                 Write-UTCLog " Pcap Files (Total): $($pcapfilelist.count) , File Size (Total): $($totalsize)bytes ($("{0:F2}" -f $($totalsize/1024/1024)) MBs), Required Disk Space (Estimate): ($("{0:F2}" -f $($totalsize/1024/1024*2.40)) MBs) " "Yellow"
-                
-                $j=1
-                foreach ($pcapfile in $pcapfilelist)
+
+                if ($multithread)
                 {
-                    Write-UTCLog " Processing $($j)/$($pcapfilelist.count) : $($pcapfile.FullName) " "Green"
-                    $csvfilename="$($pcapfile.basename).csv"
-                    pcap2kustocore -pcapfile "$($pcapfile.FullName)" -csvfile "$($csvfolder)\$($csvfilename)" -kustoendpoint $kustoendpoint -kustotable $kustotable -sastoken $sastoken
-                    $j++
-                    #PT1H2CSV -srcpt1h $nsgfile.FullName -csvfile $destfile
-                    #PT1H2CSV_Memory -srcpt1h $nsgfile.FullName -csvfile $destfile2
+                    # multi-thread to process pcap files, will need create break the steps by tshark , azcopy , kqlcli
+                    #first step is tshark multithread to process pcap files 
+                    # get the number of logical processors
+                    $cores = (Get-WmiObject -Class Win32_Processor).NumberOfLogicalProcessors
+                    Write-UTCLog " Multi-thread mode, using $($cores) cores to process pcap files" "Yellow"
+                    $t0=Get-Date
+                    $j=1    
+                    foreach ($pcapfile in $pcapfilelist)
+                    {
+                        #check how many tshark or editcap already started, if total count execed the number of cores, wait for 1 second until the threads count less than cores.                            
+                        $tsharkcount=get-process|where-object {($_.name -eq "tshark") -or ($_.name -eq "editcap")}|measure-object|select-object -expandproperty count
+                        while ($tsharkcount -ge $cores)
+                        {
+                            Write-UTCLog " tshark count: $($tsharkcount) , sleep 1 seconds " "Yellow"
+                            start-sleep -s 1
+                            $tsharkcount=get-process|where-object {($_.name -eq "tshark") -or ($_.name -eq "editcap")}|measure-object|select-object -expandproperty count
+                        }
+                        Write-UTCLog " tshark $($j)/$($pcapfilelist.count) (m): $($pcapfile.FullName) " "Green"
+                        $csvfilename="$($pcapfile.basename).csv"
+                        # call pcap2csv function in multithread mode
+                        pcap2csv -pcapfile "$($pcapfile.FullName)" -csvfile "$($csvfolder)\$($csvfilename)" -jobid $jobid -multithread
+                        $j++
+                    }
+                    
+                    #multithread clean up
+                    if ($tsharkcount -gt 1) #when multithread > 1, we need wait all threads job to be finished before processing azcopy and kqlcli. 
+                    {
+                        $tsharkcount=get-process|where-object {($_.name -eq "tshark") -or ($_.name -eq "editcap")}|measure-object|select-object -expandproperty count
+                        #wait loop to hold execution of azcopy if the total count exceed thread count
+                        while ($tsharkcount -gt 0)
+                        {
+                            Write-UTCLog "Wait for tshark processes exit, sleep 1 second. (count: $tsharkcount)" -color "gray"
+                            Start-Sleep -Seconds 1
+                            $tsharkcount=get-process|where-object {($_.name -eq "tshark") -or ($_.name -eq "editcap")}|measure-object|select-object -expandproperty count
+                        }
+                    }
+                    $t1=Get-Date
+                    Write-UTCLog "[Tshark pcap2csv :   $(($t1-$t0).TotalSeconds) secs, $(($t1-$t0).TotalMinutes) mins]" "Cyan"
+                    Write-Host "---------------------------------------------------------------------------------------" -ForegroundColor "Gray"
+                    #only SASTOKEN is not empy we can process azcopy
+                    if ([string]::IsNullOrEmpty($sastoken)) 
+                    {
+                        Write-UTCLog " +$($kustoendpoint) is used, but SAS token is not specified, existing..." "Red"
+                        exit
+                    }
+                    else {
+                        #second step is azcopy multithread to process csv files
+                        $j=1    
+                        foreach ($pcapfile in $pcapfilelist)
+                        {
+                            #check how many tshark or editcap already started, if total count execed the number of cores, wait for 1 second until the threads count less than cores.                            
+                            $azcopy=get-process|where-object {$_.name -eq "azcopy"}|measure-object|select-object -expandproperty count
+                            while ($azcopy -ge $cores*5)
+                            {
+                                Write-UTCLog " azcopy count: $($azcopy) , sleep 1 seconds " "Yellow"
+                                start-sleep -s 1
+                                $azcopy=get-process|where-object {$_.name -eq "azcopy"}|measure-object|select-object -expandproperty count
+                            }
+                            Write-UTCLog " azcopy $($j)/$($pcapfilelist.count) (m): $($pcapfile.FullName) " "Green"
+                            $csvfilename="$($pcapfile.basename).csv"
+                            # call CSVtoContainer function in multithread mode
+                            CSVtoContainer -csvfile "$($csvfolder)\$($csvfilename)" -sastoken $sastoken -multithread
+                            $j++
+                        }
+
+                        #multithread azcopy cleanup 
+                        if ($azcopy -gt 1) #when multithread > 1, we need wait all threads job to be finished before processing kqlcli. 
+                        {
+                            $azcopy=get-process|where-object {$_.name -eq "azcopy"}|measure-object|select-object -expandproperty count
+                            #wait loop to hold execution of kqlcli if the total count exceed thread count
+                            while ($azcopy -gt 0)
+                            {
+                                Write-UTCLog "Wait for azcopy processes exit, sleep 1 second. (count: $azcopy)" -color "gray"
+                                Start-Sleep -Seconds 1
+                                $azcopy=get-process|where-object {$_.name -eq "azcopy"}|measure-object|select-object -expandproperty count
+                            }
+                        }
+                        $t2=Get-Date
+                        Write-UTCLog "[Azcopy csv2blob :   $(($t2-$t1).TotalSeconds) secs, $(($t2-$t1).TotalMinutes) mins]" "Cyan"
+                        Write-Host "---------------------------------------------------------------------------------------" -ForegroundColor "Gray"
+                        # if kustoendpoint is not empty, we can process kqlcli
+                        if ([string]::IsNullOrEmpty($kustoendpoint) -and [string]::IsNullOrEmpty($kustotable)) 
+                        {
+                            Write-UTCLog " + KustoEndpoint or KustoTable is empty, exiting..." "Red"
+                            exit
+                        }
+                        else {
+                            #step 3.1 is kqlcli to process csv files
+                            # create one kql file for all ingress command 
+                            $j=1    
+                            foreach ($pcapfile in $pcapfilelist)
+                            {
+                                $csvfilename="$($pcapfile.basename).csv"
+                                #Write-UTCLog " Ingress ADX(Kusto) $($j)/$($pcapfilelist.count) (m): $($csvfilename)" "Green"
+                                # call CSVtoKusto function in multithread mode
+                                if ($kustoendpoint.contains("kusto.windows.net") -or $kustoendpoint.contains("kusto.chinacloudapi.cn"))
+                                {
+                                    CSVtoKustoCluster -csvfile "$($csvfolder)\$($csvfilename)" -kustoendpoint $kustoendpoint -kustotable $kustotable -sastoken $sastoken -jobid $jobid -multithread
+                                }
+                                else {
+                                    CSVtoKustoEmulator -csvfile "$($csvfolder)\$($csvfilename)" -kustoendpoint $kustoendpoint -kustotable $kustotable -jobid $jobid -multithread
+                                }
+                                $j++
+                            }
+
+                            # step 3.2
+                            $kqlcmd="$($kustocli) ""$kustoendpoint"" -script:""$($workingfolder)\$($jobid)_1_ingress.kql"""
+                            Write-UTCLog " Excecute kqlcmd: $($kqlcmd)" "Yellow"
+                            $time=((get-date).ToUniversalTime()).ToString("yyyy-MM-dd HH:mm:ss.fff")
+                            Write-UTCLog " Please be patience , this might take a while for importing, To debug progress, you can use kusto query below " "Yellow"
+                            Write-Host "---------------------------------------------------------------------------------------" -ForegroundColor "Gray"    
+                            Write-Host " .show commands | where StartedOn > datetime('$($time)')| where CommandType == 'DataIngestPull'| project StartedOn, CommandType, State, User, FailureReason, Text " -ForegroundColor "Gray"
+                            Write-Host "---------------------------------------------------------------------------------------" -ForegroundColor "Gray"
+                            if ($debug) {Invoke-Expression  $kqlcmd} else {Invoke-Expression  $kqlcmd| Out-Null}
+                        }
+                        
+                        # calcuate how much time the program spent
+                        $t3=Get-Date
+                        Write-UTCLog "[Ingress blob2kusto : $(($t3-$t2).TotalSeconds) secs, $(($t3-$t2).TotalMinutes) mins]" "Cyan"
+                        Write-Host "---------------------------------------------------------------------------------------" -ForegroundColor "Gray"                        
+                        Write-UTCLog "[pcap2kusto (MultiThread) :   $(($t3-$t0).TotalSeconds) secs, $(($t3-$t0).TotalMinutes) mins]" "Cyan"
+                    }
+                }
+                else {
+                    # single thread to process pcap files
+                    $t0=Get-Date
+                    $j=1  #fileindex for loop
+                    foreach ($pcapfile in $pcapfilelist)
+                    {
+                        Write-Host "---------------------------------------------------------------------------------------" -ForegroundColor "Gray"
+                        Write-UTCLog " Processing $($j)/$($pcapfilelist.count) (s): $($pcapfile.FullName) " "Green"
+                        $csvfilename="$($pcapfile.basename).csv"
+                        pcap2kustocore -pcapfile "$($pcapfile.FullName)" -csvfile "$($csvfolder)\$($csvfilename)" -kustoendpoint $kustoendpoint -kustotable $kustotable -sastoken $sastoken -jobid $jobid
+                        $j++
+                    }
+                    # calcuate how much time the program spent
+                    $t1=Get-Date
+                    Write-UTCLog "[pcap2kusto (SingleThread) :   $(($t1-$t0).TotalSeconds) secs, $(($t1-$t0).TotalMinutes) mins]" "Cyan"
                 }
             }
             else {
@@ -408,12 +593,19 @@ if (Test-Path $tracefolder)  #validate
             }        
         }
     else {
-        if (Test-Path "$($tracefolder)\$($tracefile)"){
+        if (Test-Path "$($tracefolder)\$($tracefile)")
+        {
+            $t0=Get-Date
             $pcapfile=Get-ChildItem "$($tracefolder)\$($tracefile)"
             $csvfilename="$($pcapfile.basename).csv"
             Write-UTCLog " Pcap File : 1, File Size : $($pcapfile.Length)bytes ($("{0:F2}" -f $($pcapfile.Length/1024/1024)) MBs), Required Disk Space (Estimate): $("{0:F2}" -f $($pcapfile.Length/1024/1024*2.40)) MBs " "Yellow"
             Write-UTCLog "$($pcapfile),$($pcapfile.Length)"
             pcap2kustocore -pcapfile "$($tracefolder)\$($tracefile)" -csvfile "$($csvfolder)\$($csvfilename)" -kustoendpoint $kustoendpoint -kustotable $kustotable -sastoken $sastoken
+
+            # calcuate how much time the program spent
+            $t1=Get-Date
+            Write-UTCLog "[pcap2kusto (SingleThread-SingleFile) :   $(($t1-$t0).TotalSeconds) secs, $(($t1-$t0).TotalMinutes) mins]" "Cyan"
+
         }
         else
         {
