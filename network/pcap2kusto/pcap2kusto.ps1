@@ -493,7 +493,7 @@ if (Test-Path $tracefolder)  #validate
                     #only SASTOKEN is not empy we can process azcopy
                     if ([string]::IsNullOrEmpty($sastoken)) 
                     {
-                        Write-UTCLog " SAS token is not specified, existing..." "Red"
+                        Write-UTCLog " SAS token is not specified, exit..." "Red"
                         exit
                     }
                     else {
@@ -505,7 +505,7 @@ if (Test-Path $tracefolder)  #validate
                             $azcopy=get-process|where-object {$_.name -eq "azcopy"}|measure-object|select-object -expandproperty count
                             while ($azcopy -ge $cores*5)
                             {
-                                Write-UTCLog " azcopy count: $($azcopy) , sleep 1 seconds " "Yellow"
+                                Write-UTCLog " azcopy count: $($azcopy) , sleep 1 second " "Yellow"
                                 start-sleep -Seconds 1
                                 $azcopy=get-process|where-object {$_.name -eq "azcopy"}|measure-object|select-object -expandproperty count
                             }
