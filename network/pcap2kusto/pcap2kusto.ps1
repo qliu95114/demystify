@@ -536,7 +536,7 @@ if (Test-Path $tracefolder)  #validate
                         # if kustoendpoint is not empty, we can process kqlcli
                         if ([string]::IsNullOrEmpty($kustoendpoint) -and [string]::IsNullOrEmpty($kustotable)) 
                         {
-                            Write-UTCLog " + KustoEndpoint or KustoTable is empty, exiting..." "Red"
+                            Write-UTCLog " + KustoEndpoint or KustoTable is empty, exit..." "Red"
                             exit
                         }
                         else {
@@ -594,7 +594,7 @@ if (Test-Path $tracefolder)  #validate
                 }
             }
             else {
-                Write-UTCLog " Pcap $($tracefile)\$($tracefile) Total : $($pcapfilelist.count) File(s) , existing... " "Red"
+                Write-UTCLog " Pcap $($tracefile)\$($tracefile) Total : $($pcapfilelist.count) File(s) , exiting... " "Red"
             }        
         }
     else {
