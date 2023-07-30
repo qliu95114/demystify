@@ -488,12 +488,12 @@ if (Test-Path $tracefolder)  #validate
                         }
                     }
                     $t1=Get-Date
-                    Write-UTCLog "[Tshark pcap2csv :   $(($t1-$t0).TotalSeconds) secs, $(($t1-$t0).TotalMinutes) mins]" "Cyan"
+                    Write-UTCLog "[tshark pcap2csv :   $(($t1-$t0).TotalSeconds) secs, $(($t1-$t0).TotalMinutes) mins]" "Cyan"
                     Write-Host "---------------------------------------------------------------------------------------" -ForegroundColor "Gray"
                     #only SASTOKEN is not empy we can process azcopy
                     if ([string]::IsNullOrEmpty($sastoken)) 
                     {
-                        Write-UTCLog " +$($kustoendpoint) is used, but SAS token is not specified, existing..." "Red"
+                        Write-UTCLog " SAS token is not specified, existing..." "Red"
                         exit
                     }
                     else {
