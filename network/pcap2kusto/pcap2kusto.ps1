@@ -432,8 +432,7 @@ if (Test-Path $tracefolder)  #validate
 {
 	if ($tracefile.contains("*") -or $tracefile.contains("?")) {
             Write-UTCLog "Generate a list of $($tracefile) under $($tracefolder) ..."
-            $pcapfilelist=(Get-ChildItem "$($tracefolder)\$($tracefile)" -Recurse)
-
+            $pcapfilelist=(Get-ChildItem "$($tracefolder)\$($tracefile)")
             
             if ($pcapfilelist.count -ne 0)
             {
