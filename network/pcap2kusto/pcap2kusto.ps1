@@ -108,15 +108,15 @@ Function pcap2csv ([string]$pcapfile,[string]$csvfile,[string]$jobid,[switch]$mu
     
     if ($multithread)
     {
-        Start-Process "cmd.exe" -ArgumentList "/c $($workingfolder)\$($jobid)_0_$($pcapfilename)_pcap2csv.cmd" -WindowStyle Minimized
+        Start-Process "cmd.exe" -ArgumentList "/c ""$($workingfolder)\$($jobid)_0_$($pcapfilename)_pcap2csv.cmd""" -WindowStyle Minimized
         Write-UTCLog "  ++csv: $($csvfile) convert started in background"  "gray"
     }
     else {
         if ($debug) {
-            Invoke-Expression "cmd /c $($workingfolder)\$($jobid)_0_$($pcapfilename)_pcap2csv.cmd"
+            Invoke-Expression "cmd /c ""$($workingfolder)\$($jobid)_0_$($pcapfilename)_pcap2csv.cmd"""
         }
         else {
-            Invoke-Expression "cmd /c $($workingfolder)\$($jobid)_0_$($pcapfilename)_pcap2csv.cmd" | Out-Null
+            Invoke-Expression "cmd /c ""$($workingfolder)\$($jobid)_0_$($pcapfilename)_pcap2csv.cmd""" | Out-Null
         }        
         Write-UTCLog "  ++csv: $($csvfile) convert complete"         
     }
@@ -262,7 +262,7 @@ function pcap2kustocore([string]$pcapfile,[string]$csvfile,[string]$kustoendpoin
         # split pcap file into multiple pcap files. 
         Write-UTCLog " $($pcapfile) has more than 1.5M packets, spliting..." "Yellow"
         Set-Alias editcap "c:\Program Files\Wireshark\editcap.exe"
-        $splitcmd="editcap -c 1500000 $($pcapfile) $(Split-Path -Parent -path $pcapfile)\$(Split-Path -Leaf -path $pcapfile)"
+        $splitcmd="editcap -c 1500000 ""$($pcapfile)"" ""$(Split-Path -Parent -path $pcapfile)\$(Split-Path -Leaf -path $pcapfile)"""
         Invoke-Expression $splitcmd
         Write-UTCLog " splitcmd: $($splitcmd)" "Yellow"
         $filename = Split-Path -Leaf -path $pcapfile
