@@ -450,7 +450,14 @@ if (Test-Path $tracefolder)  #validate
                     # multi-thread to process pcap files, will need create break the steps by tshark , azcopy , kqlcli
                     #first step is tshark multithread to process pcap files 
                     # get the number of logical processors
-                    $cores = (Get-WmiObject -Class Win32_Processor).NumberOfLogicalProcessors
+                    # (Get-WmiObject -Class Win32_Processor).NumberOfLogicalProcessors# this is buggy on dual core system it will return array with 2 elements
+                    # PS C:\> (Get-WmiObject -Class Win32_Processor).NumberOfLogicalProcessors
+                    # 12
+                    # 12
+                    # PS C:\> (Get-CimInstance -ClassName Win32_ComputerSystem).NumberOfLogicalProcessors
+                    # 24
+
+                    $cores=(Get-CimInstance -ClassName Win32_ComputerSystem).NumberOfLogicalProcessors
                     Write-UTCLog " Multi-thread mode, using $($cores) cores to process pcap files" "Yellow"
                     $t0=Get-Date
                     $j=1    
