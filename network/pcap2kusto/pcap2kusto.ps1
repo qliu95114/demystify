@@ -123,40 +123,6 @@ Function pcap2csv ([string]$pcapfile,[string]$csvfile,[string]$jobid,[switch]$mu
     return
 }
 
-function CSVtoKustoEmulator([string]$csvfile,[string]$kustoendpoint,[string]$kustotable,[string]$jobid,[switch]$multithread=$false)
-{
-    if ($debug) {Write-UTCLog " ++function:CSVtoKustoEmulator " "Cyan"}
-    #create ingress kql file
-    $csvfilename=(Get-ChildItem $csvfile).fullname
-
-    # replace "-" "." "," with _ in table name
-    $kustotable=$kustotable.replace("-","_")
-    $kustotable=$kustotable.replace(".","_")
-    $kustotable=$kustotable.replace(",","_")
-
-    #generate kql file
-    $kqlcsv=".ingest into table $($kustotable) (@""$($csvfilename)"") with (format='csv',ignoreFirstRecord=true)"
-    if ($debug) {Write-UTCLog "  ++kql: $($kqlcsv)"  "cyan"}
-
-    if ($multithread)
-    {
-        #multithread mode, append all Kusto query in one file
-        # KQL need be single thread to process as it will lock the table
-        Write-UTCLog "  +++ ksql:$($jobid)_1_ingress.kql, appending($($kustotable)) from blob [$($csvfilename)]" -color "Green"
-        $kqlcsv|out-file "$($workingfolder)\$($jobid)_1_ingress.kql" -Encoding ascii -Append  # append all Kusto query in one file
-    }
-    else {
-        #single thread mode, execute kusto for single thread complete the command 
-        $kqlcsv|out-file "$($workingfolder)\$($jobid)_1_$($(Get-ChildItem $csvfile).BaseName)_ingress.kql" -Encoding ascii #still create the single file for debug purpose
-        if ($debug) {Write-UTCLog "  ++kql: $($kqlcsvblob)"  "cyan"}
-        #execute kusto for single thread complete the command below for multiple thread 
-        $kqlcmd="$($kustocli) ""$kustoendpoint"" -script:""$($workingfolder)\$($jobid)_1_$($(Get-ChildItem $csvfile).BaseName)_ingress.kql"""
-        if ($debug) {Write-UTCLog "  ++kqlcmd: $($kqlcmd)" "cyan"}
-        Write-UTCLog "  +++ (Kusto.Cli) (ADX) ingress table:($($kustotable)) from blob [$($csvfilename)]" -color "Green"
-        if ($debug) {Invoke-Expression  $kqlcmd} else {Invoke-Expression  $kqlcmd| Out-Null}
-    }
-}
-
 function CSVtoContainer([string]$csvfile,[string]$sastoken,[switch]$multithread)
 {
     if ($debug) {Write-UTCLog " +++function:CSVtoContainer " "cyan"}
@@ -187,7 +153,7 @@ function CSVtoKustoCluster([string]$csvfile,[string]$kustoendpoint,[string]$kust
     if ($multithread){}else { CSVtoContainer -csvfile $csvfile -sastoken $sastoken }
 
     #create ingress kql file
-    $csvfilename=(Get-ChildItem $csvfile).name
+    $csvfilename=(Get-ChildItem $csvfile).name #only csv filename
 
     # replace "-" "." "," with _ in table name
     $kustotable=$kustotable.replace("-","_")
@@ -200,10 +166,10 @@ function CSVtoKustoCluster([string]$csvfile,[string]$kustoendpoint,[string]$kust
 
     if ($multithread)
     {
-        #multithread mode, append all Kusto query in one file
+        #multithread mode, append all Kusto query in one $($jobid)_1_ingress.kql
         # KQL need be single thread to process as it will lock the table
         Write-UTCLog "  +++ ksql:$($jobid)_1_ingress.kql, appending($($kustotable)) from blob [$($csvfilename)]" -color "Green"
-        $kqlcsvblob|out-file "$($workingfolder)\$($jobid)_1_ingress.kql" -Encoding ascii -Append  # append all Kusto query in one file
+        $kqlcsvblob|out-file "$($workingfolder)\$($jobid)_1_ingress.kql" -Encoding ascii -Append  
     }
     else {
         #single thread mode, execute kusto for single thread complete the command 
@@ -217,6 +183,42 @@ function CSVtoKustoCluster([string]$csvfile,[string]$kustoendpoint,[string]$kust
     }
 }
 
+
+function CSVtoKustoEmulator([string]$csvfile,[string]$kustoendpoint,[string]$kustotable,[string]$jobid,[switch]$multithread=$false)
+{
+    if ($debug) {Write-UTCLog " ++function:CSVtoKustoEmulator " "Cyan"}
+    #create ingress kql file
+    $csvfilename=(Get-ChildItem $csvfile).fullname  #fullname will include absolute path
+
+    # replace "-" "." "," with _ in table name
+    $kustotable=$kustotable.replace("-","_")
+    $kustotable=$kustotable.replace(".","_")
+    $kustotable=$kustotable.replace(",","_")
+
+    #generate kql file
+    $kqlcsv=".ingest into table $($kustotable) (@""$($csvfilename)"") with (format='csv',ignoreFirstRecord=true)"
+    
+    if ($debug) {Write-UTCLog "  ++kql: $($kqlcsv)"  "cyan"}
+    if ($multithread)
+    {
+        #multi-thread mode, append all Kusto query in one $($jobid)_1_ingress.kql
+        # KQL need be single thread to process as it will lock the table
+        Write-UTCLog "  +++ ksql:$($jobid)_1_ingress.kql, appending($($kustotable)) from csv [$($csvfilename)]" -color "Green"
+        $kqlcsv|out-file "$($workingfolder)\$($jobid)_1_ingress.kql" -Encoding ascii -Append  
+    }
+    else {
+        #single thread mode, execute kusto for single thread complete the command 
+        $kqlcsv|out-file "$($workingfolder)\$($jobid)_1_$($(Get-ChildItem $csvfile).BaseName)_ingress.kql" -Encoding ascii #still create the single file for debug purpose
+        if ($debug) {Write-UTCLog "  ++kql: $($kqlcsvblob)"  "cyan"}
+        #execute kusto for single thread complete the command below for multiple thread 
+        $kqlcmd="$($kustocli) ""$kustoendpoint"" -script:""$($workingfolder)\$($jobid)_1_$($(Get-ChildItem $csvfile).BaseName)_ingress.kql"""
+        if ($debug) {Write-UTCLog "  ++kqlcmd: $($kqlcmd)" "cyan"}
+        Write-UTCLog "  +++ (Kusto.Cli) (ADX) ingress table:($($kustotable)) from local csv file [$($csvfilename)]" -color "Green"
+        if ($debug) {Invoke-Expression  $kqlcmd} else {Invoke-Expression  $kqlcmd| Out-Null}
+    }
+}
+
+
 function pcap2kustocore([string]$pcapfile,[string]$csvfile,[string]$kustoendpoint,[string]$kustotable,[string]$sastoken,[switch]$multithread=$false,[string]$jobid) # this handle one file only
 {
     if ($debug) {Write-UTCLog  " +function:pcap2kustocore '$($pcapfile)'  multithread: $($multithread)" "cyan"}
@@ -226,7 +228,7 @@ function pcap2kustocore([string]$pcapfile,[string]$csvfile,[string]$kustoendpoin
     $pcapacketcount=[int][regex]::Match(((capinfos $pcapfile)|Select-String "Number of Packets ="), '\d+').Value
 
     #determine $pcapfile packet count if this is > 1500000, we will split orginial file into multiple and once it is complete the orginial file will get removed. 
-    if ($pcapacketcount -le 1500000)
+    if ($pcapacketcount -le 2000000)
     {
         if ($multithread)
         {
@@ -499,8 +501,46 @@ if (Test-Path $tracefolder)  #validate
                     #only SASTOKEN is not empy we can process azcopy
                     if ([string]::IsNullOrEmpty($sastoken)) 
                     {
-                        Write-UTCLog " SAS token is not specified, exit..." "Red"
-                        exit
+                        #  when both $kustoendpoint and $kustotable has value and with domain suffix, we cannot processed without sastoken
+                        if ($kustoendpoint.contains("kusto.windows.net") -or $kustoendpoint.contains("kusto.chinacloudapi.cn"))
+                        {
+                            Write-UTCLog " SAS token is not specified, exit..." "Red"
+                            exit
+                        }
+                        else {
+                            if ((-not [string]::IsNullOrEmpty($kustoendpoint)) -and (-not [string]::IsNullOrEmpty($kustotable))) 
+                            {
+                                #step 3.1 is calling CSVtoKustoEmulator -multithread to generate one kql file for kqlcli to process, local mode
+                                # create one kql file for all ingress command 
+                                foreach ($pcapfile in $pcapfilelist)
+                                {
+                                    $csvfilename="$($pcapfile.basename).csv"
+                                    # call CSVtoKustoEmulator function -multithread
+                                    CSVtoKustoEmulator -csvfile "$($csvfolder)\$($csvfilename)" -kustoendpoint $kustoendpoint -kustotable $kustotable -jobid $jobid -multithread
+                                }
+
+                                # step 3.2 
+                                $kqlcmd="$($kustocli) ""$kustoendpoint"" -script:""$($workingfolder)\$($jobid)_1_ingress.kql"""
+                                Write-UTCLog " Excecute kqlcmd: $($kqlcmd)" "Yellow"
+                                $time=((get-date).ToUniversalTime()).ToString("yyyy-MM-dd HH:mm:ss.fff")
+                                Write-UTCLog " Please be patience , this might take a while for importing, To debug progress, you can use kusto query below " "Yellow"
+                                Write-Host "---------------------------------------------------------------------------------------" -ForegroundColor "Gray"    
+                                Write-Host " .show commands | where StartedOn > datetime('$($time)')| where CommandType == 'DataIngestPull'| project StartedOn, CommandType, State, User, FailureReason, Text " -ForegroundColor "Gray"
+                                Write-Host "---------------------------------------------------------------------------------------" -ForegroundColor "Gray"
+                                if ($debug) {Invoke-Expression  $kqlcmd} else {Invoke-Expression  $kqlcmd| Out-Null}
+                            }
+                            else {
+                                # exit here as not kusto endpoint specified, will exit after pcap2csv
+                                Write-UTCLog " + KustoEndpoint KustoTable is empty, exit..." "Red"
+                                exit
+                            }
+
+                            # calcuate how much time the program spent
+                            $t3=Get-Date
+                            Write-UTCLog "[ingress kusto local : $(($t3-$t1).TotalSeconds) secs, $(($t3-$t1).TotalMinutes) mins]" "Cyan"
+                            Write-Host "---------------------------------------------------------------------------------------" -ForegroundColor "Gray"                        
+                            Write-UTCLog "[pcap2kusto (MultiThread) - Local :   $(($t3-$t0).TotalSeconds) secs, $(($t3-$t0).TotalMinutes) mins]" "Cyan"                            
+                        }
                     }
                     else {
                         #second step is azcopy multithread to process csv files
@@ -546,9 +586,8 @@ if (Test-Path $tracefolder)  #validate
                             exit
                         }
                         else {
-                            #step 3.1 is kqlcli to process csv files
+                            #step 3.1 is calling CSVtoKustoCluster -multithread to generate one kql file for kqlcli to process, cluster mode
                             # create one kql file for all ingress command 
-                            $j=1    
                             foreach ($pcapfile in $pcapfilelist)
                             {
                                 $csvfilename="$($pcapfile.basename).csv"
@@ -559,9 +598,9 @@ if (Test-Path $tracefolder)  #validate
                                     CSVtoKustoCluster -csvfile "$($csvfolder)\$($csvfilename)" -kustoendpoint $kustoendpoint -kustotable $kustotable -sastoken $sastoken -jobid $jobid -multithread
                                 }
                                 else {
+                                    # We should never hit this code as if we specific sastoken we should alwayse use cluster mode instead of local mode. just in case we hit this , we will not fail. 
                                     CSVtoKustoEmulator -csvfile "$($csvfolder)\$($csvfilename)" -kustoendpoint $kustoendpoint -kustotable $kustotable -jobid $jobid -multithread
                                 }
-                                $j++
                             }
 
                             # step 3.2
@@ -579,7 +618,7 @@ if (Test-Path $tracefolder)  #validate
                         $t3=Get-Date
                         Write-UTCLog "[Ingress blob2kusto : $(($t3-$t2).TotalSeconds) secs, $(($t3-$t2).TotalMinutes) mins]" "Cyan"
                         Write-Host "---------------------------------------------------------------------------------------" -ForegroundColor "Gray"                        
-                        Write-UTCLog "[pcap2kusto (MultiThread) :   $(($t3-$t0).TotalSeconds) secs, $(($t3-$t0).TotalMinutes) mins]" "Cyan"
+                        Write-UTCLog "[pcap2kusto (MultiThread) - ADX :   $(($t3-$t0).TotalSeconds) secs, $(($t3-$t0).TotalMinutes) mins]" "Cyan"
                     }
                 }
                 else {
