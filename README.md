@@ -2,29 +2,33 @@
 
 ## Things are related to Azure Platform 
 
-1. How do network packets travel between the internet and Azure VMs, between Azure VMs, and between Azure VMs and on-prem networks? 
-1. AzureSpeedStorage: Terraform sample for creating storage accounts in different Azure regions. 
-1. PS_Azure: Random PowerShell script. 
-1. How can ADX be used to analyze Storage Analytics logs in a few clicks (gather logs from customers and others without configuring LA)? 
-1. How can ADX be used to analyze Network trace PCAPs (gather network traces from customers)? 
-1. How can ADX be used to analyze NSGFlowLogV2 (get raw JSON logs from customers and others without configuring LA)?
-1. How can ADX be used to analyze random text logs (Linux secure logs, random DNS fail logs, etc.)?
-1. Linux_bash: Post-boot script for Azure VMs.
-1. network\pcap2kusto\pcap2kusto.ps1 : import PCAP to Kusto
-1. network\pcap2kusto\mergecapfiles.ps1 : merge all pcap files under one folder to one pcap file
-1. connectivityscript\linux\pingmesh or connectivityscript\win\pingmesh : pingmesh script for linux/windows, build for cloud env.
+This repository contains various scripts and samples that can be used to enhance your Azure infrastructure and streamline your network operations. From analyzing network packets and logs to automating tasks, these resources aim to simplify your Azure VM management and network troubleshooting.
+
+Contents
+
+1. **AzureSpeedStorage**: Explore a Terraform sample that demonstrates how to create storage accounts in different Azure regions.
+1. **PS_Azure(Library)**: Discover a set of PowerShell scripts that can assist you in automating common Azure tasks. This script showcases the power and flexibility of PowerShell for managing your Azure environment.
+1. **ADX for Storage Analytics Logs**: Learn how to leverage Azure Data Explorer (ADX) to analyze Storage Analytics logs with ease. By following a few simple steps, you can gather logs from customers and other sources without the need for complex log configuration.
+1. **ADX for Network Trace PCAPs**: Explore the capabilities of ADX in analyzing network trace PCAPs. This functionality enables you to gather network traces from customers and efficiently analyze them using ADX's powerful querying capabilities.
+1. **ADX for NSGFlowLogV2**: Discover how ADX can be utilized to analyze NSGFlowLogV2, allowing you to obtain raw JSON logs from customers and other sources without the need for extensive log configuration. ADX simplifies the process of extracting valuable insights from network flow logs.
+1. **ADX for Random Text Logs**: Learn how ADX can be used to analyze various types of random text logs, such as Linux secure logs and DNS fail logs. By leveraging ADX's query language, you can gain valuable insights from these logs and identify potential issues in your environment.
+1. **Linux_bash**: Access a post-boot script designed specifically for Azure VMs running Linux. This script provides a set of useful commands and configurations to optimize your Linux-based VMs.
+1. **Folder network\pcap2kusto**: Utilize the pcap2kusto.ps1 script to import PCAP files into Azure Data Explorer (Kusto). This enables you to perform advanced analysis on network packet captures and gain deeper visibility into your network traffic.
+1. **Folder network\mergecapfiles**: Combine multiple PCAP files into a single file using the mergecapfiles.ps1 script. This simplifies the management and analysis of network packet captures by consolidating them into a single, unified file.
+1. **Script network\get-MicrosoftIpAddressRange.ps1**: which helps you find Microsoft Azure and Office 365 IP ranges and details using public data files. This script simplifies the process of identifying and managing IP ranges associated with Microsoft services.
 
 ## Things are NOT related to Azure Platform 
 
-1. connectivityscript : Script library of connectivity testing
-1. ps_mediaencoder : Powershell script with ffmpeg 
+1. **connectivityscript**: This script is specifically designed for cloud environments and allows you to perform network connectivity tests across your infrastructure.
+1. **pingmesh**: Find the pingmesh script for both Linux and Windows environments within the respective folders. 
+1. **ps_mediaencoder** : Powershell script with ffmpeg 
 1. How to install Windows Terminal on Windows Server 2022/2019
    1. Go to [MS STORE link](https://store.rg-adguard.net/)
-   1. Search Microsoft.UI.Xaml.2.7_8wekyb3d8bbwe and Microsoft.VCLibs.140.00.UWPDesktop_8wekyb3d8bbwe
-   1. Download [Microsoft.UI.Xaml.2.7_7.2208.15002.0_x64__8wekyb3d8bbwe.appx](http://tlu.dl.delivery.mp.microsoft.com/filestreamingservice/files/cadae296-3389-40c2-b927-605f7b399b78?P1=1670124102&P2=404&P3=2&P4=erd0dYktWppM%2bMNpZjs1V%2btMPjunra8%2fvJmZxF1JM%2fxzw4z13btHtNBd7iXtcMXfUkn%2bqn8ucAVX0oXyjjIqOw%3d%3d)
-   1. Downlaod [Microsoft.VCLibs.140.00.UWPDesktop_8wekyb3d8bbwe](http://tlu.dl.delivery.mp.microsoft.com/filestreamingservice/files/8a26c76e-5a63-42d5-9f7d-df053c273363?P1=1670124447&P2=404&P3=2&P4=SOgVXaRGFTkCWtPYEwF6eXQpfKSIOAjRs%2fQotvgUTkTYMgooAxXVu0P8UWsKEWpMlhln5s6BwkIIlM7sdle5ew%3d%3d)
-   1. Download [Windows Terminal(latest)](https://github.com/microsoft/terminal/releases?WT.mc_id=modinfra-26926-thmaure)
-   1. Go to download folder 
+   2. Search Microsoft.UI.Xaml.2.7_8wekyb3d8bbwe and Microsoft.VCLibs.140.00.UWPDesktop_8wekyb3d8bbwe
+   3. Download [Microsoft.UI.Xaml.2.7_7.2208.15002.0_x64__8wekyb3d8bbwe.appx](http://tlu.dl.delivery.mp.microsoft.com/filestreamingservice/files/cadae296-3389-40c2-b927-605f7b399b78?P1=1670124102&P2=404&P3=2&P4=erd0dYktWppM%2bMNpZjs1V%2btMPjunra8%2fvJmZxF1JM%2fxzw4z13btHtNBd7iXtcMXfUkn%2bqn8ucAVX0oXyjjIqOw%3d%3d)
+   4. Downlaod [Microsoft.VCLibs.140.00.UWPDesktop_8wekyb3d8bbwe](http://tlu.dl.delivery.mp.microsoft.com/filestreamingservice/files/8a26c76e-5a63-42d5-9f7d-df053c273363?P1=1670124447&P2=404&P3=2&P4=SOgVXaRGFTkCWtPYEwF6eXQpfKSIOAjRs%2fQotvgUTkTYMgooAxXVu0P8UWsKEWpMlhln5s6BwkIIlM7sdle5ew%3d%3d)
+   5. Download [Windows Terminal(latest)](https://github.com/microsoft/terminal/releases?WT.mc_id=modinfra-26926-thmaure)
+   6. Go to download folder 
       ```
        Add-AppxPackage -Path C:\setup\Microsoft.VCLibs.140.00.UWPDesktop_14.0.30704.0_x64__8wekyb3d8bbwe.Appx
        Add-AppxPackage -Path C:\setup\Microsoft.UI.Xaml.2.7_7.2208.15002.0_x64__8wekyb3d8bbwe.Appx
