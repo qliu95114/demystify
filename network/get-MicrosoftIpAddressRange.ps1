@@ -3,9 +3,9 @@ Author: qliu@microsoft.com ;
 Usage: get-azurepublicipaddressrange.ps1 -ipaddr x.x.x.x (public vip address) or -dnsname www.windowsazure.cn
 
 change history
+# 10:42 PM 2023-08-11, add Office 365 iprange search
 # 5:41 PM 2020-10-10, Added a failfast for unresolvable DNS names
 # 5:03 PM 2020-10-10, for now, check if an IP from the list is IPv6 as it throws off parsing. Goal is to eventually parse IPv6
-# 11:17 AM 2020-06-25 remove DDOS Jarivs / ACISCLIENT function to get-slb.ps1 , so this version can shared with customer, if needed. 
 # 1:10 PM 08/12/2018, add Azure IP Ranges and Service Tags (JSON） check, it scans azure service tag file to get more details. 
 # 2:23 PM 01/02/2017, auto download the latest Windows Azure Datacenter IP Ranges (public & mooncake)
 # demo
