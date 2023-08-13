@@ -24,6 +24,8 @@ promptchoice , that matches prompt.json file
 .PARAMETER aikey
 GUID, Instrumentation Key used by Application Insight
 
+.PARAMETER debug
+
 .EXAMPLE
 Use Default template to ask GPT "what to eat today"
 .\invoke-azureai-gpt.ps1 -content "What to eat today" -promptchoice "Default"
@@ -58,8 +60,9 @@ Param(
     [string] $endpoint, # endpoint for AzureAI
     [string] $DeploymentName, # deployment name for AzureAI
     [string] $apikey, # deployment name for AzureAI
-    [ValidateSet('Default','Text Polish','Chinese to English','English to Chinese','Code Re-Factory','Explain Code','Summarize Text','Echo','Powershell Sample Code','Python Sample Code','KQL ADX')][string]$promptchoice="Default",
-    [guid]   $aikey  #Provide Application Insigt instrumentation key 
+    [ValidateSet("Default","Text Polish","Chinese to English","English to Chinese","Code Re-Factory","Explain Code","Summarize Text","Echo","Powershell Sample Code","Python Sample Code","KQL ADX","Marketing Writing Assistant","JSON Format Assistant")][string]$promptchoice="Default",
+    [guid]   $aikey,
+    [switch] $debug #Provide Application Insigt instrumentation key 
 )
 
 #logging
@@ -71,13 +74,13 @@ Function Write-UTCLog ([string]$message,[string]$color="white")
 #    	Write-Output $logstamp | Out-File $logfile -Encoding ASCII -append
 }
 
-# Powershell Function Send-AIEvent , 2023-04-08
+# Powershell Function Send-AIEvent , 2023-08-12 , fix bug in retry logic
 Function Send-AIEvent{
     param (
                 [Guid]$piKey,
                 [String]$pEventName,
                 [Hashtable]$pCustomProperties,
-                [string]$logpath="c:\temp\"
+                [string]$logpath=$env:temp
     )
         $appInsightsEndpoint = "https://dc.services.visualstudio.com/v2/track"        
         
@@ -116,7 +119,7 @@ Function Send-AIEvent{
                 return    
             }
             catch {
-                $PreciseTimeStamp=($timeStart.ToUniversalTime()).ToString("yyyy-MM-dd HH:mm:ss")
+                $PreciseTimeStamp=(get-date).ToUniversalTime().ToString("yyyy-MM-dd HH:mm:ss")
                 if ($attempt -ge 4)
                 {
                     Write-Output "retry 3 failure..." 
@@ -134,7 +137,6 @@ Function Send-AIEvent{
         $ProgressPreference = $temp
 }
 
-
 ## Invoke-AzureAI-GPT
 
 Function Invoke-ChartGPTCompletion {
@@ -147,8 +149,8 @@ Function Invoke-ChartGPTCompletion {
     )
 
     $url = "$($endpoint)openai/deployments/$DeploymentName/chat/completions?api-version=2023-03-15-preview"
-    Write-UTCLog "AI Endpoints: $($url)" "Green"
-    Write-UTCLog "Question : $($Message)" "Yellow"
+    if ($debug) {Write-UTCLog "AI Endpoints: $($url)" "DarkCyan"}
+
     $headers = @{
         "api-key" = $AccessKey
     }
@@ -177,7 +179,7 @@ Function Invoke-ChartGPTCompletion {
     # return $payload
     $body = ConvertTo-Json -InputObject $payload -Compress 
     
-    Write-UTCLog "Payload: $($body)" "Yellow"
+    if ($debug) {Write-UTCLog "Payload: $($body)" "DarkCyan"}
 
     #$body = $body -creplace '\P{IsBasicLatin}'  # this leaves only ASCII characters does not accept the chinese characters
     $result = Invoke-RestMethod -Uri $url -Method Post -Headers $headers -Body $body -ContentType 'application/json;charset=utf-8' 
@@ -186,8 +188,18 @@ Function Invoke-ChartGPTCompletion {
 
 # main program started
 
-# verify the current folder has prompt.json file
-$promptfile = "$($PSScriptRoot)\prompt.json"
+# downoad prompt.json from url blow # https://raw.githubusercontent.com/qliu95114/demystify/main/azureai/prompt.json
+# $j=(get-content "$($env:temp)\prompt.json" -encoding utf8 )|convertfrom-json
+# $c="";foreach ($i in $j.'name_en-us') {$c+="""$($i)"","} ; $c.trimend(”,")
+# "Default","Text Polish","Chinese to English","English to Chinese","Code Re-Factory","Explain Code","Summarize Text","Echo","Powershell Sample Code","Python Sample Code","KQL ADX","Marketing Writing Assistant","JSON Format Assistant"
+
+$prompturl="https://raw.githubusercontent.com/qliu95114/demystify/main/azureai/prompt.json"
+
+if ($debug) {Write-UTCLog "Download Prompt library $($prompturl)" -color "DarkCyan "}
+$wc = New-Object System.Net.WebClient
+$wc.DownloadFile($prompturl, "$($env:temp)\prompt.json")
+
+$promptfile = "$($env:temp)\prompt.json"
 
 if (Test-Path $promptfile) {
     # use $promptchoice to select the prompt from the json file
@@ -215,11 +227,12 @@ if ([string]::IsNullOrEmpty($endpoint)) {Write-UTCLog "Endpoint is not set, exit
 if ([string]::IsNullOrEmpty($DeploymentName)) {Write-UTCLog "DeploymentName is not set, exit. Please use evn_setup.cmd to config endpoint/deployment/apikey" -color "Red"; return $false}
 if ([string]::IsNullOrEmpty($apikey)) {Write-UTCLog "apikey is not set, exit. Please use evn_setup.cmd to config endpoint/deployment/apikey" -color "Red"; return $false}
 
-Write-UTCLog "Endpoint: $($endpoint)" -color "Green"
-Write-UTCLog "DeploymentName: $($DeploymentName)" -color "Green"
-Write-UTCLog "apikey: *****************" -color "Green"
-Write-UTCLog "PromptChoice: $($promptchoice) , $($promptchoicezhcn)" -color "blue"
-Write-UTCLog "Prompt: $($prompt)" -color "blue"
+Write-UTCLog "Endpoint      : $($endpoint)" -color "gray"
+Write-UTCLog "Deployment    : $($DeploymentName)" -color "gray"
+#Write-UTCLog "apikey        : *****************" -color "Green"
+Write-UTCLog "PtChoice      : $($promptchoice) , $($promptchoicezhcn)" -color "Green"
+Write-UTCLog "Prompt(system): $($prompt)" -color "Green"
+Write-UTCLog "Content(user) : $($content)" "Yellow"
 
 $t0=Get-Date
 $chat = Invoke-ChartGPTCompletion -Endpoint $($endpoint) -AccessKey $($apikey) -DeploymentName $($DeploymentName) -Prompt $prompt -Message $content
@@ -240,31 +253,38 @@ $delta = "{0:N2}" -f ($t1-$t0).TotalSeconds
 
 # print out the result
 Write-UTCLog "AI thinking time: $($delta) seconds"  -color "Cyan"
-Write-Host "---------------------------------------------------------" -ForegroundColor "Cyan"
+
 # Unix Epoch time to UTC time
 $unixEpoch = [datetime]'1/1/1970 00:00:00Z'
 $dateTime = $unixEpoch.AddSeconds($($chat.created)).ToUniversalTime().ToString("yyyy-MM-dd HH:mm:ss")
 
 # output the result properties
-Write-Host "Id               : $($chat.id)" -ForegroundColor "gray"
-Write-Host "Object           : $($chat.object)" -ForegroundColor "gray"
-Write-Host "Model            : $($chat.model)" -ForegroundColor "gray"
-Write-Host "CreateTime       : $($dateTime)" -ForegroundColor "gray"
-Write-Host "Token_Completion : $($chat.usage.completion_tokens)" -ForegroundColor "gray"
-Write-Host "Token_Prompt     : $($chat.usage.prompt_tokens)" -ForegroundColor "gray"
-Write-Host "Token_Total      : $($chat.usage.total_tokens)" -ForegroundColor "gray"
-
+if ($debug)
+{
+    Write-Host "---------------------------------------------------------" -ForegroundColor "DarkCyan"
+    Write-Host "Id               : $($chat.id)" -ForegroundColor "gray"
+    Write-Host "Object           : $($chat.object)" -ForegroundColor "gray"
+    Write-Host "Model            : $($chat.model)" -ForegroundColor "gray"
+    Write-Host "CreateTime       : $($dateTime)" -ForegroundColor "gray"
+    Write-Host "Token_Completion : $($chat.usage.completion_tokens)" -ForegroundColor "gray"
+    Write-Host "Token_Prompt     : $($chat.usage.prompt_tokens)" -ForegroundColor "gray"
+    Write-Host "Token_Total      : $($chat.usage.total_tokens)" -ForegroundColor "gray"
+}
 Write-Host "---------------------------------------------------------" -ForegroundColor "Cyan"
 Write-Host "$($suggestion)" -ForegroundColor "Cyan"
 Write-Host "---------------------------------------------------------" -ForegroundColor "Cyan"
 
 if ([string]::IsNullOrEmpty($aikey)) {
-    #Write-Host "Info : aikey is not specified, Send-AIEvent() is skipped." -ForegroundColor "Gray"
+    if ($debug) {Write-Host "Info : aikey is not specified, Send-AIEvent() is skipped." -ForegroundColor "DarkCyan"}
 } 
 else 
 {
-    Write-Host "Info : aikey is specified, Send-AIEvent() is called" -ForegroundColor "Green"
-    Send-AIEvent -piKey $aikey -pEventName "invoke-azureapi-gpt.ps1" -pCustomProperties @{DeploymentName=$DeploymentName.tostring();chatid=$chat.id.tostring();object=$chat.object.tostring();model=$chat.model.tostring();CreatedTime=$datetime;token_completion=$chat.usage.completion_tokens;token_prompt=$chat.usage.prompt_tokens;token_total=$chat.usage.total_tokens}
+    if ($debug) {Write-Host "Info : aikey is specified, Send-AIEvent() is called" -ForegroundColor "DarkCyan"}
+    
+    #get hostname from $endpoint and retrieve the name before .openai.azure.com
+    Send-AIEvent -piKey $aikey -pEventName "invoke-azureapi-gpt.ps1" -pCustomProperties @{DeploymentName=$DeploymentName.tostring();chatid=$chat.id.tostring();
+        object=$chat.object.tostring();model=$chat.model.tostring();CreatedTime=$datetime;token_completion=$chat.usage.completion_tokens;
+        token_prompt=$chat.usage.prompt_tokens;token_total=$chat.usage.total_tokens;promptchoice=$promptchoice.tostring();endpoint=$endpoint.split("/")[2].tostring()}
 }
 
 
