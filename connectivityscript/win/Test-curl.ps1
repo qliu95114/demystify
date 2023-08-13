@@ -68,12 +68,13 @@ Param (
        [guid]$aikey  #Provide Application Insigt instrumentation key 
 )
 
-# Powershell Function Send-AIEvent , 2023-04-08
+# Powershell Function Send-AIEvent , 2023-08-12 , fix bug in retry logic
 Function Send-AIEvent{
     param (
                 [Guid]$piKey,
                 [String]$pEventName,
-                [Hashtable]$pCustomProperties
+                [Hashtable]$pCustomProperties,
+                [string]$logpath=$env:temp
     )
         $appInsightsEndpoint = "https://dc.services.visualstudio.com/v2/track"        
         
@@ -112,7 +113,7 @@ Function Send-AIEvent{
                 return    
             }
             catch {
-                $PreciseTimeStamp=($timeStart.ToUniversalTime()).ToString("yyyy-MM-dd HH:mm:ss")
+                $PreciseTimeStamp=(get-date).ToUniversalTime().ToString("yyyy-MM-dd HH:mm:ss")
                 if ($attempt -ge 4)
                 {
                     Write-Output "retry 3 failure..." 
@@ -128,8 +129,9 @@ Function Send-AIEvent{
             $attempt++
         } until ($success)
         $ProgressPreference = $temp
-    }
-    
+}
+
+
 Function Write-UTCLog ([string]$message,[string]$color="white")
 {
     	$logdate = ((get-date).ToUniversalTime()).ToString("yyyy-MM-dd HH:mm:ss")
