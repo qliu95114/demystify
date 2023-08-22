@@ -61,8 +61,8 @@ Param(
     [string] $DeploymentName, # deployment name for AzureAI
     [string] $apikey, # deployment name for AzureAI
     [ValidateSet("Default","Text Polish","Chinese to English","English to Chinese","Code Re-Factory","Explain Code","Summarize Text","Echo","Powershell Sample Code","Python Sample Code","KQL ADX","Marketing Writing Assistant","JSON Format Assistant")][string]$promptchoice="Default",
-    [guid]   $aikey,
-    [switch] $debug #Provide Application Insigt instrumentation key 
+    [guid]   $aikey, #Provide Application Insigt instrumentation key 
+    [switch] $debug 
 )
 
 #logging
