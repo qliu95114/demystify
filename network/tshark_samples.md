@@ -151,7 +151,7 @@ trace
 | take 20  //get 20 record from top
 
 //to take last 10 record
-| order by TT desc | take 10 | order by TT asc // take last 7 records
+| order by TT desc | take 10 | order by TT asc // take last 10 records
 ```
 Result:
 ```
