@@ -160,4 +160,7 @@ Console & LogFile : "$(hostname -s)_curl.log"
 url="https://www.google.com";timeout="1.0";interval=4;hh=$(echo $url|cut -d'/' -f3);while true; do curl -o /dev/null --connect-timeout $timeout -s -w "${hh},remote_ip:%{remote_ip},dns_resolution:%{time_namelookup},tcp_established:%{time_connect},ssl_handshake_done:%{time_appconnect},TTFB:%{time_starttransfer},httpstatus:%{http_code},size_download:%{size_download}\n" $url | while read pong; do echo "$(date -u +'%F %H:%M:%S') - $pong"; done; sleep $interval; done 2>&1 | tee -a "$(hostname -s)_curl_${hh}.log"
 ```
 
+# WebSites run Curl
+[Run Curl Commands Online](https://reqbin.com/curl)
+
 
