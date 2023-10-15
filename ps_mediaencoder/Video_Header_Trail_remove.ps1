@@ -147,7 +147,9 @@ If ((Test-Path $filename) -and (Test-Path $outputfolder))
     }
 
     try {
-        $audiobitrate=[int]((ffprobe ""$($filename)"" -show_entries stream=bit_rate -select_streams a:0 -of default=noprint_wrappers=1:nokey=1 -v error)/1000)    
+        $audiobitrate=[int]((ffprobe ""$($filename)"" -show_entries stream=bit_rate -select_streams a:0 -of default=noprint_wrappers=1:nokey=1 -v error)/1000)
+        # if $audiobitrate is large than 96 and use 96kbps as default    
+        if ($audiobitrate -gt 96) {$audiobitrate=96}
     }
     catch {
         $audiobitrate=96
