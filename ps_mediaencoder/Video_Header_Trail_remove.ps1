@@ -149,10 +149,11 @@ If ((Test-Path $filename) -and (Test-Path $outputfolder))
     try {
         $audiobitrate=[int]((ffprobe ""$($filename)"" -show_entries stream=bit_rate -select_streams a:0 -of default=noprint_wrappers=1:nokey=1 -v error)/1000)
         # if $audiobitrate is large than 96 and use 96kbps as default    
-        if ($audiobitrate -gt 96) {$audiobitrate=96}
+        if ($audiobitrate -gt 96) {$bitrate_audio=96} else {$bitrate_audio=$audiobitrate}
     }
     catch {
-        $audiobitrate=96
+        $audiobitrate=0
+        $bitrate_audio=96
     }
 
     if ($bitrate -eq 0)
@@ -174,7 +175,7 @@ If ((Test-Path $filename) -and (Test-Path $outputfolder))
 
     Write-UTCLog "Source : ($($fileName)) : $($VideoLength) - $($videoduration) s"  "Green"
     Write-UTCLog " - Video Bitrate : $($videobitrate) K and bitrate(used for encoding) : $($bitrate) K"
-    Write-UTCLog " - Audio Bitrate : $($audiobitrate) K"
+    Write-UTCLog " - Audio Bitrate : $($audiobitrate) K and bitrate(used for encoding) : $($bitrate_audio) K"
     Write-UTCLog " Cut from the begin : $($startsecs)  -   Cut from the end : $($lastsecs)"  "Green"
 
     $endsecs = $videoduration-$lastsecs
@@ -184,7 +185,7 @@ If ((Test-Path $filename) -and (Test-Path $outputfolder))
 
     #direct cut without encoding, this will cause a few seconds black screen for target file. 
     #$ffcmd="ffmpeg.exe -y -i ""$($filename)"" -ss $($starttime).000 -to $($endtime).000  -c:v copy -map 0:v:0? -c:a copy -map 0:a? -c:s copy -map 0:s? -map_chapters 0 -map_metadata 0 -f mp4 -threads 0 ""$($outputfile)"" 2> ""$($logfile)"""
-    $ffcmd="ffmpeg.exe -y -i ""$($filename)"" -ss $($starttime).000 -to $($endtime).000  -c:v h264_nvenc -b:v $($bitrate)k -pix_fmt yuv420p -vf ""scale=1920:-2"" -map 0:v:0? -c:a copy -map 0:1 -c:a aac -b:a $($audiobitrate)k -c:s mov_text -map 0:s? -map_chapters 0 -map_metadata 0 -f mp4 -threads 0 ""$($outputfile)"" 2> ""$($logfile)"""
+    $ffcmd="ffmpeg.exe -y -i ""$($filename)"" -ss $($starttime).000 -to $($endtime).000  -c:v h264_nvenc -b:v $($bitrate)k -pix_fmt yuv420p -vf ""scale=1920:-2"" -map 0:v:0? -c:a copy -map 0:1 -c:a aac -b:a $($bitrate_audio)k -c:s mov_text -map 0:s? -map_chapters 0 -map_metadata 0 -f mp4 -threads 0 ""$($outputfile)"" 2> ""$($logfile)"""
     Write-UTCLog "CMD: $($ffcmd)" "Green"
     Write-UTCLog "Cut/Encode Start : $($filename) " "Green"
     $st=Get-date;  Invoke-Expression $ffcmd; $et=Get-date
