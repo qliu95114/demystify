@@ -34,3 +34,11 @@
 SETX OPENAI_API_KEY_AZURE "<Input your API key here>"
 SETX OPENAI_ENGINE_AZURE "<Input Deployment Name>"
 SETX OPENAI_ENDPOINT_AZURE "https://<Azure AI Endpoint>.openai.azure.com/"
+SETX OPENAI_TOKENS_AZURE "32768"  
+
+:: OPENAI_TOKENS_AZURE is the maxtokens please refer the link https://learn.microsoft.com/en-us/azure/ai-services/openai/concepts/models#model-summary-table-and-region-availability
+:: for summary https://github.com/qliu95114/demystify/blob/main/azureai/model_readme.md 
+
+:: NEW AI connection string plan
+:: "endpoint=https://<Azure AI Endpoint>.openai.azure.com/;key=<Input your API key here>;deployment=<Input Deployment Name>;model=GPT-3.5-16k;maxtokens=16384" 
+

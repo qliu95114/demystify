@@ -74,10 +74,11 @@ Function Invoke-ChartGPTCompletion {
         [Parameter(Mandatory = $true)][string]$AccessKey,
         [Parameter(Mandatory = $true)][string]$DeploymentName,
         [Parameter(Mandatory = $true)][string]$Prompt,
-        [Parameter(Mandatory = $true)][string]$Message
+        [Parameter(Mandatory = $true)][string]$Message,
+        [int]$token=8000
     )
 
-    $url = "$($endpoint)openai/deployments/$DeploymentName/chat/completions?api-version=2023-03-15-preview"
+    $url = "$($endpoint)openai/deployments/$DeploymentName/chat/completions?api-version=2023-05-15"
     if ($debug) { Write-UTCLog "AI Endpoints: $($url)" "DarkCyan" }
 
     $headers = @{
@@ -97,7 +98,7 @@ Function Invoke-ChartGPTCompletion {
     $payload = [PSCustomObject]@{
         "model"             = $DeploymentName
         "frequency_penalty" = 0
-        "max_tokens"        = 20000
+        "max_tokens"        = $token
         "messages"          = @($promptPayload, $messagePayload)
         "presence_penalty"  = 0
         "stream"            = $false
@@ -109,8 +110,72 @@ Function Invoke-ChartGPTCompletion {
     $body = ConvertTo-Json -InputObject $payload -Compress 
     
     if ($debug) { Write-UTCLog "Payload: $($body)" "DarkCyan" }
-
     #$body = $body -creplace '\P{IsBasicLatin}'  # this leaves only ASCII characters does not accept the chinese characters
     $result = Invoke-RestMethod -Uri $url -Method Post -Headers $headers -Body $body -ContentType 'application/json;charset=utf-8' 
     return $result;
+}
+
+# input parameters [string] $content, return tokens of the content 
+function Get-ContentCJKTokens {
+    param(
+        [Parameter(Mandatory=$true)][string]$InputString
+    )
+
+    $CJKCharCount = 0
+    #$stringContainsCJK = $false
+
+    foreach ($char in $InputString.ToCharArray()) {
+        if ([System.Char]::GetUnicodeCategory($char) -eq [System.Globalization.UnicodeCategory]::OtherLetter) {
+            #$stringContainsCJK = $true
+            $CJKCharCount++
+        }
+    }
+    return $CJKCharCount
+    #$output = New-Object PSObject
+    #$output | Add-Member -MemberType NoteProperty -Name "ContainsCJK" -Value $stringContainsCJK
+    #$output | Add-Member -MemberType NoteProperty -Name "CJKCharCount" -Value $CJKCharCount
+}
+
+function Get-ContentNumbersTokens {
+    param (
+        [string]$InputString
+    )
+
+    $numbersCount = 0
+
+    foreach($char in $inputString.ToCharArray()){
+        if([char]::IsDigit($char)) {
+            $numbersCount++
+        }
+    }
+
+    return $numbersCount
+}
+
+# 使用示例
+function Get-ContentTokens {
+    param (
+        [Parameter(Mandatory = $true)][string]$content
+    )
+
+    # we need to determine if $content is has Non-English characters CJK (Chinese,Japanese,Korean)
+    # For CJK characters, tokens should be total CJK Char * 2
+    # For Lartin (Non-CJK) characters, tokens will count the word, split by space
+
+    # Add CJK chars, tokens  = CJK chars * 2
+    $cjktokens = (Get-ContentCJKTokens -InputString $content) * 2 
+    $numtokens = (Get-ContentNumbersTokens -InputString $content) 
+
+    # Add Lartin characters only remove numbers, tokens , split by space and count the tokens
+    $chs = "[\p{IsCJKUnifiedIdeographs}]"
+    $jpn = "[\p{IsHiragana}\p{IsKatakana}\p{IsCJKUnifiedIdeographs}\p{IsCJKSymbolsandPunctuation}]"
+    $kor = "[\p{IsHangulJamo}\p{IsHangulSyllables}\p{IsHangulCompatibilityJamo}]"
+    $chartokens=[int](($content -replace $chs, " " -replace $jpn, " " -replace $kor, " " -replace "\d"," " -replace "\s+", " " -split (" ")).count * 3)
+    $tokens = $cjktokens + $numtokens+ $chartokens
+
+    if ($debug) {Write-UTCLog "cjktokens: $cjktokens" "DarkCyan"}
+    if ($debug) {Write-UTCLog "numberotoken: $numtokens" "DarkCyan"}
+    if ($debug) {Write-UTCLog "chartokens: $chartokens" "DarkCyan"}
+    
+    return $tokens
 }

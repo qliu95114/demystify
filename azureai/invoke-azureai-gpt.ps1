@@ -74,12 +74,13 @@ To use the invoke-azureai-gpt.ps1, please env_setup.cmd first to setup the envir
 SETX OPENAI_API_KEY_AZURE "<Input your API key here>"
 SETX OPENAI_ENGINE_AZURE "<Input Deployment Name>"
 SETX OPENAI_ENDPOINT_AZURE "https://<Azure AI Endpoint>.openai.azure.com/"
+SETX OPENAI_TOKENS_AZURE "16384" or other value  # this is for max tokens we specific in GPT calls. when we call GPT, we need calcuate the remaining tokens we want to use.
+
 
 .LINK
 Get code idea from below github repo
 https://github.com/blrchen/azuredevops-pr-gpt
 https://github.com/chenxizhang/openai-powershell
-
 
 #>
 
@@ -90,6 +91,7 @@ Param(
     [string] $endpoint = $env:OPENAI_ENDPOINT_AZURE,
     [string] $DeploymentName = $env:OPENAI_ENGINE_AZURE,
     [string] $apikey = $env:OPENAI_API_KEY_AZURE,
+    [string] $token = $env:OPENAI_TOKENS_AZURE,
     [ValidateSet("common_create_prompt","common_echo_text","common_polish_text","common_response_default","common_summarize_text","common_translate_to_en-us","common_translate_to_zh-cn","common_write_marketingcontent","devops_beauty_json","devops_explain_code","devops_kustokql_samplecode","devops_powershell_samplecode","devops_python_samplecode","support_AAD_copilot","support_sumary_notes","support_update_casenotes","support_write_casesummary","support_write_initialresponse")][string]$promptchoice="common_response_default",
     [string] $aikey,
     [string] $promptLibraryFile,
@@ -153,12 +155,21 @@ else {
 
 # Check all parameters are set
 if (!$endpoint -or !$DeploymentName -or !$apikey) { 
-    Write-UTCLog "Endpoint, DeploymentName or apikey is not set, exit. Please use evn_setup.cmd to config endpoint/deployment/apikey" -color "Red"; 
+    Write-UTCLog "Endpoint, DeploymentName or apikey is not set, exit. Please use env_setup.cmd to config endpoint/deployment/apikey & tokens" -color "Red"; 
     exit
 }
 
 Write-UTCLog "Endpoint      : $($endpoint)" -color "gray"
-Write-UTCLog "Deployment    : $($DeploymentName)" -color "gray"
+Write-UTCLog "Deployment    : $($DeploymentName)" -color "gray" 
+# if Token is empty then use default value 8000
+if (!$token) 
+{ 
+    $token = 16384 
+    Write-UTCLog "MaxToken(Default): $($token)" -color "gray" 
+}
+else {
+    Write-UTCLog "MaxToken(Env) : $($token)" -color "gray" 
+}
 Write-UTCLog "PromptChoice  : $($promptchoice)" -color "Green"
 if ($debug) {
     $prompttext=$prompt.replace("\r\n",[System.Environment]::NewLine)  #replace \r\n 
@@ -168,14 +179,25 @@ if ($debug) {
 # Check if contentFile is specified and exists
 if ($contentFile -and (Test-Path $contentFile)) {
     $content = Get-Content $contentFIle -Raw
+    $tokenCount = Get-ContentTokens $content
+    Write-UTCLog "PromptToken   : $($tokenCount)" -color "Green"        
     Write-UTCLog "Content(user) first 100: $($content.Substring(0,100))" "Yellow"
 }
 else {
+    # Get Token count of the content
+    $tokenCount = Get-ContentTokens $content
+    Write-UTCLog "PromptToken   : $($tokenCount)" -color "Green"    
     Write-UTCLog "Content(user) : $($content)" "Yellow"
 }
 
+if (($token - $tokenCount) -lt 0) {
+    Write-UTCLog "Error: Prompt Token is too large, please reduce size of content,contentfile , exit." -color "Red"
+    exit
+}
+
 $t0 = Get-Date
-$chat = Invoke-ChartGPTCompletion -Endpoint $($endpoint) -AccessKey $($apikey) -DeploymentName $($DeploymentName) -Prompt $prompt -Message $content
+# Use $token - $tokenCount as Max Return token for GPT call
+$chat = Invoke-ChartGPTCompletion -Endpoint $($endpoint) -AccessKey $($apikey) -DeploymentName $($DeploymentName) -Prompt $prompt -Message $content -Token $([int]($token-$tokenCount))
 $t1 = Get-Date
 $suggestion = $chat.choices[0].message.content
 
@@ -228,6 +250,7 @@ else {
     #get hostname from $endpoint and retrieve the name before .openai.azure.com
     Send-AIEvent -piKey $aikey -pEventName $scriptname -pCustomProperties @{DeploymentName = $DeploymentName.tostring(); chatid = $chat.id.tostring();
         object = $chat.object.tostring(); model = $chat.model.tostring(); CreatedTime = $datetime; token_completion = $chat.usage.completion_tokens;
-        token_prompt = $chat.usage.prompt_tokens; token_total = $chat.usage.total_tokens; promptchoice = $promptchoice.tostring(); endpoint = $endpoint.split("/")[2].tostring()
+        token_prompt = $chat.usage.prompt_tokens; token_total = $chat.usage.total_tokens; promptchoice = $promptchoice.tostring(); endpoint = $endpoint.split("/")[2].tostring() ; AIResponseTimeE2E=$delta
     }
+    # CreatedTime is not accurate this is the time when i log the Send-AIEvnet
 }
