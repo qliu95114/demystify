@@ -170,8 +170,8 @@ function Get-ContentTokens {
     $chs = "[\p{IsCJKUnifiedIdeographs}]"
     $jpn = "[\p{IsHiragana}\p{IsKatakana}\p{IsCJKUnifiedIdeographs}\p{IsCJKSymbolsandPunctuation}]"
     $kor = "[\p{IsHangulJamo}\p{IsHangulSyllables}\p{IsHangulCompatibilityJamo}]"
-    $chartokens=[int](($content -replace $chs, " " -replace $jpn, " " -replace $kor, " " -replace "\d"," " -replace "\s+", " " -split (" ")).count * 3)
-    $tokens = $cjktokens + $numtokens+ $chartokens
+    $chartokens=[int](($content -replace $chs, " " -replace $jpn, " " -replace $kor, " " -replace "\d"," " -replace "\s+", " " -split (" ")).count * 3) 
+    $tokens = $cjktokens + $numtokens+ $chartokens # add 500 tokens for the prompt
 
     if ($debug) {Write-UTCLog "cjktokens: $cjktokens" "DarkCyan"}
     if ($debug) {Write-UTCLog "numberotoken: $numtokens" "DarkCyan"}

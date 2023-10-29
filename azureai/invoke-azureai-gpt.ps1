@@ -175,29 +175,31 @@ if ($debug) {
     $prompttext=$prompt.replace("\r\n",[System.Environment]::NewLine)  #replace \r\n 
     Write-UTCLog "Prompt(system): $($prompttext)" -color "DarkCyan"
 }
+$stoken = Get-ContentTokens $prompt
 
 # Check if contentFile is specified and exists
 if ($contentFile -and (Test-Path $contentFile)) {
     $content = Get-Content $contentFIle -Raw
-    $tokenCount = Get-ContentTokens $content
-    Write-UTCLog "PromptToken   : $($tokenCount)" -color "Green"        
-    Write-UTCLog "Content(user) first 100: $($content.Substring(0,100))" "Yellow"
-}
-else {
-    # Get Token count of the content
-    $tokenCount = Get-ContentTokens $content
-    Write-UTCLog "PromptToken   : $($tokenCount)" -color "Green"    
-    Write-UTCLog "Content(user) : $($content)" "Yellow"
 }
 
-if (($token - $tokenCount) -lt 0) {
+# Get Token count of the content
+$utoken = Get-ContentTokens $content
+
+# if content is too long, only print first 100 characters
+if ($content.length -ge 100) {$offset = 100} else {$offset = $content.length}
+Write-UTCLog "Content(user) : $($content.Substring(0,$offset)) [max first 100 chars]" "Yellow"
+
+if (($token - $utoken -$stoken) -lt 0) {
     Write-UTCLog "Error: Prompt Token is too large, please reduce size of content,contentfile , exit." -color "Red"
+    Write-UTCLog "Tokens        : user=$($utoken) , system=$($stoken) , max_tokens=$($token - $utoken -$stoken)" -color "Red"
     exit
+}else {
+    Write-UTCLog "Tokens        : user=$($utoken) , system=$($stoken) , max_tokens=$($token - $utoken -$stoken)" -color "Green"
 }
 
 $t0 = Get-Date
 # Use $token - $tokenCount as Max Return token for GPT call
-$chat = Invoke-ChartGPTCompletion -Endpoint $($endpoint) -AccessKey $($apikey) -DeploymentName $($DeploymentName) -Prompt $prompt -Message $content -Token $([int]($token-$tokenCount))
+$chat = Invoke-ChartGPTCompletion -Endpoint $($endpoint) -AccessKey $($apikey) -DeploymentName $($DeploymentName) -Prompt $prompt -Message $content -Token $([int]($token-$utoken-$stoken))
 $t1 = Get-Date
 $suggestion = $chat.choices[0].message.content
 
