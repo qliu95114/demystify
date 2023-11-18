@@ -109,14 +109,17 @@ Param(
     [string] $content = "What to eat today",
     [string] $contentFile,
     [string] $prompt,
-    [ValidateSet("common_create_prompt", "common_echo_text", "common_polish_text", "common_response_default", "common_summarize_text", "common_translate_to_en-us", "common_translate_to_zh-cn", "common_write_marketingcontent", "devops_beauty_json", "devops_explain_code", "devops_kustokql_samplecode", "devops_powershell_samplecode", "devops_python_samplecode", "support_AAD_copilot", "support_sumary_notes", "support_update_casenotes", "support_write_casesummary", "support_write_initialresponse")][string]$promptchoice = "common_response_default",
+    [ValidateSet("common_create_prompt","common_echo_text","common_polish_text","common_response_default","common_summarize_text","common_translate_to_en-us","common_translate_to_zh-cn","common_write_marketingcontent","devops_beauty_json","devops_explain_code","devops_kustokql_samplecode","devops_powershell_samplecode","devops_python_samplecode","support_AAD_copilot","support_sumary_notes","support_ta_case_skill_label","support_update_casenotes","support_write_casesummary","support_write_initialresponse")][string]$promptchoice = "common_response_default",
     [string] $promptLibraryFile,
     [string] $promptFile,
     [string] $completionFile,
     [string] $endpoint = $env:OPENAI_ENDPOINT_AZURE,
-    [string] $DeploymentName = $env:OPENAI_ENGINE_AZURE,
+    # To correct use the deployment name, please ensure you create deployment in azure openai portal first and use the exact name matches the model name
+    [ValidateSet("gpt-35-turbo-16k_0613","gpt-35-turbo_0613","gpt-35-turbo_1106","gpt-4-32k_0613","gpt-4_0613","gpt-4_1106","text-embedding-ada-002_2")][string]$DeploymentName = $env:OPENAI_ENGINE_AZURE,
     [string] $apikey = $env:OPENAI_API_KEY_AZURE,
     [string] $token = $env:OPENAI_TOKENS_AZURE,
+    [string] $maxtoken_output = $env:OPENAI_MAXTOKENSOUTPUT_AZURE,  # this is for max tokens we specific in supporting new api model GPT-4 or 3.5 1106 preview, the token limitation was change to Input : x and Output : 4096, instead of total token
+    [string] $maxtoken_input = $env:OPENAI_MAXTOKENSINPUT_AZURE,  # this is for max tokens we specific in supporting new api model GPT-4 or 3.5 1106 preview, the token limitation was change to Input : x and Output : 4096, instead of total token
     [string] $aikey,
     [switch] $debug
 )
@@ -140,7 +143,7 @@ $prompturl = "https://raw.githubusercontent.com/qliu95114/demystify/main/azureai
 # switch to default $env:temp\prompt.json if not specified
 # all failed, download from github
 
-# Check all Azure AI parameters are set
+# Validate Azure AI parameters
 if (!$endpoint -or !$DeploymentName -or !$apikey) { 
     Write-UTCLog "Endpoint, DeploymentName or apikey is not set, exit. Please use env_setup.cmd to config endpoint/deployment/apikey & tokens" -color "Red"; 
     exit
@@ -148,10 +151,19 @@ if (!$endpoint -or !$DeploymentName -or !$apikey) {
 
 Write-UTCLog "Endpoint      : $($endpoint)" -color "gray"
 Write-UTCLog "Deployment    : $($DeploymentName)" -color "gray" 
-# if Token is empty then use default value 8000
+
+# if token is empty 
+# then check if we have maxtoken_input and maxtoken_output if that is not set, use default 8096
 if (!$token) { 
-    $token = 16384 
-    Write-UTCLog "MaxToken(Default): $($token)" -color "gray" 
+    if ($maxtoken_input -and $maxtoken_output) {
+        $token = $maxtoken_output
+        Write-UTCLog "MaxTokens_Input (Env) : $($maxtoken_input)" -color "gray" 
+        Write-UTCLog "MaxTokens_Output(Env) : $($token)" -color "gray" 
+    }
+    else {
+        $token = 8096 
+        Write-UTCLog "MaxToken(Default): $($token)" -color "gray" 
+    }
 }
 else {
     Write-UTCLog "MaxToken(Env) : $($token)" -color "gray" 
@@ -201,13 +213,13 @@ else {
     }
 }
 
-if ([string]::IsNullOrEmpty($prompt) -and [string]::IsNullOrEmpty($promptFile))
-    { Write-UTCLog "PromptChoice  : $($promptchoice)" -color "DarkCyan"
-        if ($debug) {
-            $prompttext = $promptText.replace("\r\n", [System.Environment]::NewLine)  #replace \r\n 
-            Write-UTCLog "Prompt(system): $($prompttext)" -color "DarkCyan"
-        }
+if ([string]::IsNullOrEmpty($prompt) -and [string]::IsNullOrEmpty($promptFile)) {
+    Write-UTCLog "PromptChoice  : $($promptchoice)" -color "DarkCyan"
+    if ($debug) {
+        $prompttext = $promptText.replace("\r\n", [System.Environment]::NewLine)  #replace \r\n 
+        Write-UTCLog "Prompt(system): $($prompttext)" -color "DarkCyan"
     }
+}
 
 $stoken = Get-ContentTokens $promptText
 
@@ -223,21 +235,38 @@ $utoken = Get-ContentTokens $content
 if ($content.length -ge 100) { $offset = 100 } else { $offset = $content.length }
 Write-UTCLog "Content(user) : $($content.Substring(0,$offset)) [max first 100 chars]" "Yellow"
 
-if (($token - $utoken - $stoken) -lt 0) {
-    Write-UTCLog "Error: Prompt Token is too large, please reduce size of content,contentfile , exit." -color "Red"
-    Write-UTCLog "Tokens        : user=$($utoken) , system=$($stoken) , max_tokens=$($token - $utoken -$stoken)" -color "Red"
-    exit
+# check if token is too large
+if ($maxtoken_input -and $maxtoken_output)
+{
+    # checkinput token only for GPT-4 or 3.5 1106
+    if (($maxtoken_input- $utoken - $stoken) -lt 0) {
+        Write-UTCLog "Error: Prompt Token is too large (> $($maxtoken_input)), please reduce size of content,contentfile , exit." -color "Red"
+        Write-UTCLog "Tokens        : user=$($utoken) , system=$($stoken) , tokens_input=$($utoken + $stoken)" -color "Red"
+        exit
+    }
+    else {
+        Write-UTCLog "Tokens        : user=$($utoken) , system=$($stoken) , tokens_inputs=$($utoken + $stoken)" -color "Green"
+        $t0 = Get-Date
+        # Use $token as Max Return token for GPT call
+        $chat = Invoke-ChartGPTCompletion -Endpoint $endpoint -AccessKey $apikey -DeploymentName $DeploymentName -Prompt $promptText -Message $content -Token $($token)
+    }
 }
 else {
-    Write-UTCLog "Tokens        : user=$($utoken) , system=$($stoken) , max_tokens=$($token - $utoken -$stoken)" -color "Green"
+    # checkinput token for GPT-4 or 3.5 before 1106 
+    if (($token - $utoken - $stoken) -lt 0) {
+        Write-UTCLog "Error: Prompt Token is too large, please reduce size of content,contentfile , exit." -color "Red"
+        Write-UTCLog "Tokens        : user=$($utoken) , system=$($stoken) , max_tokens=$($token - $utoken -$stoken)" -color "Red"
+        exit
+    }
+    else {
+        Write-UTCLog "Tokens        : user=$($utoken) , system=$($stoken) , max_tokens=$($token - $utoken -$stoken)" -color "Green"
+        $t0 = Get-Date
+        # Use $token - $tokenCount as Max Return token for GPT call
+        $chat = Invoke-ChartGPTCompletion -Endpoint $endpoint -AccessKey $apikey -DeploymentName $DeploymentName -Prompt $promptText -Message $content -Token $([int]($token - $utoken - $stoken))
+    }
 }
 
-$t0 = Get-Date
-# Use $token - $tokenCount as Max Return token for GPT call
-$chat = Invoke-ChartGPTCompletion -Endpoint $($endpoint) -AccessKey $($apikey) -DeploymentName $($DeploymentName) -Prompt $promptText -Message $content -Token $([int]($token - $utoken - $stoken))
-$t1 = Get-Date
 $suggestion = $chat.choices[0].message.content
-
 if ($PSVersionTable['PSVersion'].Major -eq 5) {
     $dstEncoding = [System.Text.Encoding]::GetEncoding('iso-8859-1')
     $srcEncoding = [System.Text.Encoding]::UTF8
@@ -254,14 +283,14 @@ if ($completionFile) {
 }
 
 # get delta time between $t1 and t0 in seconds and in format of xx.xx
-$delta = "{0:N2}" -f ($t1 - $t0).TotalSeconds
+$delta = "{0:N2}" -f ((Get-Date) - $t0).TotalSeconds
 
 # print out the result
 Write-UTCLog "AI thinking time: $($delta) seconds"  -color "Cyan"
 
 # Unix Epoch time to UTC time
 $unixEpoch = [datetime]'1/1/1970 00:00:00Z'
-$dateTime = $unixEpoch.AddSeconds($($chat.created)).ToUniversalTime().ToString("yyyy-MM-dd HH:mm:ss")
+$dateTime = $unixEpoch.AddSeconds($chat.created).ToUniversalTime().ToString("yyyy-MM-dd HH:mm:ss")
 
 # output the result properties
 if ($debug) {
