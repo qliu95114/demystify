@@ -75,7 +75,8 @@ Function Invoke-ChartGPTCompletion {
         [Parameter(Mandatory = $true)][string]$DeploymentName,
         [Parameter(Mandatory = $true)][string]$Prompt,
         [Parameter(Mandatory = $true)][string]$Message,
-        [int]$token=8000
+        [int]$token=8000,
+        [single]$temperature=0.7
     )
 
     $url = "$($endpoint)openai/deployments/$DeploymentName/chat/completions?api-version=2023-05-15"
@@ -98,11 +99,11 @@ Function Invoke-ChartGPTCompletion {
     $payload = [PSCustomObject]@{
         "model"             = $DeploymentName
         "frequency_penalty" = 0
-        "max_tokens"        = $token
+        #"max_tokens"       = $token  #remve api token limit and see what we will have
         "messages"          = @($promptPayload, $messagePayload)
         "presence_penalty"  = 0
         "stream"            = $false
-        "temperature"       = 0.7
+        "temperature"       = $temperature
         "top_p"             = 0.95
     }
 

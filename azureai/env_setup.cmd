@@ -15,6 +15,20 @@
 :: 2. Locate the OpenAI resource you created during the application process.
 :: 3. Select the resource and navigate to the **Manage Deployments** tab, it will open https://oai.azure.com in a new browser tab
 :: 4. Click on **New Deployment** to create a new deployment, give it a name and description.
+
+:: In light of the recent API token limitations (1106 token), it is advisable to adhere to the standard naming convention for new deployments. 
+:: Additionally, it is recommended to transition from using the "Environment" method to the "$env:USERPROFILE\.azureai\azureai_config.json" method.
+
+:: DeploymentName
+:: gpt-35-turbo-16k_0613
+:: gpt-35-turbo_0613
+:: gpt-35-turbo-16k_0613
+:: gpt-35-turbo_0613
+:: gpt-35-turbo_1106
+:: gpt-4-32k_0613
+:: gpt-4_0613
+:: gpt-4_1106
+
 :: 5. Choose the **GPT-3.5-16k** model from the available options.
 :: 6. Configure the deployment settings according to your requirements. 
 :: 7. Review the configuration and click on **Create Deployment** to start the deployment process.
@@ -31,10 +45,23 @@
 :: With the endpoint, key, and deployment name, you can now execute the batch file below to set the environment variables required for accessing the deployment.
 :: Reminder: Do not, Do not, Do not git commit your personal key, endpoint, and deployment name to the repository.
 
+:: Please refrain from using both OPENAI_TOKENS_AZURE and OPENAI_MAXTOKENSOUTPUT_AZURE or OPENAI_MAXTOKENSINPUT_AZURE. 
+:: If using one of the token configuration settings, ensure that the other is set to empty.
+
+:: For example, you can either:
+:: 1. SETX OPENAI_TOKENS_AZURE ""
+::    SETX OPENAI_MAXTOKENSOUTPUT_AZURE "4096"
+::    SETX OPENAI_MAXTOKENSINPUT_AZURE "128000"
+
+:: 2. SETX OPENAI_TOKENS_AZURE "32678"
+::    SETX OPENAI_MAXTOKENSOUTPUT_AZURE ""
+::    SETX OPENAI_MAXTOKENSINPUT_AZURE ""
+
 SETX OPENAI_API_KEY_AZURE "<Input your API key here>"
 SETX OPENAI_ENGINE_AZURE "<Input Deployment Name>"
 SETX OPENAI_ENDPOINT_AZURE "https://<Azure AI Endpoint>.openai.azure.com/"
 :: SETX OPENAI_TOKENS_AZURE "32768"  
+SETX OPENAI_TOKENS_AZURE ""  
 SETX OPENAI_MAXTOKENSOUTPUT_AZURE "4096"  
 SETX OPENAI_MAXTOKENSINPUT_AZURE "128000"  
 
