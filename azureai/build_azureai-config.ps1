@@ -35,7 +35,7 @@ if ((Get-Module -ListAvailable -Name Az.ResourceGraph).count -gt 0) {
 }
 
 if ($subcount=Get-AzSubscription | Measure-Object | Select-Object -ExpandProperty Count) {
-    Write-UTCLog "You have $subcount subscriptions" "Green"
+    Write-UTCLog "You have $subcount subscriptions" "Gray"
 } else {
     Write-UTCLog "You have no subscriptions, please login to Azure" "Red"
     Connect-AzAccount -ErrorAction SilentlyContinue
@@ -47,7 +47,7 @@ $usertoken = "Bearer " + $usertoken.Token
 $headers = @{
     'Authorization' = $usertoken
 }
-Write-UTCLog "Get current user Bearer token" "Green"
+Write-UTCLog "Get current user Bearer token" "Gray"
 
 #if subid is not provided, get all the resource group
 if ($subscriptionId -eq "") {
@@ -88,15 +88,15 @@ foreach ($subid in $result)
 
     # get-key key of Azure OpenAI resource
     Select-AzSubscription -subscriptionid $subid.subscriptionId -ErrorAction SilentlyContinue | Out-Null
-    Write-UTCLog "Switch to subscription $($subid.subscriptionId)" "Gray"
-    
+  
     $key=""
     $key=Get-AzCognitiveServicesAccountKey -ResourceGroupName $subid.resourceGroup -Name $subid.name -ErrorAction SilentlyContinue
 
     if ([string]::IsNullOrEmpty($key)) {
-        Write-UTCLog "Get-AzCognitiveServicesAccountKey failed, please check if you read access permission to subscription $($subid.subscriptionId)"  "Red"
+        Write-UTCLog "(Fail) Save configuration from subscription $($subid.subscriptionId):$($subid.name), please check if you have contributor permission to the resource."  "Red"
     }
     else {
+        Write-UTCLog "(Success) Save configuration from subscription $($subid.subscriptionId):$($subid.name)" "Green"
         $json = $jsonresult.value | ConvertTo-Json -Depth 100 | convertfrom-json 
         foreach ($deployment in $json)
         {

@@ -85,6 +85,9 @@ specify model name
 .PARAMETER modelversion
 specify version name
 
+.PARAMETER DonotUpdateLastConfig
+Do not update the last used configuration in $profile\.azureai\azureai_config_last.json
+
 .EXAMPLE
 Use ask gpt with prompt and content
 .\invoke-azureai-gpt.ps1 -prompt "You are echo gpt, repeat everything received" -content "good morning"
@@ -151,10 +154,9 @@ Param(
     [switch] $listconfig,
     [ValidateSet("gpt-35-turbo","gpt-35-turbo-16k","gpt-35-turbo-instruct","gpt-4","gpt-4-32k")][string] $modelname,
     [ValidateSet("1","001","2","0301","0314","0613","0914","1106","1106-Preview")][string] $modelversion,
+    [switch] $DonotUpdateLastConfig,
     [switch] $debug
 )
-
-
 
 $scriptDir = Split-Path -Path $MyInvocation.MyCommand.Definition -Parent
 . $scriptDir\utils.ps1
@@ -232,13 +234,24 @@ if ($listconfig)
 # Validate Azure AI parameters, when v1 & v2 all parameter is not configure 
 #if (!$endpoint -or !$DeploymentName -or !$apikey -or !$modelname -or !$modelversion) { 
 if ([string]::IsNullOrEmpty($endpoint) -and [string]::IsNullOrEmpty($DeploymentName) -and [string]::IsNullOrEmpty($apikey) -and [string]::IsNullOrEmpty($modelname) -and [string]::IsNullOrEmpty($modelversion)){ 
-    Write-UTCLog "both v1 & v2 Configuration are not set, exit now. Please use .\env_setup.cmd (v1) or .\build_azure-config.ps1(v2) to config endpoint/deployment/apikey" -color "Red"; 
-    exit
+    # if azureai-config_last.json exist, read the configuration 
+    if (Test-path "$($env:USERPROFILE)\.azureai\azureai-config_last.json")
+    {
+        if ($debug) {Write-UTCLog "Use last config file: $($env:USERPROFILE)\.azureai\azureai-config_last.json" -color "Gray"}
+        $openai_configs=(get-content "$($env:USERPROFILE)\.azureai\azureai-config_last.json")|convertfrom-json
+        $endpoint = $openai_configs.endpoint
+        $DeploymentName = $openai_configs.DeploymentName
+        $apikey = $openai_configs.apikey
+    }
+    else {
+        Write-UTCLog "Azure OpenAi Config v1, v2, azureai-config_last.json are not set, exit now. Please refer .\build_azure-config.ps1(v2) or .\env_setup.cmd (v1) or config endpoint/deployment/apikey" -color "Red"; 
+        exit
+    }
 }
 
 if (![string]::IsNullOrEmpty($endpoint) -and ![string]::IsNullOrEmpty($DeploymentName) -and ![string]::IsNullOrEmpty($apikey))
 {
-    Write-UTCLog "v1 Configuration is set, v2 Configuration is ignored" -color "DarkCyan"
+    if ($debug) {Write-UTCLog "v1 Configuration or azureai-config_last are used" -color "DarkCyan"}
 }
 else {
     # if v2 configuration is set, then use v2 configuration
@@ -318,8 +331,15 @@ else {
     }
 }
 
-Write-UTCLog "Endpoint      : $($endpoint)" -color "gray"
-Write-UTCLog "Deployment    : $($DeploymentName)" -color "gray" 
+# review configuration is correct if there any of the following are null, exit
+if ([string]::IsNullOrEmpty($endpoint) -and [string]::IsNullOrEmpty($DeploymentName) -and [string]::IsNullOrEmpty($apikey))
+{
+    Write-UTCLog "Endpoint, DeploymentName, apikey are not set from v1/v2 configuration, exit now." -color "Red";
+    exit
+}
+else {
+    Write-UTCLog "Endpoint : $($endpoint) , Deployment : $($DeploymentName)" -color "gray"    <# Action when all if and elseif conditions are false #>
+}
 
 # if token is empty 
 # then check if we have maxtoken_input and maxtoken_output if that is not set, use default 8096
@@ -442,7 +462,6 @@ else {
 Write-UTCLog "Tokens        : user=$($utoken) , system=$($stoken) , tokens_inputs=$($utoken + $stoken).  Temperature : $($temperature)" -color "Green"
 $t0 = Get-Date
 $chat = Invoke-ChartGPTCompletion -Endpoint $endpoint -AccessKey $apikey -DeploymentName $DeploymentName -Prompt $promptText -Message $content -Temperature $temperature
-
 $suggestion = $chat.choices[0].message.content
 if ($PSVersionTable['PSVersion'].Major -eq 5) {
     $dstEncoding = [System.Text.Encoding]::GetEncoding('iso-8859-1')
@@ -461,6 +480,22 @@ if ($completionFile) {
 
 # get delta time between $t1 and t0 in seconds and in format of xx.xx
 $delta = "{0:N2}" -f ((Get-Date) - $t0).TotalSeconds
+
+#save the last used configuration $endpoint, $deploymentname, $apikey to $profile\.azureai\azureai_config_last.json
+if (!$DonotUpdateLastConfig)
+{
+    $lastconfigjson=@()
+    $lastconfig = New-Object PSObject
+    $lastconfig | Add-Member -MemberType NoteProperty -Name endpoint -Value $endpoint
+    $lastconfig | Add-Member -MemberType NoteProperty -Name DeploymentName -Value $DeploymentName
+    $lastconfig | Add-Member -MemberType NoteProperty -Name apikey -Value $apikey
+    $lastconfigjson += $lastconfig
+    $lastconfigjson | ConvertTo-Json | Out-File "$($env:USERPROFILE)\.azureai\azureai-config_last.json" -Encoding utf8
+    if ($debug) {Write-UTCLog "Last used configuration saved to $($env:USERPROFILE)\.azureai\azureai-config_last.json" -color "gray"  }
+}
+else {
+    if ($debug) {Write-UTCLog "Last used configuration is not updated" -color "gray"}
+}
 
 # print out the result
 Write-UTCLog "AI thinking time: $($delta) seconds"  -color "Cyan"
