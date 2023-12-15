@@ -6,7 +6,7 @@ Output: build a TEXT output Warp on top of Invoke-sqlcmd,
 
 Version: 1.0.20231215.1702
 
-2020-12-15, first version
+2023-12-15, first version
 
 #>
 
