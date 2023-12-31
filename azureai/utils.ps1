@@ -5,6 +5,73 @@ Function Write-UTCLog ([string]$message, [string]$color = "white") {
     Write-Host $logstamp -ForegroundColor $color
 }
 
+
+# Copy function from code365scripts.openai
+function Get-IsValidImage($path) {
+    # check if the url is a valid url for image, mediatype is jpg, png, gif
+    $valid = $false
+
+    # if the path is a local file path, then check if the file is a valid image file
+    if (Test-Path $path -PathType Leaf) {
+        $extension = [System.IO.Path]::GetExtension($path).TrimStart(".")
+        if ($extension -match "^(jpg|jpeg|png|gif)$") {
+            $valid = $true
+        }
+    }
+    elseif($path -match "^https?://") {
+        # send a head request to the url to check the header, 
+        $response = Invoke-WebRequest -Uri $url -Method Head -UseBasicParsing
+        # if the "Content-Type" is image/jpg or image/png or image/gif, then it is a valid
+        if ($response.Headers["Content-Type"] -match "image/(jpg|jpeg|png|gif)") {
+            $valid = $true
+        }
+    }
+
+    return $valid
+
+}
+function Get-OnlineImageBase64Uri($url) {
+    # Create a new WebClient instance
+    $webClient = New-Object System.Net.WebClient
+
+    # Download the image data
+    $imageData = $webClient.DownloadData($url)
+
+    # Convert the image data to base64
+    $base64 = [System.Convert]::ToBase64String($imageData)
+
+    # Get the image type from the URL
+    $type = if ($url -match "\.(\w+)$") { $Matches[1] } else { "png" }
+
+    # Create the data URI
+    $uri = "data:image/$type;base64=$base64" 
+
+
+    return $uri
+}
+
+function Get-ImageBase64Uri($file) {
+    # if the file is a local file path, then read the file as byte array
+    if (Test-Path $file -PathType Leaf) {
+        Write-UTCLog "Imagefile     : $file , convert to BASE64" -color "Yellow"
+        $image = [System.IO.File]::ReadAllBytes($file)
+        # get extension without dot
+        $type = [System.IO.Path]::GetExtension($file).TrimStart(".")
+        $base64 = [System.Convert]::ToBase64String($image)
+        $uri = "data:image/$($type);base64,$($base64)"
+        #$uri = """$($base64)"""
+        return $uri
+    }
+
+    if ($file -match "^https?://") {
+        Write-Verbose "Prompt is a url, read the url as prompt"
+        $uri = Get-OnlineImageBase64Uri -url $file
+
+        return $uri
+    }
+}
+
+
 # Powershell Function Send-AIEvent , 2023-08-12 , fix bug in retry logic
 Function Send-AIEvent {
     param (
@@ -78,8 +145,11 @@ Function Invoke-ChartGPTCompletion {
         [int]$token=8000,
         [single]$temperature=0.7
     )
-
-    $url = "$($endpoint)openai/deployments/$DeploymentName/chat/completions?api-version=2023-05-15"
+    
+    #"2023-07-01-preview"  "2023-05-15"
+    $api_version = "2023-07-01-preview"
+    
+    $url = "$($endpoint)openai/deployments/$($DeploymentName)/chat/completions?api-version=$($api_version)"
     if ($debug) { Write-UTCLog "AI Endpoints: $($url)" "DarkCyan" }
 
     $headers = @{
@@ -113,6 +183,76 @@ Function Invoke-ChartGPTCompletion {
     if ($debug) { Write-UTCLog "Payload: $($body)" "DarkCyan" }
     #$body = $body -creplace '\P{IsBasicLatin}'  # this leaves only ASCII characters does not accept the chinese characters
     $result = Invoke-RestMethod -Uri $url -Method Post -Headers $headers -Body $body -ContentType 'application/json;charset=utf-8' 
+    return $result;
+}
+
+Function Invoke-ChartGPTCompletionVision {
+    Param(
+        [Parameter(Mandatory = $true)][string]$endpoint,
+        [Parameter(Mandatory = $true)][string]$AccessKey,
+        [Parameter(Mandatory = $true)][string]$DeploymentName,
+        [Parameter(Mandatory = $true)][string]$Prompt,
+        [Parameter(Mandatory = $true)][string]$Message,
+        [Parameter(Mandatory = $true)][string]$Imagefile,
+        [single]$temperature=0.7
+    )
+    
+    #"2023-07-01-preview"  "2023-05-15"
+    $api_version = "2023-07-01-preview"
+    
+    $url = "$($endpoint)openai/deployments/$($DeploymentName)/chat/completions?api-version=$($api_version)"
+    if ($debug) { Write-UTCLog "AI Endpoints: $($url)" "DarkCyan" }
+
+    $headers = @{
+        "api-key" = $AccessKey
+    }
+
+    $promptPayload = [PSCustomObject]@{
+        "content" = "You are an AI assistant that helps people find information"
+        "role"    = "system"
+    }
+
+    $userTextPayload = [PSCustomObject]@{
+        "type" = "text"
+        "text" = $Message
+    }
+
+    # create imageURLPayload 
+    $uri= [PSCustomObject]@{
+        "url" = Get-ImageBase64Uri -file $Imagefile
+    }
+
+    $imageUrlPayload = [PSCustomObject]@{
+        "type"    = "image_url"
+        "image_url" = $uri
+    }
+
+    # Create UserPayload
+    $userPayload = [PSCustomObject]@{
+        "role"    = "user"
+        "content" = @($imageUrlPayload,$userTextPayload)
+    }
+
+    #Write-Host $userPayload.content
+    #Write-Host $userPayload.content.image_url
+
+    $payload = [PSCustomObject]@{
+        "model"             = $DeploymentName
+        "frequency_penalty" = 0
+        #"max_tokens"       = $token  #remve api token limit and see what we will have
+        "messages"          = @($promptPayload, $userPayload)
+        "presence_penalty"  = 0
+        "stream"            = $false
+        "temperature"       = $temperature
+        "top_p"             = 0.95
+    }
+
+    # return $payload
+    $body = ConvertTo-Json -InputObject $payload -Depth 10
+
+    if ($debug) { Write-UTCLog "Payload: $($body)" "DarkCyan" }
+    $result = Invoke-RestMethod -Uri $url -Method Post -Headers $headers -Body $body -ContentType 'application/json;charset=utf-8' 
+    if ($debug) { Write-UTCLog "Result: $($result)" "DarkCyan" }
     return $result;
 }
 
@@ -153,7 +293,7 @@ function Get-ContentNumbersTokens {
     return $numbersCount
 }
 
-# 使用示例
+
 function Get-ContentTokens {
     param (
         [Parameter(Mandatory = $true)][string]$content
@@ -179,4 +319,40 @@ function Get-ContentTokens {
     if ($debug) {Write-UTCLog "chartokens: $chartokens" "DarkCyan"}
     
     return $tokens
+}
+
+# 2023-12-30 , add function to find model name and version from config file
+function Find-ModelNameVersion{
+    param (
+        [Parameter(Mandatory = $true)][string]$endpoint,
+        [Parameter(Mandatory = $true)][string]$name
+    )
+    if ($debug) {Write-UTCLog "Find-ModelNameVersion: endpointURL: $endpoint" -color "DarkCyan"}
+    if ($debug) {Write-UTCLog "Find-ModelNameVersion: DeploymentName: $name" -color "DarkCyan"}
+    
+    # if file "$($env:USERPROFILE)\.azureai\azureai-config.json" exist and open it to get the model name and version
+    $configfile = "$($env:USERPROFILE)\.azureai\azureai-config.json"
+    if (Test-Path $configfile) {
+        $config = Get-Content $configfile | ConvertFrom-Json
+        # get extract endpoint name from the endpoint url
+        $endpointname = $endpoint.split('/')[2].Split('.')[0]
+        if ($debug) {Write-UTCLog "Find-ModelNameVersion: endpoint: $endpointname" -color "DarkCyan"}
+        foreach ($c in $config)
+        {
+            $account=$c.id.split('/')[8]
+            if ($account -eq $endpointname)
+            {
+                if ($debug) {Write-UTCLog "Find-ModelNameVersion: Match Endpoint found, $($c.id)" -color "DarkCyan"}
+                if ($c.name -eq $name)
+                {
+                    if ($debug) {Write-UTCLog "Find-ModelNameVersion: Match Deployment found, $($c.name)" -color "DarkCyan"}
+                    return $c.properties.model.name, $c.properties.model.version
+                }
+            }
+        }
+    }
+    else {
+        return $null,$null
+    }
+
 }

@@ -13,6 +13,7 @@ Parameters are divided into four categories:
 input (user prompt - only one of below two is required or needed）
     -content : [string] as user prompt string 
     -contentFile : [path to file] as user prompt string
+    -imageFile : [path to image] 
 input (system promt - only one of below three is required or needed）
     -prompt ： [string] as system prompt string   
     -promptchoice : [string] as promptchoice from prompt.json, （optional) -promptlibraryfile to overwrite default $($env:temp)\prompt.json
@@ -36,6 +37,9 @@ Content to be sent to Azure OpenAI GPT
 
 .PARAMETER contentFile
 Path to user prompt content file
+
+.PARAMETER imageFile
+Path to imageFile
 
 .PARAMETER prompt
 Prompt , that will be used as system prompt
@@ -137,23 +141,23 @@ https://github.com/chenxizhang/openai-powershell
 Param(
     [string] $content = "What to eat today",
     [string] $contentFile,
+    [string] $imageFile,
     [string] $prompt,
-    [ValidateSet("common_create_prompt","common_echo_text","common_polish_text","common_response_default","common_summarize_text","common_translate_to_en-us","common_translate_to_zh-cn","common_write_marketingcontent","devops_beauty_json","devops_explain_code","devops_kustokql_samplecode","devops_powershell_samplecode","devops_python_samplecode","support_AAD_copilot","support_sumary_notes","support_ta_case_skill_label","support_update_casenotes","support_write_casesummary","support_write_initialresponse")][string]$promptchoice = "common_response_default",
+    [ValidateSet("common_create_prompt", "common_echo_text", "common_polish_text", "common_response_default", "common_summarize_text", "common_translate_to_en-us", "common_translate_to_zh-cn", "common_write_marketingcontent", "devops_beauty_json", "devops_explain_code", "devops_kustokql_samplecode", "devops_powershell_samplecode", "devops_python_samplecode", "support_AAD_copilot", "support_sumary_notes", "support_ta_case_skill_label", "support_update_casenotes", "support_write_casesummary", "support_write_initialresponse")][string]$promptchoice = "common_response_default",
     [string] $promptLibraryFile,
     [string] $promptFile,
     [string] $completionFile,
     [string] $endpoint = $env:OPENAI_ENDPOINT_AZURE,
-    # To correct use the deployment name, please ensure you create deployment in azure openai portal first and use the exact name matches the model name
     [string] $DeploymentName = $env:OPENAI_ENGINE_AZURE,
     [string] $apikey = $env:OPENAI_API_KEY_AZURE,
     [string] $token = $env:OPENAI_TOKENS_AZURE,
     [single] $temperature = 0.7,
-    [string] $maxtoken_output = $env:OPENAI_MAXTOKENSOUTPUT_AZURE,  # this is for max tokens we specific in supporting new api model GPT-4 or 3.5 1106 preview, the token limitation was change to Input : x and Output : 4096, instead of total token
-    [string] $maxtoken_input = $env:OPENAI_MAXTOKENSINPUT_AZURE,  # this is for max tokens we specific in supporting new api model GPT-4 or 3.5 1106 preview, the token limitation was change to Input : x and Output : 4096, instead of total token
+    [string] $maxtoken_output = $env:OPENAI_MAXTOKENSOUTPUT_AZURE, # this is for max tokens we specific in supporting new api model GPT-4 or 3.5 1106 preview, the token limitation was change to Input : x and Output : 4096, instead of total token
+    [string] $maxtoken_input = $env:OPENAI_MAXTOKENSINPUT_AZURE, # this is for max tokens we specific in supporting new api model GPT-4 or 3.5 1106 preview, the token limitation was change to Input : x and Output : 4096, instead of total token
     [string] $aikey,
     [switch] $listconfig,
-    [ValidateSet("gpt-35-turbo","gpt-35-turbo-16k","gpt-35-turbo-instruct","gpt-4","gpt-4-32k")][string] $modelname,
-    [ValidateSet("1","001","2","0301","0314","0613","0914","1106","1106-Preview")][string] $modelversion,
+    [ValidateSet("gpt-35-turbo", "gpt-35-turbo-16k", "gpt-35-turbo-instruct", "gpt-4", "gpt-4-32k")][string] $modelname,
+    [ValidateSet("1", "001", "2", "0301", "0314", "0613", "0914", "1106", "1106-Preview","vision-preview")][string] $modelversion,
     [switch] $DonotUpdateLastConfig,
     [switch] $debug
 )
@@ -178,15 +182,12 @@ $prompturl = "https://raw.githubusercontent.com/qliu95114/demystify/main/azureai
 # all failed, download from github
 
 # if listconfig is specified, dump the config parameters in $($env:USERPROFILE)\.azureai\azureai_config.json
-if ($listconfig) 
-{ 
+if ($listconfig) { 
     # dump the config parameters in $profile\.azureai\azureai-config.json
-    if (Test-path "$($env:USERPROFILE)\.azureai\azureai-config.json")
-    {
+    if (Test-path "$($env:USERPROFILE)\.azureai\azureai-config.json") {
         Write-UTCLog "Dump $($env:USERPROFILE)\.azureai\azureai-config.json, you can append the parameter sample" -color "Cyan" 
-        $openai_configs=(get-content "$($env:USERPROFILE)\.azureai\azureai-config.json")|convertfrom-json
-        foreach ($config in $openai_configs)
-        {
+        $openai_configs = (get-content "$($env:USERPROFILE)\.azureai\azureai-config.json") | convertfrom-json
+        foreach ($config in $openai_configs) {
             $endpoint = "https://$($config.Id.split("/")[8]).openai.azure.com/"
             $Deployment = $config.name
             $key = $config.key1
@@ -232,16 +233,23 @@ if ($listconfig)
 }
 
 # Validate Azure AI parameters, when v1 & v2 all parameter is not configure 
-#if (!$endpoint -or !$DeploymentName -or !$apikey -or !$modelname -or !$modelversion) { 
-if ([string]::IsNullOrEmpty($endpoint) -and [string]::IsNullOrEmpty($DeploymentName) -and [string]::IsNullOrEmpty($apikey) -and [string]::IsNullOrEmpty($modelname) -and [string]::IsNullOrEmpty($modelversion)){ 
+
+# Azure AI Connection cli/v1/v2 configuration priority
+# ** User can specify -endpoint, -DeploymentName, -apikey to overwrite all of above settings**
+# If nothing is specificed, try to load last used configuration from $profile\.azureai\azureai_config_last.json.
+# If $profile\.azureai\azureai_config_last.json does not exist, try to load v1 configuration from $env:OPENAI_ENDPOINT_AZURE, $env:OPENAI_ENGINE_AZURE, $env:OPENAI_API_KEY_AZURE
+# if v1 configurations are not set, then try to load v2 configuration from $profile\.azureai\azureai_config.json, at this time, $modelname or $modelversion is required
+# if all fails, exit
+
+if ([string]::IsNullOrEmpty($endpoint) -and [string]::IsNullOrEmpty($DeploymentName) -and [string]::IsNullOrEmpty($apikey) -and [string]::IsNullOrEmpty($modelname) -and [string]::IsNullOrEmpty($modelversion)) { 
     # if azureai-config_last.json exist, read the configuration 
-    if (Test-path "$($env:USERPROFILE)\.azureai\azureai-config_last.json")
-    {
-        if ($debug) {Write-UTCLog "Use last config file: $($env:USERPROFILE)\.azureai\azureai-config_last.json" -color "Gray"}
-        $openai_configs=(get-content "$($env:USERPROFILE)\.azureai\azureai-config_last.json")|convertfrom-json
+    if (Test-path "$($env:USERPROFILE)\.azureai\azureai-config_last.json") {
+        if ($debug) { Write-UTCLog "Use last config file: $($env:USERPROFILE)\.azureai\azureai-config_last.json" -color "Gray" }
+        $openai_configs = (get-content "$($env:USERPROFILE)\.azureai\azureai-config_last.json") | convertfrom-json
         $endpoint = $openai_configs.endpoint
         $DeploymentName = $openai_configs.DeploymentName
         $apikey = $openai_configs.apikey
+        $model_name, $model_version=Find-ModelNameVersion -endpoint $endpoint -Name $DeploymentName 
     }
     else {
         Write-UTCLog "Azure OpenAi Config v1, v2, azureai-config_last.json are not set, exit now. Please refer .\build_azure-config.ps1(v2) or .\env_setup.cmd (v1) or config endpoint/deployment/apikey" -color "Red"; 
@@ -249,19 +257,19 @@ if ([string]::IsNullOrEmpty($endpoint) -and [string]::IsNullOrEmpty($DeploymentN
     }
 }
 
-if (![string]::IsNullOrEmpty($endpoint) -and ![string]::IsNullOrEmpty($DeploymentName) -and ![string]::IsNullOrEmpty($apikey))
-{
-    if ($debug) {Write-UTCLog "v1 Configuration or azureai-config_last are used" -color "DarkCyan"}
+if (![string]::IsNullOrEmpty($endpoint) -and ![string]::IsNullOrEmpty($DeploymentName) -and ![string]::IsNullOrEmpty($apikey)) {
+    if ($debug) { 
+        Write-UTCLog "v1 Configuration or azureai-config_last are used" -color "DarkCyan" 
+    }
+    $model_name, $model_version=Find-ModelNameVersion -endpoint $endpoint -Name $DeploymentName 
 }
 else {
     # if v2 configuration is set, then use v2 configuration
-    if ((![string]::$modelname) -and (Test-path "$($env:USERPROFILE)\.azureai\azureai-config.json" ))
-    {
+    if ((![string]::$modelname) -and (Test-path "$($env:USERPROFILE)\.azureai\azureai-config.json" )) {
         Write-UTCLog "v2 Configuration is set" -color "DarkCyan"
-        $openai_configs=(get-content "$($env:USERPROFILE)\.azureai\azureai-config.json")|convertfrom-json
+        $openai_configs = (get-content "$($env:USERPROFILE)\.azureai\azureai-config.json") | convertfrom-json
         $configObjects = @()  # create empty array
-        foreach ($config in $openai_configs)
-        {
+        foreach ($config in $openai_configs) {
             # both $modelname and $modelversion are specified
             if (![string]::IsNullOrEmpty($modelname) -and ![string]::IsNullOrEmpty($modelversion)) {
                 if (($config.properties.model.name -eq $modelname) -and ($config.properties.model.version -eq $modelversion)) {
@@ -304,20 +312,23 @@ else {
                 }
             }
         }
+
         # create random number between 0 and $configObjects.count
         if ($configObjects.count -eq 0) {
             Write-UTCLog "No matching model found, please check '-listconfig -modelname $($modelname) -modelversion $($modelversion)' and verify if there is a result" -color "Red"
             exit
         }
 
-        if ($configObjects.count -eq 1) {  # if only 1 model found, use it
+        if ($configObjects.count -eq 1) {
+            # if only 1 model found, use it
             $endpoint = $configObjects[0].endpoint
             $DeploymentName = $configObjects[0].DeploymentName
             $apikey = $configObjects[0].apikey
             $model_name = $configObjects[0].model_name
             $model_version = $configObjects[0].model_version
         }
-        else { # if more than 1 model found, use random one
+        else {
+            # if more than 1 model found, use random one
             $random = Get-Random -Minimum 0 -Maximum $configObjects.count
             $endpoint = $configObjects[$random].endpoint
             $DeploymentName = $configObjects[$random].DeploymentName
@@ -332,13 +343,12 @@ else {
 }
 
 # review configuration is correct if there any of the following are null, exit
-if ([string]::IsNullOrEmpty($endpoint) -and [string]::IsNullOrEmpty($DeploymentName) -and [string]::IsNullOrEmpty($apikey))
-{
+if ([string]::IsNullOrEmpty($endpoint) -and [string]::IsNullOrEmpty($DeploymentName) -and [string]::IsNullOrEmpty($apikey)) {
     Write-UTCLog "Endpoint, DeploymentName, apikey are not set from v1/v2 configuration, exit now." -color "Red";
     exit
 }
 else {
-    Write-UTCLog "Endpoint : $($endpoint) , Deployment : $($DeploymentName)" -color "gray"    <# Action when all if and elseif conditions are false #>
+    Write-UTCLog "Endpoint : $($endpoint) , Deployment : $($DeploymentName), ModelName: $($model_name), ModelVersion: $($model_version)" -color "gray"
 }
 
 # if token is empty 
@@ -369,10 +379,18 @@ if (![string]::IsNullOrEmpty($prompt)) {
     $promptforlogging = "PromptCustom: $($promptText.length) chars"
 }
 else {
-    if ($promptFile -and (Test-Path $promptFile)) {
-        $promptText = Get-Content $promptFile -Raw
-        Write-UTCLog "PromptFile system, use prompt from custom file: $promptFile" -color "DarkCyan" 
-        $promptforlogging = "PromptFile: $($promptFile)" 
+    if ($promptFile) {
+        if (Test-Path $promptFile) 
+        {
+            # if promptFile is specified and exists       
+            $promptText = Get-Content $promptFile -Raw
+            Write-UTCLog "PromptFile system, use prompt from custom file: $promptFile" -color "DarkCyan" 
+            $promptforlogging = "PromptFile: $($promptFile)" 
+        }
+        else {
+            Write-UTCLog "PromptFiles ($($promptFile)) does not exist, please check"  -color "red"       
+            exit
+        }
     }
     else { 
         # Check if promptLibraryFile is specified and exists
@@ -461,7 +479,15 @@ else {
 }#>
 Write-UTCLog "Tokens        : user=$($utoken) , system=$($stoken) , tokens_inputs=$($utoken + $stoken).  Temperature : $($temperature)" -color "Green"
 $t0 = Get-Date
-$chat = Invoke-ChartGPTCompletion -Endpoint $endpoint -AccessKey $apikey -DeploymentName $DeploymentName -Prompt $promptText -Message $content -Temperature $temperature
+
+if ([string]::IsNullOrEmpty($imageFile))
+{
+    $chat = Invoke-ChartGPTCompletion -Endpoint $endpoint -AccessKey $apikey -DeploymentName $DeploymentName -Prompt $promptText -Message $content -Temperature $temperature
+}
+else {
+    $chat = Invoke-ChartGPTCompletionVision -Endpoint $endpoint -AccessKey $apikey -DeploymentName $DeploymentName -Prompt $promptText -Message $content -Temperature $temperature -imageFile $imageFile
+}
+
 $suggestion = $chat.choices[0].message.content
 if ($PSVersionTable['PSVersion'].Major -eq 5) {
     $dstEncoding = [System.Text.Encoding]::GetEncoding('iso-8859-1')
@@ -482,19 +508,20 @@ if ($completionFile) {
 $delta = "{0:N2}" -f ((Get-Date) - $t0).TotalSeconds
 
 #save the last used configuration $endpoint, $deploymentname, $apikey to $profile\.azureai\azureai_config_last.json
-if (!$DonotUpdateLastConfig)
-{
-    $lastconfigjson=@()
+if (!$DonotUpdateLastConfig) {
+    $lastconfigjson = @()
     $lastconfig = New-Object PSObject
     $lastconfig | Add-Member -MemberType NoteProperty -Name endpoint -Value $endpoint
     $lastconfig | Add-Member -MemberType NoteProperty -Name DeploymentName -Value $DeploymentName
     $lastconfig | Add-Member -MemberType NoteProperty -Name apikey -Value $apikey
+    $lastconfig | Add-Member -MemberType NoteProperty -Name model_name -Value $model_name
+    $lastconfig | Add-Member -MemberType NoteProperty -Name model_version -Value $model_version
     $lastconfigjson += $lastconfig
     $lastconfigjson | ConvertTo-Json | Out-File "$($env:USERPROFILE)\.azureai\azureai-config_last.json" -Encoding utf8
-    if ($debug) {Write-UTCLog "Last used configuration saved to $($env:USERPROFILE)\.azureai\azureai-config_last.json" -color "gray"  }
+    if ($debug) { Write-UTCLog "Last used configuration saved to $($env:USERPROFILE)\.azureai\azureai-config_last.json" -color "gray" }
 }
 else {
-    if ($debug) {Write-UTCLog "Last used configuration is not updated" -color "gray"}
+    if ($debug) { Write-UTCLog "Last used configuration is not updated" -color "gray" }
 }
 
 # print out the result
@@ -528,7 +555,7 @@ else {
     #get hostname from $endpoint and retrieve the name before .openai.azure.com
     Send-AIEvent -piKey $aikey -pEventName $scriptname -pCustomProperties @{DeploymentName = $DeploymentName.tostring(); chatid = $chat.id.tostring();
         object = $chat.object.tostring(); model = $chat.model.tostring(); CreatedTime = $datetime; token_completion = $chat.usage.completion_tokens;
-        token_prompt = $chat.usage.prompt_tokens; token_total = $chat.usage.total_tokens; promptchoice = $promptforlogging; endpoint = $endpoint.split("/")[2].tostring() ; AIResponseTimeE2E = $delta;temperature = $temperature; 
+        token_prompt = $chat.usage.prompt_tokens; token_total = $chat.usage.total_tokens; promptchoice = $promptforlogging; endpoint = $endpoint.split("/")[2].tostring() ; AIResponseTimeE2E = $delta; temperature = $temperature; 
     }
     # CreatedTime is not accurate this is the time when i log the Send-AIEvnet
 }

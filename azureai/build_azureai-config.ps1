@@ -18,20 +18,16 @@ $scriptDir = Split-Path -Path $MyInvocation.MyCommand.Definition -Parent
 # to get the deployment id and name  
 # append the result to %userprofile%\.azureai\azureai-config.json
 
-# determine if connect-azaccount is available, if not install az module
-if ((Get-Module -ListAvailable -Name Az.Accounts).count -gt 0) {
-    Write-UTCLog "Az.Accounts module is installed" "Gray"
-} else {
-    Write-UTCLog "Az.Accounts module is not installed, installing..." "Yellow"
-    Install-Module -Name Az.Accounts -Force
-}
+# create a list object of Az.Accounts , Az.ResourceGraph and Az.CognitiveServices
+$modules = @("Az.Accounts", "Az.ResourceGraph", "Az.CognitiveServices")
 
-# detect if Az.ResourceGraph is not installed installed it via 'Install-Module -Name Az.ResourceGraph  '
-if ((Get-Module -ListAvailable -Name Az.ResourceGraph).count -gt 0) {
-    Write-UTCLog "Az.ResourceGraph module is installed" "Gray"
-} else {
-    Write-UTCLog "Az.ResourceGraph module is not installed, installing..." "Yellow"
-    Install-Module -Name Az.ResourceGraph -Force
+foreach ($m in $modules) {
+    if ((Get-Module -ListAvailable -Name $m).count -gt 0) {
+        Write-UTCLog "$m module is installed" "Gray"
+    } else {
+        Write-UTCLog "$m module is not installed, installing..." "Yellow"
+        Install-Module -Name $m -Force
+    }
 }
 
 if ($subcount=Get-AzSubscription | Measure-Object | Select-Object -ExpandProperty Count) {
