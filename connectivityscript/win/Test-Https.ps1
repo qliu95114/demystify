@@ -102,6 +102,8 @@ Function Send-AIEvent{
 #$logfile= Join-Path $logpath $($env:COMPUTERNAME+"_TestHTTPS_$($url.split('/')[2])_$((get-date).ToUniversalTime().ToString('yyyyMMddTHHmmss')).log")
 $logfile= Join-Path $logpath $($env:COMPUTERNAME+"_TestHTTPS_$($url.split('/')[2]).log")
 
+$scriptname = $MyInvocation.MyCommand.Name
+
 Write-UTCLog "Log File : $($logfile)" -color "Cyan"
 Write-UTCLog "Running Invoke-WebRequest(IWR) test, press CTRL + C to stop" -color "Cyan"
 Write-UTCLog "URL : $($Url) "  "Yellow"
@@ -156,7 +158,7 @@ while ($killswitch -ne 0)
         else 
         {
             Write-Host "Info : aikey is specified, Send-AIEvent() is called" -ForegroundColor "Green"
-            Send-AIEvent -piKey $aikey -pEventName "test-https_ps1" -pCustomProperties @{result=$strState.tostring();url=$Url.tostring();failcount="0";httpstatus=$out.StatusCode.tostring();responsesize=$out.RawContentLength.ToString()} 
+            Send-AIEvent -piKey $aikey -pEventName $scriptname -pCustomProperties @{result=$strState.tostring();url=$Url.tostring();failcount="0";httpstatus=$out.StatusCode.tostring();responsesize=$out.RawContentLength.ToString()} 
         }
 
         if($VerboseLog)
@@ -180,7 +182,7 @@ while ($killswitch -ne 0)
         else 
         {
             Write-Host "Info : aikey is specified, Send-AIEvent() is called" -ForegroundColor "Green"
-            Send-AIEvent -piKey $aikey -pEventName "test-https_ps1" -pCustomProperties @{result=$strState.tostring();url=$Url.tostring();failcount=$failcount.tostring();httpstatus=$_.Exception.Message.tostring();responsesize="0"} 
+            Send-AIEvent -piKey $aikey -pEventName $scriptname -pCustomProperties @{result=$strState.tostring();url=$Url.tostring();failcount=$failcount.tostring();httpstatus=$_.Exception.Message.tostring();responsesize="0"} 
         }
 
         if($VerboseLog)

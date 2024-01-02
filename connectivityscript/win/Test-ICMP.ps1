@@ -147,6 +147,7 @@ Function Send-AIEvent{
         $ProgressPreference = $temp
 }
 
+$scriptname = $MyInvocation.MyCommand.Name
 
 #$logfile= Join-Path $logpath $($env:COMPUTERNAME+"_Ping_"+$IPAddress+"_"+((get-date).ToUniversalTime()).ToString("yyyyMMddTHHmmss")+".log")
 $logfile= Join-Path $logpath $($env:COMPUTERNAME+"_Test-ICMP_"+$IPAddress+".log")
@@ -213,7 +214,7 @@ while (($killswitch -le $n) -or ($forever)) {
         else 
         {
             Write-Host "Info : aikey is specified, Send-AIEvent() is called" -ForegroundColor "Green"
-            Send-AIEvent -piKey $aikey -pEventName "test-icmp_ps1" -pCustomProperties @{status="ERROR";message="Ping Fail - Request timed out.";target=$IPAddress.tostring();latency="-1"} 
+            Send-AIEvent -piKey $aikey -pEventName $scriptname -pCustomProperties @{status="ERROR";message="Ping Fail - Request timed out.";target=$IPAddress.tostring();latency="-1"} 
         }
     }
     Else {
@@ -227,7 +228,7 @@ while (($killswitch -le $n) -or ($forever)) {
         else 
         {
             Write-Host "Info : aikey is specified, Send-AIEvent() is called" -ForegroundColor "Green"
-            Send-AIEvent -piKey $aikey -pEventName "test-icmp_ps1" -pCustomProperties @{status="INFO";message="Ping OK";target=$IPAddress.tostring();latency=$latency.ToString();containerid=$containerid.ToString()} 
+            Send-AIEvent -piKey $aikey -pEventName $scriptname -pCustomProperties @{status="INFO";message="Ping OK";target=$IPAddress.tostring();latency=$latency.ToString();containerid=$containerid.ToString()} 
         }
         Start-Sleep -Milliseconds $intervalinMS
     }

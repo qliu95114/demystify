@@ -186,7 +186,7 @@ switch ($PSCmdlet.ParameterSetName)
 
 Write-Host "`nRunning PSPING TCP test to $IPAddress : $port every $Interval seconds. Logs erros to screen. Press <CTRL> C to stop. `n" -Fo Cyan
 
-
+$scriptname = $MyInvocation.MyCommand.Name
 # Get the full path of $logpath if it was provided as local path .\
 $logpath = (Get-Item $logpath).FullName
 
@@ -294,7 +294,7 @@ while ($killswitch -ne 0)
         else 
         {
             Write-Host "Info : aikey is specified, Send-AIEvent() is called" -ForegroundColor "Green"
-            Send-AIEvent -piKey $aikey -pEventName "test-psping_ps1" -pCustomProperties @{RESULT="ERROR";DestIP=$ipaddress;DestPort=$port;Message=$result.ToString();FailCount=$failcount} 
+            Send-AIEvent -piKey $aikey -pEventName $scriptname -pCustomProperties @{RESULT="ERROR";DestIP=$ipaddress;DestPort=$port;Message=$result.ToString();FailCount=$failcount} 
         }
     }
     else 
@@ -311,7 +311,7 @@ while ($killswitch -ne 0)
         else 
         {
             Write-Host "Info : aikey is specified, Send-AIEvent() is called" -ForegroundColor "Green"
-            Send-AIEvent -piKey $aikey -pEventName "test-psping_ps1" -pCustomProperties @{RESULT="SUCCESS";DestIP=$ipaddress;DestPort=$port;Message=$result.ToString();FailCount=$failcount} 
+            Send-AIEvent -piKey $aikey -pEventName $scriptname -pCustomProperties @{RESULT="SUCCESS";DestIP=$ipaddress;DestPort=$port;Message=$result.ToString();FailCount=$failcount} 
         }
         $failcount=0
     }

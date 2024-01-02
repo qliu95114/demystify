@@ -154,12 +154,15 @@ Function invoke_nslookup([string]$dns,[string]$dnsserver)
     else 
     {
         Write-Host "Info : aikey is specified, Send-AIEvent() is called" -ForegroundColor "Green"
-        Send-AIEvent -piKey $aikey -pEventName "test-dns_ps1" -pCustomProperties @{latency=$duration.tostring();target=$dns.tostring();Message=$dnsresult.ToString()} 
+        Send-AIEvent -piKey $aikey -pEventName $global:scriptname -pCustomProperties @{latency=$duration.tostring();target=$dns.tostring();Message=$dnsresult.ToString()} 
     }
 
 }
 
 #main
+
+$global:scriptname = $MyInvocation.MyCommand.Name
+
 If ([string]::IsNullOrEmpty($logfile)) 
 {
     # use default path $env:temp , $env:computename, TEST-DNS, utc timestamp 

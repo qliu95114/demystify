@@ -65,6 +65,7 @@ Param (
        [int]$count=10,  # Total execution of $url or $urlfile (Default: 10,  0:forever) 
        [int]$delay=1000, # Milliseconds, dely between each execution of CURL (Default: 1000)
        [string]$logfile, #Provide Logfile path and filename, 
+       [string]$containerid,
        [guid]$aikey  #Provide Application Insigt instrumentation key 
 )
 
@@ -140,7 +141,7 @@ Function Write-UTCLog ([string]$message,[string]$color="white")
 #    	Write-Output $logstamp | Out-File $logfile -Encoding ASCII -append
 }
 
-Function invoke_curl([string]$url,[string]$ipaddr)
+Function invoke_curl([string]$url,[string]$ipaddr,[string]$containerid)
 {
     $cmd="curl.exe -k --connect-timeout $($timeout) -s -w ""remote_ip:%{remote_ip},dns_resolution:%{time_namelookup},tcp_established:%{time_connect},ssl_handshake_done:%{time_appconnect},TTFB:%{time_starttransfer},httpstatus:%{http_code},size_download:%{size_download}"" $($url) -o $($env:temp)\$($env:computername)_curl_result.html"
     if ([string]::IsNullOrEmpty($ipaddr)) {}
@@ -158,7 +159,7 @@ Function invoke_curl([string]$url,[string]$ipaddr)
     # Execute CURL and get output and duration
     $duration=(measure-command {$result=Invoke-Expression $cmd }).TotalSeconds
     $PreciseTimeStamp=((get-date).ToUniversalTime()).ToString("yyyy-MM-dd HH:mm:ss")
-    $Message="syscost:$($duration),$($url),$($ipaddr),$($result)"
+    $Message="syscost:$($duration),$($url),$($ipaddr),$($result),$($containerid)"
     "$($PreciseTimeStamp),$($Message)"
     "$($PreciseTimeStamp),$($Message)" | Out-File $logfile -Append -Encoding utf8
     
@@ -168,7 +169,7 @@ Function invoke_curl([string]$url,[string]$ipaddr)
     else 
     {
         Write-Host "Info : aikey is specified, Send-AIEvent() is called" -ForegroundColor "Green"
-        Send-AIEvent -piKey $aikey -pEventName "test-curl_ps1" -pCustomProperties @{Message=$Message.ToString()} 
+        Send-AIEvent -piKey $aikey -pEventName $global:scriptname -pCustomProperties @{Message=$Message.ToString()} 
     }
 }
 
@@ -178,10 +179,20 @@ If ([string]::IsNullOrEmpty($logfile))
     # use default path $env:temp , $env:computename, TEST-DNS, utc timestamp 
     $logfile= Join-Path  $($env:temp) $($env:COMPUTERNAME+"_Test-CURL_"+((get-date).ToUniversalTime()).ToString("yyyyMMddTHHmmss")+".log")
 }
-Write-UTCLog " LogFile   : $($logfile)"
-Write-UTCLog " Timeout   : $($timeout)" 
-Write-UTCLog " Count     : $($count)" 
-Write-UTCLog " Delay(ms) : $($delay)"
+
+# if containerid is empty or null, try to get it from goalstate
+if ([string]::IsNullOrEmpty($containerid)) { 
+    Write-UTCLog "ContainerId is empty, try to get it from goalstate" -color "Yellow"
+    $containerid=([xml](c:\windows\system32\curl --connect-timeout 0.2 "http://168.63.129.16/machine?comp=goalstate" -H "x-ms-guest-agent-name: WaAgent-2.7.0.0 (2.7.0.0)" -H "x-ms-version: 2012-11-30" -A """")).GoalState.Container.ContainerId
+}
+
+$global:scriptname = $MyInvocation.MyCommand.Name
+
+Write-UTCLog " LogFile     : $($logfile)"
+Write-UTCLog " Timeout     : $($timeout)" 
+Write-UTCLog " Count       : $($count)" 
+Write-UTCLog " Delay(ms)   : $($delay)"
+Write-UTCLog " ContainerId : $($containerid)"
 
 if ([string]::IsNullOrEmpty($aikey))
 {
@@ -203,7 +214,7 @@ if ([string]::IsNullOrEmpty($url) -and [string]::IsNullOrEmpty($urlfile))
         # run $count curl test
         for ($i=1;$i -le $count;$i++)  { 
             Write-UTCLog " Url $($i)/($count) : $($url)   UrlIpAddr  : $($urlipaddr)"   "Green"            
-            invoke_curl -url $url -ipaddr $urlipaddr
+            invoke_curl -url $url -ipaddr $urlipaddr -containerid $containerid
             start-sleep -Milliseconds $delay 
         }
     }
@@ -213,7 +224,7 @@ if ([string]::IsNullOrEmpty($url) -and [string]::IsNullOrEmpty($urlfile))
         while ($true)   
         {
             Write-UTCLog " Url $($i)/Forever : $($url)   UrlIpAddr  : $($urlipaddr)"   "Green"            
-            invoke_curl -url $url -ipaddr $urlipaddr
+            invoke_curl -url $url -ipaddr $urlipaddr -containerid $containerid
             start-sleep -Milliseconds $delay
             $i++
         }
@@ -229,7 +240,7 @@ else {
         {
             for ($i=1;$i -le $count;$i++) { 
                 Write-UTCLog " Url $($i)/$($count) : $($url)   UrlIpAddr  : $($urlipaddr)"   "Green"            
-                invoke_curl -url $url -ipaddr $urlipaddr
+                invoke_curl -url $url -ipaddr $urlipaddr -containerid $containerid
                 start-sleep -Milliseconds $delay
             }
         }
@@ -239,7 +250,7 @@ else {
             while ($true)   
             {
                 Write-UTCLog " Url $($i)/Forever : $($url)   UrlIpAddr  : $($urlipaddr)"   "Green"            
-                invoke_curl -url $url -ipaddr $urlipaddr
+                invoke_curl -url $url -ipaddr $urlipaddr -containerid $containerid
                 start-sleep -Milliseconds $delay
                 $i++
             }
