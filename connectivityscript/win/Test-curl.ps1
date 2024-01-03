@@ -1,19 +1,20 @@
 <#
 .SYNOPSIS
-DNS Test script and output to local log file
-> provide url
-> specify TEXT file contains a list of url test and resolver ip address. 
-> specify repeat count
+HTTP script (based on Curl) and output to local log file
+> Support hardcode --resolve ip address
+> Support TEXT file contains a list of urls 
+> Support Repeat count
+> Support CURL timeout
+> Support delay between each execution of CURL
+> Support Application Insight logging
+> Support Capture HTTP headers
 
 .DESCRIPTION
 HTTP/HTTPS Test script and output to local log file
-> provide url
-> specify TEXT file contains a list of url test and resolver ip address. 
-> specify repeat count
 > CURL source code check -w https://github.com/curl/curl/blob/master/src/tool_writeout.c
 
 .PARAMETER url
-The url to be tested by curl
+Provide URL to be tested 
 
 .PARAMETER urlfile
 Provide URLFile that contains list of url and resolve
@@ -22,7 +23,7 @@ Provide URLFile that contains list of url and resolve
 Provide Logfile path and filename
 
 .PARAMETER timeout
-CURL timeout in seconds, default 3.  --connect-timeout  (default:15) 
+CURL timeout in seconds, default 3.  --connect-timeout  (curl native default:15) 
 
 .PARAMETER count 
 Total execution of $url or $urlfile (Default: 10) , 0 - Forever
@@ -53,11 +54,11 @@ Using a d:\temp\urlfile.txt (you can have a list of URLs) and confirm curl timeo
 .\Test-Curl.ps1 -delay 0 -urlfile D:\temp\urlfile.txt -timeout 1
 
 .EXAMPLE
-Flood https://www.bing.com and confirm curl timeout is 1 second and result save to custom log d:\temp\a.log
+Flood https://www.bing.com and confirm curl timeout is 1 second, save result to custom log d:\temp\a.log
 .\Test-Curl.ps1 -delay 0 -url https://www.bing.com  -timeout 1 -logfile d:\temp\a.log
 
 .EXAMPLE
-Flood https://www.bing.com and confirm curl timeout is 1 second , send the result to Application Insight, 
+Flood https://www.bing.com and confirm curl timeout is 1 second, send the result to Application Insight and default log file
 .\Test-Curl.ps1 -delay 0 -url https://www.bing.com  -timeout 1 -aikey 11111111-1111-1111-1111-111111111111
 
 .EXAMPLE
