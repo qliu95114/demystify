@@ -247,8 +247,16 @@ if ([string]::IsNullOrEmpty($url) -and [string]::IsNullOrEmpty($urlfile))
         # run $count curl test
         for ($i=1;$i -le $count;$i++)  { 
             Write-UTCLog " Url $($i)/($count) : $($url)   UrlIpAddr  : $($urlipaddr)"   "Green"            
-            invoke_curl -url $url -ipaddr $urlipaddr -containerid $containerid -httpheaders $httpheaders
-            start-sleep -Milliseconds $delay 
+            # caculate duration of curl.exe
+            $syscost=Measure-Command {invoke_curl -url $url -ipaddr $urlipaddr -containerid $containerid -httpheaders $httpheaders}
+            if (($delay - $syscost.TotalMilliseconds) -gt 0 )
+                {
+                    Write-UTCLog "Sleep $($delay - $syscost.TotalMilliseconds) ms" "Yellow"
+                    start-sleep -Milliseconds ($delay - $syscost.TotalMilliseconds)
+                }
+                else {
+                    Write-UTCLog "Overdue : Sleep 0 ms" "Yellow"
+                }                
         }
     }
     else {
@@ -257,8 +265,15 @@ if ([string]::IsNullOrEmpty($url) -and [string]::IsNullOrEmpty($urlfile))
         while ($true)   
         {
             Write-UTCLog " Url $($i)/Forever : $($url)   UrlIpAddr  : $($urlipaddr)"   "Green"            
-            invoke_curl -url $url -ipaddr $urlipaddr -containerid $containerid -httpheaders $httpheaders
-            start-sleep -Milliseconds $delay
+            $syscost=Measure-Command {invoke_curl -url $url -ipaddr $urlipaddr -containerid $containerid -httpheaders $httpheaders}
+            if (($delay - $syscost.TotalMilliseconds) -gt 0 )
+                {
+                    Write-UTCLog "Sleep $($delay - $syscost.TotalMilliseconds) ms" "Yellow"
+                    start-sleep -Milliseconds ($delay - $syscost.TotalMilliseconds)
+                }
+                else {
+                    Write-UTCLog "Overdue : Sleep 0 ms" "Yellow"
+                }
             $i++
         }
     }
@@ -273,8 +288,15 @@ else {
         {
             for ($i=1;$i -le $count;$i++) { 
                 Write-UTCLog " Url $($i)/$($count) : $($url)   UrlIpAddr  : $($urlipaddr)"   "Green"            
-                invoke_curl -url $url -ipaddr $urlipaddr -containerid $containerid -httpheaders $httpheaders
-                start-sleep -Milliseconds $delay
+                $syscost=Measure-Command {invoke_curl -url $url -ipaddr $urlipaddr -containerid $containerid -httpheaders $httpheaders}
+                if (($delay - $syscost.TotalMilliseconds) -gt 0 )
+                    {
+                        Write-UTCLog "Sleep $($delay - $syscost.TotalMilliseconds) ms" "Yellow"
+                        start-sleep -Milliseconds ($delay - $syscost.TotalMilliseconds)
+                    }
+                    else {
+                        Write-UTCLog "Overdue : Sleep 0 ms" "Yellow"
+                    }    
             }
         }
         else{
@@ -283,8 +305,15 @@ else {
             while ($true)   
             {
                 Write-UTCLog " Url $($i)/Forever : $($url)   UrlIpAddr  : $($urlipaddr)"   "Green"            
-                invoke_curl -url $url -ipaddr $urlipaddr -containerid $containerid -httpheaders $httpheaders
-                start-sleep -Milliseconds $delay
+                $syscost=Measure-Command {invoke_curl -url $url -ipaddr $urlipaddr -containerid $containerid -httpheaders $httpheaders}
+                if (($delay - $syscost.TotalMilliseconds) -gt 0 )
+                    {
+                        Write-UTCLog "Sleep $($delay - $syscost.TotalMilliseconds) ms" "Yellow"
+                        start-sleep -Milliseconds ($delay - $syscost.TotalMilliseconds)
+                    }
+                    else {
+                        Write-UTCLog "Overdue : Sleep 0 ms" "Yellow"
+                    }    
                 $i++
             }
         }
@@ -311,8 +340,15 @@ else {
                         }
                         else{
                             Write-UTCLog " Url $($j)/$($urllist.count) - $($i)/$($count) : $($urlitem)   UrlIpAddr  : $($urlip)"   "Green"
-                            invoke_curl -url $urlitem -ipaddr $urlip -httpheaders $httpheaders
-                            start-sleep -Milliseconds $delay
+                            $syscost=Measure-Command {invoke_curl -url $url -ipaddr $urlipaddr -containerid $containerid -httpheaders $httpheaders}
+                            if (($delay - $syscost.TotalMilliseconds) -gt 0 )
+                                {
+                                    Write-UTCLog "Sleep $($delay - $syscost.TotalMilliseconds) ms" "Yellow"
+                                    start-sleep -Milliseconds ($delay - $syscost.TotalMilliseconds)
+                                }
+                                else {
+                                    Write-UTCLog "Overdue : Sleep 0 ms" "Yellow"
+                                }    
                         }
                         $j++
                     }
@@ -333,8 +369,15 @@ else {
                         }
                         else{
                             Write-UTCLog " Url $($j)/$($urllist.count) - $($i)/forever : $($urlitem)   UrlIpAddr  : $($urlip)"   "Green"
-                            invoke_curl -url $urlitem -ipaddr $urlip -httpheaders $httpheaders
-                            start-sleep -Milliseconds $delay
+                            $syscost=Measure-Command {invoke_curl -url $url -ipaddr $urlipaddr -containerid $containerid -httpheaders $httpheaders}
+                            if (($delay - $syscost.TotalMilliseconds) -gt 0 )
+                                {
+                                    Write-UTCLog "Sleep $($delay - $syscost.TotalMilliseconds) ms" "Yellow"
+                                    start-sleep -Milliseconds ($delay - $syscost.TotalMilliseconds)
+                                }
+                                else {
+                                    Write-UTCLog "Overdue : Sleep 0 ms" "Yellow"
+                                }    
                         }
                         $j++
                     }
