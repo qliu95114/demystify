@@ -251,11 +251,11 @@ if ([string]::IsNullOrEmpty($url) -and [string]::IsNullOrEmpty($urlfile))
             $syscost=Measure-Command {invoke_curl -url $url -ipaddr $urlipaddr -containerid $containerid -httpheaders $httpheaders}
             if (($delay - $syscost.TotalMilliseconds) -gt 0 )
                 {
-                    Write-UTCLog "Sleep $($delay - $syscost.TotalMilliseconds) ms" "Yellow"
+                    Write-UTCLog "Sleep $($delay - $syscost.TotalMilliseconds) ms" "gray"
                     start-sleep -Milliseconds ($delay - $syscost.TotalMilliseconds)
                 }
                 else {
-                    Write-UTCLog "Overdue : Sleep 0 ms" "Yellow"
+                    Write-UTCLog "Overdue : Sleep 0 ms" "red"
                 }                
         }
     }
@@ -268,11 +268,11 @@ if ([string]::IsNullOrEmpty($url) -and [string]::IsNullOrEmpty($urlfile))
             $syscost=Measure-Command {invoke_curl -url $url -ipaddr $urlipaddr -containerid $containerid -httpheaders $httpheaders}
             if (($delay - $syscost.TotalMilliseconds) -gt 0 )
                 {
-                    Write-UTCLog "Sleep $($delay - $syscost.TotalMilliseconds) ms" "Yellow"
+                    Write-UTCLog "Sleep $($delay - $syscost.TotalMilliseconds) ms" "gray"
                     start-sleep -Milliseconds ($delay - $syscost.TotalMilliseconds)
                 }
                 else {
-                    Write-UTCLog "Overdue : Sleep 0 ms" "Yellow"
+                    Write-UTCLog "Overdue : Sleep 0 ms" "red"
                 }
             $i++
         }
@@ -291,11 +291,11 @@ else {
                 $syscost=Measure-Command {invoke_curl -url $url -ipaddr $urlipaddr -containerid $containerid -httpheaders $httpheaders}
                 if (($delay - $syscost.TotalMilliseconds) -gt 0 )
                     {
-                        Write-UTCLog "Sleep $($delay - $syscost.TotalMilliseconds) ms" "Yellow"
+                        Write-UTCLog "Sleep $($delay - $syscost.TotalMilliseconds) ms" "gray"
                         start-sleep -Milliseconds ($delay - $syscost.TotalMilliseconds)
                     }
                     else {
-                        Write-UTCLog "Overdue : Sleep 0 ms" "Yellow"
+                        Write-UTCLog "Overdue : Sleep 0 ms" "red"
                     }    
             }
         }
@@ -308,11 +308,11 @@ else {
                 $syscost=Measure-Command {invoke_curl -url $url -ipaddr $urlipaddr -containerid $containerid -httpheaders $httpheaders}
                 if (($delay - $syscost.TotalMilliseconds) -gt 0 )
                     {
-                        Write-UTCLog "Sleep $($delay - $syscost.TotalMilliseconds) ms" "Yellow"
+                        Write-UTCLog "Sleep $($delay - $syscost.TotalMilliseconds) ms" "gray"
                         start-sleep -Milliseconds ($delay - $syscost.TotalMilliseconds)
                     }
                     else {
-                        Write-UTCLog "Overdue : Sleep 0 ms" "Yellow"
+                        Write-UTCLog "Overdue : Sleep 0 ms" "red"
                     }    
                 $i++
             }
@@ -343,11 +343,11 @@ else {
                             $syscost=Measure-Command {invoke_curl -url $url -ipaddr $urlipaddr -containerid $containerid -httpheaders $httpheaders}
                             if (($delay - $syscost.TotalMilliseconds) -gt 0 )
                                 {
-                                    Write-UTCLog "Sleep $($delay - $syscost.TotalMilliseconds) ms" "Yellow"
+                                    Write-UTCLog "Sleep $($delay - $syscost.TotalMilliseconds) ms" "gray"
                                     start-sleep -Milliseconds ($delay - $syscost.TotalMilliseconds)
                                 }
                                 else {
-                                    Write-UTCLog "Overdue : Sleep 0 ms" "Yellow"
+                                    Write-UTCLog "Overdue : Sleep 0 ms" "red"
                                 }    
                         }
                         $j++
@@ -372,11 +372,11 @@ else {
                             $syscost=Measure-Command {invoke_curl -url $url -ipaddr $urlipaddr -containerid $containerid -httpheaders $httpheaders}
                             if (($delay - $syscost.TotalMilliseconds) -gt 0 )
                                 {
-                                    Write-UTCLog "Sleep $($delay - $syscost.TotalMilliseconds) ms" "Yellow"
+                                    Write-UTCLog "Sleep $($delay - $syscost.TotalMilliseconds) ms" "gray"
                                     start-sleep -Milliseconds ($delay - $syscost.TotalMilliseconds)
                                 }
                                 else {
-                                    Write-UTCLog "Overdue : Sleep 0 ms" "Yellow"
+                                    Write-UTCLog "Overdue : Sleep 0 ms" "red"
                                 }    
                         }
                         $j++
