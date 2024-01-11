@@ -35,7 +35,10 @@ Milliseconds, dely between each execution of $url, but there is no delay within 
 GUID, Instrumentation Key used by Application Insight
 
 .PARAMETER httpheaders
-Give the options for if we want to capture the http headers, we can use , to include multiple headers for example "X-Azure-Ref,Content-Type"
+Give the options for if we want to capture the http headers, we can use ; to include multiple headers for example "X-Azure-Ref;Content-Type"
+
+.PARAMETER httprequestheaders
+Give the options for if we want to add http request headers, we can use ; to include multiple headers for example "connection: close; User-Agent: curl/7.55.1-powershell; Accept: */*"
 
 .PARAMETER containerid
 (Optional) ContainerId, if not provided, try to get it from goalstate (this assume we are running in Azure VM)
@@ -76,8 +79,10 @@ Param (
        [int]$delay=1000, # Milliseconds, dely between each execution of CURL (Default: 1000)
        [string]$logfile, #Provide Logfile path and filename, 
        [string]$containerid,
-       [string]$httpheaders, #provider http headers need be captured , for example "X-Azure-Ref,Content-Type"
-       [guid]$aikey  #Provide Application Insigt instrumentation key 
+       [string]$httpheaders, #provider http headers need be captured , for example "X-Azure-Ref;Content-Type"
+       [string]$httprequestheaders, #provider http request headers, for example "connection: close; User-Agent: curl/7.55.1-powershell; Accept: */*"
+       [guid]$aikey,  #Provide Application Insigt instrumentation key 
+       [switch]$debug
 )
 
 # Powershell Function Send-AIEvent , 2023-08-12 , fix bug in retry logic
@@ -152,11 +157,26 @@ Function Write-UTCLog ([string]$message,[string]$color="white")
 #    	Write-Output $logstamp | Out-File $logfile -Encoding ASCII -append
 }
 
-Function invoke_curl([string]$url,[string]$ipaddr,[string]$containerid,[string]$httpheaders)
+Function invoke_curl([string]$url,[string]$ipaddr,[string]$containerid,[string]$httpheaders,[string]$httprequestheaders)
 {
     # give me random guid in case we need run multiple curl in parallel
     $guid = [guid]::NewGuid().ToString()
-    $cmd="curl.exe -k --connect-timeout $($timeout) -s -w ""remote_ip:%{remote_ip},dns_resolution:%{time_namelookup},tcp_established:%{time_connect},ssl_handshake_done:%{time_appconnect},TTFB:%{time_starttransfer},httpstatus:%{http_code},size_download:%{size_download}"" $($url) -o $($env:temp)\$($env:computername)_curl_result_$($guid).html -D $($env:temp)\$($env:computername)_curl_header_$($guid).txt"
+    # if $httprequestheaders is not empty, append it to $cmd
+    if ([string]::IsNullOrEmpty($httprequestheaders))
+    {
+        $cmd="curl.exe -k --connect-timeout $($timeout) -s -w ""remote_ip:%{remote_ip},dns_resolution:%{time_namelookup},tcp_established:%{time_connect},ssl_handshake_done:%{time_appconnect},TTFB:%{time_starttransfer},httpstatus:%{http_code},size_download:%{size_download}"" $($url) -o $($env:temp)\$($env:computername)_curl_result_$($guid).html -D $($env:temp)\$($env:computername)_curl_header_$($guid).txt"
+    }
+    else {
+        # split $httprequestheaders by ';'
+        $requestheaders=""
+        $httprequestheaders.split(';') | foreach { 
+            $requestheaders=$requestheaders+" --header ""$($_)""" 
+        }
+        $cmd="curl.exe -k --connect-timeout $($timeout) -s -w ""remote_ip:%{remote_ip},dns_resolution:%{time_namelookup},tcp_established:%{time_connect},ssl_handshake_done:%{time_appconnect},TTFB:%{time_starttransfer},httpstatus:%{http_code},size_download:%{size_download}"" $($requestheaders) $($url) -o $($env:temp)\$($env:computername)_curl_result_$($guid).html -D $($env:temp)\$($env:computername)_curl_header_$($guid).txt"
+    }
+
+    if ($debug) {Write-Host "Debug(Curl.exe) : $($cmd)" -ForegroundColor "DarkBlue"}
+    
     if ([string]::IsNullOrEmpty($ipaddr)) {}
     else {
         #samples  --resolve www.bing.com:80:8.8.8.8
@@ -172,17 +192,20 @@ Function invoke_curl([string]$url,[string]$ipaddr,[string]$containerid,[string]$
     # Execute CURL and get output and duration
     $duration=(measure-command {$result=Invoke-Expression $cmd }).TotalSeconds
     $PreciseTimeStamp=((get-date).ToUniversalTime()).ToString("yyyy-MM-dd HH:mm:ss")
-    $Message="syscost:$($duration),$($url),$($ipaddr),$($result),$($containerid)"
+    $Message="syscost:$($duration),$($url),$($ipaddr),$($result),$($containerid),$($httprequestheaders)"
+
+     if ($debug) {Write-Host "Debug(Message) : $($Message)" -ForegroundColor "DarkBlue"}
 
     # append headers to $message if $httpheaders is not empty and $($env:computername)_curl_header_$($guid).txt exist
     if ([string]::IsNullOrEmpty($httpheaders)) {} else {
         if (Test-Path "$($env:temp)\$($env:computername)_curl_header_$($guid).txt") {
             $headers=get-content "$($env:temp)\$($env:computername)_curl_header_$($guid).txt"
-            $httpheaders.split(',') | foreach { 
+            $httpheaders.split(';') | foreach { 
                 $headername=$_.split(':')[0]
                 $header=$headers | where {$_ -like "$($headername):*"}
                 if ([string]::IsNullOrEmpty($header)) {} else {$Message=$Message+",$($header)"}
             }
+            if ($debug) {Write-Host "Debug(GetResponseHeaders) : $($Message)" -ForegroundColor "DarkBlue"}
         }
         else {
             Write-UTCLog "Warning : HTTPHeaders ($($httpheaders)) is specified, but $($env:temp)\$($env:computername)_curl_header_$($guid).txt does not exist, skip append headers to message" -ForegroundColor "Yellow"
@@ -197,11 +220,11 @@ Function invoke_curl([string]$url,[string]$ipaddr,[string]$containerid,[string]$
     Remove-Item "$($env:temp)\$($env:computername)_curl_result_$($guid).html" -Force
 
     if ([string]::IsNullOrEmpty($aikey)) {
-        Write-Host "Info : aikey is not specified, Send-AIEvent() is skipped." -ForegroundColor "Gray"
+        if ($debug) {Write-Host "Info : aikey is not specified, Send-AIEvent() is skipped." -ForegroundColor "Gray"}
     } 
     else 
     {
-        Write-Host "Info : aikey is specified, Send-AIEvent() is called" -ForegroundColor "Green"
+        if ($debug) {Write-Host "Info : aikey is specified, Send-AIEvent() is called" -ForegroundColor "Green"}
         Send-AIEvent -piKey $aikey -pEventName $global:scriptname -pCustomProperties @{Message=$Message.ToString()} 
     }
 }
@@ -242,20 +265,21 @@ if ([string]::IsNullOrEmpty($url) -and [string]::IsNullOrEmpty($urlfile))
     $url="https://www.bing.com"
     Write-UTCLog " -url and -urlfile both empty, use default 'http://www.bing.com' to test" -color Yellow
     if ([string]::IsNullOrEmpty($urlipaddr)) {} else { Write-UTCLog " URLIPAddr : $($urlipaddr)" "green"}
+    if ([string]::IsNullOrEmpty($httprequestheaders)) {} else { Write-UTCLog " HTTP_Request_Header : $($httprequestheaders)" "green"}
     if ($count -ne 0)
     {
         # run $count curl test
         for ($i=1;$i -le $count;$i++)  { 
             Write-UTCLog " Url $($i)/($count) : $($url)   UrlIpAddr  : $($urlipaddr)"   "Green"            
             # caculate duration of curl.exe
-            $syscost=Measure-Command {invoke_curl -url $url -ipaddr $urlipaddr -containerid $containerid -httpheaders $httpheaders}
+            $syscost=Measure-Command {invoke_curl -url $url -ipaddr $urlipaddr -containerid $containerid -httpheaders $httpheaders -httprequestheaders $httprequestheaders}
             if (($delay - $syscost.TotalMilliseconds) -gt 0 )
                 {
-                    Write-UTCLog "Sleep $($delay - $syscost.TotalMilliseconds) ms" "gray"
+                    Write-UTCLog " Sleep $($delay - $syscost.TotalMilliseconds) ms" "gray"
                     start-sleep -Milliseconds ($delay - $syscost.TotalMilliseconds)
                 }
                 else {
-                    Write-UTCLog "Overdue : Sleep 0 ms" "red"
+                    Write-UTCLog " Overdue : Sleep 0 ms" "red"
                 }                
         }
     }
@@ -265,14 +289,14 @@ if ([string]::IsNullOrEmpty($url) -and [string]::IsNullOrEmpty($urlfile))
         while ($true)   
         {
             Write-UTCLog " Url $($i)/Forever : $($url)   UrlIpAddr  : $($urlipaddr)"   "Green"            
-            $syscost=Measure-Command {invoke_curl -url $url -ipaddr $urlipaddr -containerid $containerid -httpheaders $httpheaders}
+            $syscost=Measure-Command {invoke_curl -url $url -ipaddr $urlipaddr -containerid $containerid -httpheaders $httpheaders -httprequestheaders $httprequestheaders}
             if (($delay - $syscost.TotalMilliseconds) -gt 0 )
                 {
-                    Write-UTCLog "Sleep $($delay - $syscost.TotalMilliseconds) ms" "gray"
+                    Write-UTCLog " Sleep $($delay - $syscost.TotalMilliseconds) ms" "gray"
                     start-sleep -Milliseconds ($delay - $syscost.TotalMilliseconds)
                 }
                 else {
-                    Write-UTCLog "Overdue : Sleep 0 ms" "red"
+                    Write-UTCLog " Overdue : Sleep 0 ms" "red"
                 }
             $i++
         }
@@ -284,18 +308,19 @@ else {
     {
         Write-UTCLog " URL       : $($url)"  "green"
         if ([string]::IsNullOrEmpty($urlipaddr)) {} else { Write-UTCLog " URLIPAddr : $($urlipaddr)" "green"}        
+        if ([string]::IsNullOrEmpty($httprequestheaders)) {} else { Write-UTCLog " HTTP_Request_Header : $($httprequestheaders)" "green"}
         if ($count -ne 0)
         {
             for ($i=1;$i -le $count;$i++) { 
                 Write-UTCLog " Url $($i)/$($count) : $($url)   UrlIpAddr  : $($urlipaddr)"   "Green"            
-                $syscost=Measure-Command {invoke_curl -url $url -ipaddr $urlipaddr -containerid $containerid -httpheaders $httpheaders}
+                $syscost=Measure-Command {invoke_curl -url $url -ipaddr $urlipaddr -containerid $containerid -httpheaders $httpheaders -httprequestheaders $httprequestheaders}
                 if (($delay - $syscost.TotalMilliseconds) -gt 0 )
                     {
-                        Write-UTCLog "Sleep $($delay - $syscost.TotalMilliseconds) ms" "gray"
+                        Write-UTCLog " Sleep $($delay - $syscost.TotalMilliseconds) ms" "gray"
                         start-sleep -Milliseconds ($delay - $syscost.TotalMilliseconds)
                     }
                     else {
-                        Write-UTCLog "Overdue : Sleep 0 ms" "red"
+                        Write-UTCLog " Overdue : Sleep 0 ms" "red"
                     }    
             }
         }
@@ -305,14 +330,14 @@ else {
             while ($true)   
             {
                 Write-UTCLog " Url $($i)/Forever : $($url)   UrlIpAddr  : $($urlipaddr)"   "Green"            
-                $syscost=Measure-Command {invoke_curl -url $url -ipaddr $urlipaddr -containerid $containerid -httpheaders $httpheaders}
+                $syscost=Measure-Command {invoke_curl -url $url -ipaddr $urlipaddr -containerid $containerid -httpheaders $httpheaders -httprequestheaders $httprequestheaders}
                 if (($delay - $syscost.TotalMilliseconds) -gt 0 )
                     {
-                        Write-UTCLog "Sleep $($delay - $syscost.TotalMilliseconds) ms" "gray"
+                        Write-UTCLog " Sleep $($delay - $syscost.TotalMilliseconds) ms" "gray"
                         start-sleep -Milliseconds ($delay - $syscost.TotalMilliseconds)
                     }
                     else {
-                        Write-UTCLog "Overdue : Sleep 0 ms" "red"
+                        Write-UTCLog " Overdue : Sleep 0 ms" "red"
                     }    
                 $i++
             }
@@ -340,14 +365,14 @@ else {
                         }
                         else{
                             Write-UTCLog " Url $($j)/$($urllist.count) - $($i)/$($count) : $($urlitem)   UrlIpAddr  : $($urlip)"   "Green"
-                            $syscost=Measure-Command {invoke_curl -url $url -ipaddr $urlipaddr -containerid $containerid -httpheaders $httpheaders}
+                            $syscost=Measure-Command {invoke_curl -url $url -ipaddr $urlipaddr -containerid $containerid -httpheaders $httpheaders -httprequestheaders $httprequestheaders}
                             if (($delay - $syscost.TotalMilliseconds) -gt 0 )
                                 {
-                                    Write-UTCLog "Sleep $($delay - $syscost.TotalMilliseconds) ms" "gray"
+                                    Write-UTCLog " Sleep $($delay - $syscost.TotalMilliseconds) ms" "gray"
                                     start-sleep -Milliseconds ($delay - $syscost.TotalMilliseconds)
                                 }
                                 else {
-                                    Write-UTCLog "Overdue : Sleep 0 ms" "red"
+                                    Write-UTCLog " Overdue : Sleep 0 ms" "red"
                                 }    
                         }
                         $j++
@@ -369,14 +394,14 @@ else {
                         }
                         else{
                             Write-UTCLog " Url $($j)/$($urllist.count) - $($i)/forever : $($urlitem)   UrlIpAddr  : $($urlip)"   "Green"
-                            $syscost=Measure-Command {invoke_curl -url $url -ipaddr $urlipaddr -containerid $containerid -httpheaders $httpheaders}
+                            $syscost=Measure-Command {invoke_curl -url $url -ipaddr $urlipaddr -containerid $containerid -httpheaders $httpheaders -httprequestheaders $httprequestheaders}
                             if (($delay - $syscost.TotalMilliseconds) -gt 0 )
                                 {
-                                    Write-UTCLog "Sleep $($delay - $syscost.TotalMilliseconds) ms" "gray"
+                                    Write-UTCLog " Sleep $($delay - $syscost.TotalMilliseconds) ms" "gray"
                                     start-sleep -Milliseconds ($delay - $syscost.TotalMilliseconds)
                                 }
                                 else {
-                                    Write-UTCLog "Overdue : Sleep 0 ms" "red"
+                                    Write-UTCLog " Overdue : Sleep 0 ms" "red"
                                 }    
                         }
                         $j++
