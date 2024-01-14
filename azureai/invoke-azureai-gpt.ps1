@@ -444,7 +444,8 @@ $utoken = Get-ContentTokens $content
 
 # if content is too long, only print first 100 characters
 if ($content.length -ge 100) { $offset = 100 } else { $offset = $content.length }
-Write-UTCLog "Content(user) : $($content.Substring(0,$offset)) [max first 100 chars]" "Yellow"
+Write-UTCLog "Content(user) : $($content.Substring(0,$offset)) ..."  "Yellow"
+Write-UTCLog "Content(user) : Total characters number is $($content.Length)" "Yellow"
 
 # check if token is too large
 <#

@@ -27,7 +27,7 @@
 :: gpt-35-turbo_1106
 :: gpt-4-32k_0613
 :: gpt-4_0613
-:: gpt-4_1106
+:: gpt-4_1106-preview
 
 :: 5. Choose the **GPT-3.5-16k** model from the available options.
 :: 6. Configure the deployment settings according to your requirements. 
@@ -41,6 +41,14 @@
 :: 4. Find Endpoint, click copy and paste to **OPENAI_ENDPOINT_AZURE** below
 :: 2. Select the **Model deployments**, Click **Manage Deployments**, it will open https://oai.azure.com in a new browser tab. 
 :: 3. Locate the name of deployment you created and copy and paste to **OPENAI_ENGINE_AZURE** below 
+
+:: After setup the Azure Open AI, please use the powershell .\build_azureai-config.ps1 to create the config file (v2 configuration)
+:: The config file will be created in the following location: $env:USERPROFILE\.azureai\azureai_config.json
+
+:: command sample. please include your subid where you create the Azure Open AI account
+.\build_azureai-config.ps1 %subid%
+
+:: the following is the (v1 configuration), please do not use it
 
 :: With the endpoint, key, and deployment name, you can now execute the batch file below to set the environment variables required for accessing the deployment.
 :: Reminder: Do not, Do not, Do not git commit your personal key, endpoint, and deployment name to the repository.
@@ -57,13 +65,13 @@
 ::    SETX OPENAI_MAXTOKENSOUTPUT_AZURE ""
 ::    SETX OPENAI_MAXTOKENSINPUT_AZURE ""
 
-SETX OPENAI_API_KEY_AZURE "<Input your API key here>"
-SETX OPENAI_ENGINE_AZURE "<Input Deployment Name>"
-SETX OPENAI_ENDPOINT_AZURE "https://<Azure AI Endpoint>.openai.azure.com/"
+rem SETX OPENAI_API_KEY_AZURE "<Input your API key here>"
+rem SETX OPENAI_ENGINE_AZURE "<Input Deployment Name>"
+rem SETX OPENAI_ENDPOINT_AZURE "https://<Azure AI Endpoint>.openai.azure.com/"
 :: SETX OPENAI_TOKENS_AZURE "32768"  
-SETX OPENAI_TOKENS_AZURE ""  
-SETX OPENAI_MAXTOKENSOUTPUT_AZURE "4096"  
-SETX OPENAI_MAXTOKENSINPUT_AZURE "128000"  
+rem SETX OPENAI_TOKENS_AZURE ""  
+rem SETX OPENAI_MAXTOKENSOUTPUT_AZURE "4096"  
+rem SETX OPENAI_MAXTOKENSINPUT_AZURE "128000"  
 
 :: OPENAI_TOKENS_AZURE is the maxtokens please refer the link https://learn.microsoft.com/en-us/azure/ai-services/openai/concepts/models#model-summary-table-and-region-availability
 :: for summary https://github.com/qliu95114/demystify/blob/main/azureai/model_readme.md 

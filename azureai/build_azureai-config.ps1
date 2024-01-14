@@ -3,7 +3,8 @@
 # the script will then append the result to %userprofile%\.azureai\azureai-config.json
 
 Param(
-    [string] $subscriptionId
+    [string] $subscriptionId,  # only support one subscription id 
+    [string] $exlude_subid  # use to remove subscription id from the result, only support one subscription id
 )
 
 $scriptDir = Split-Path -Path $MyInvocation.MyCommand.Definition -Parent
@@ -50,6 +51,11 @@ if ($subscriptionId -eq "") {
     $qry = "resources | where type == 'microsoft.cognitiveservices/accounts' | where kind == 'OpenAI'"
 } else {
     $qry = "resources | where type == 'microsoft.cognitiveservices/accounts' | where kind == 'OpenAI' | where subscriptionId =~ '$($subscriptionId)'" 
+}
+
+# if exlude_subid is provided, remove the subscription id from the result
+if ($exlude_subid -ne "") {
+    $qry = $qry + "| where subscriptionId !~ '$($exlude_subid)'"
 }
 
 $result = Search-AzGraph -Query $qry -ErrorAction SilentlyContinue
