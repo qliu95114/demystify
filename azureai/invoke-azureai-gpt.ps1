@@ -16,7 +16,7 @@ input (user prompt - only one of below two is required or needed）
     -imageFile : [path to image] 
 input (system promt - only one of below three is required or needed）
     -prompt ： [string] as system prompt string   
-    -promptchoice : [string] as promptchoice from prompt.json, （optional) -promptlibraryfile to overwrite default $($env:temp)\prompt.json
+    -promptchoice : [string] as promptchoice from prompt.json, （optional) -promptlibraryfile to overwrite default $($env:USERPROFILE)\.azureai\prompt.json
     -promptFile : [path to file] as prompt.md file
 output (response)
     default output to console
@@ -114,7 +114,7 @@ Specify a prompt file to as system prompt, -promptchoice & -promtlibrary will be
 
 .EXAMPLE
 Use local -promptlibrary file instead of downloading from github, avoid download issue. 
-.\invoke-azureai-gpt.ps1 -content "help me write a prompt file that create project plan" -promptLibraryFile $env:temp\prompt.json -promptchoice "common_create_prompt" 
+.\invoke-azureai-gpt.ps1 -content "help me write a prompt file that create project plan" -promptLibraryFile $env:USERPROFILE\.azureai\prompt.json -promptchoice "common_create_prompt" 
 
 .EXAMPLE
 output the response to a file
@@ -167,18 +167,13 @@ $scriptDir = Split-Path -Path $MyInvocation.MyCommand.Definition -Parent
 
 # main program started
 
-# downoad prompt.json from url blow # https://raw.githubusercontent.com/qliu95114/demystify/main/azureai/prompt.json
-# $j=(get-content "$($env:temp)\prompt.json" -encoding utf8 )|convertfrom-json
-# $c="";foreach ($i in $j.'name_en-us') {$c+="""$($i)"","} ; $c.trimend(鈥?")
-# "Default","Text Polish","Chinese to English","English to Chinese","Code Re-Factory","Explain Code","Summarize Text","Echo","Powershell Sample Code","Python Sample Code","KQL ADX","Marketing Writing Assistant","JSON Format Assistant"
-
 # global initialization
 $scriptname = $MyInvocation.MyCommand.Name
 $prompturl = "https://raw.githubusercontent.com/qliu95114/demystify/main/azureai/prompt.json"
 
 # use $promptFile to overwrite the default prompt.json
 # use localprompt library file if specified
-# switch to default $env:temp\prompt.json if not specified
+# switch to default $env:USERPROFILE\.azureai\prompt.json if not specified
 # all failed, download from github
 
 # if listconfig is specified, dump the config parameters in $($env:USERPROFILE)\.azureai\azureai_config.json
@@ -401,8 +396,8 @@ else {
         else {
             # if prompt.json already exist, skip download from github
             # If not, download the prompt.json from github
-            $localPromptLibraryFile = "$($env:temp)\prompt.json"
-            if (Test-Path "$($env:temp)\prompt.json") {
+            $localPromptLibraryFile = "$($env:USERPROFILE)\.azureai\prompt.json"
+            if (Test-Path "$($env:USERPROFILE)\.azureai\prompt.json") {
                 Write-UTCLog "PromptLibrary (Cached): $localPromptLibraryFile" -color "Gray"
             }
             else {
