@@ -1,4 +1,4 @@
-# Script to covert Video by FFMPEG
+# Script to covert Video/Audio by FFMPEG
 
 ## Requirements
 
@@ -12,7 +12,7 @@
 1. screencapture_sample.txt : sample command of archiving "Playing Video" to local MP4 video file
 1. getExtendedFileProperties.ps1 : Function Get-ExtendedProperties to read file meta data
 
-## Sample 
+## Sample - Screen capture
 
 Get Video Duration (length)
 ```
@@ -56,3 +56,13 @@ set filename="D:\videocapture\training.mp4"
 ffmpeg -f gdigrab -framerate 30 -offset_x 0 -offset_y 0 -video_size 1920x1080 -show_region 1 -i desktop -f dshow -i audio="CABLE Output (VB-Audio Virtual Cable)" %filename%
 ```
 
+## Sample - Extract audio to mp3
+```
+ffmpeg -i input.mp4 -vn -acodec libmp3lame -q:a 4 output.mp3
+```
+
+- `-i input.mp4`: This specifies the input file, in this case, `input.mp4`. Replace `input.mp4` with the path and name of your actual MP4 file.
+- `-vn`: This option tells FFmpeg to disable video processing and only extract the audio.
+- `-acodec libmp3lame`: This specifies the audio codec to be used, which is `libmp3lame` for MP3 encoding.
+- `-q:a 4`: This sets the audio quality. The value ranges from 0 (best) to 9 (worst), with 4 being a good balance between quality and file size.
+- `output.mp3`: This specifies the output file name. Replace `output.mp3` with the desired name for your MP3 file.
