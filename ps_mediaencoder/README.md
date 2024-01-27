@@ -58,11 +58,11 @@ ffmpeg -f gdigrab -framerate 30 -offset_x 0 -offset_y 0 -video_size 1920x1080 -s
 
 ## Sample - Extract audio to mp3
 ```
-ffmpeg -i input.mp4 -vn -acodec libmp3lame -q:a 4 output.mp3
+ffmpeg -i input.mp4 -vn -acodec libmp3lame -q:a 3 output.mp3
 ```
 
 - `-i input.mp4`: This specifies the input file, in this case, `input.mp4`. Replace `input.mp4` with the path and name of your actual MP4 file.
 - `-vn`: This option tells FFmpeg to disable video processing and only extract the audio.
 - `-acodec libmp3lame`: This specifies the audio codec to be used, which is `libmp3lame` for MP3 encoding.
-- `-q:a 4`: This sets the audio quality. The value ranges from 0 (best) to 9 (worst), with 4 being a good balance between quality and file size.
+- `-q:a 3`: This sets the audio quality. The value ranges from 0 (best) to 9 (worst), with 4 being a good balance between quality and file size.
 - `output.mp3`: This specifies the output file name. Replace `output.mp3` with the desired name for your MP3 file.
