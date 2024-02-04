@@ -353,7 +353,7 @@ rem - for all files
 for /f "delims=" %a in ('dir /b /o *.pcap') do "c:\program files\wireshark\tshark.exe" -r "%a" -Y "icmp" -w "icmp\%~na.icmp.pcap"
 ```
 
-## Sample 11 - Find out all DNS NoResponse from trace , assume you already import Network Trace to Kusto
+## Sample 11A - Find out all DNS NoResponse from trace , assume you already import Network Trace to Kusto
 
 ```kql
 trace
@@ -382,3 +382,30 @@ trace
 
 ```
 ![image](./.image/kql_dnsquery_noresponse.png?raw=true)
+
+## Sample 11B - Find out all DNS NoResponse from trace , assume you already import Network Trace to Kusto
+
+```kql
+trace
+| where Protocol == 'DNS' and (Source == '168.63.129.16')
+| project frametime, Source, Destination, ipid, Protocol, Length, Info, udpdstport, udpsrcport, dnsid
+| extend FQDN = extract("([a-zA-Z0-9.-]+\\.[a-zA-Z]{2,})", 1, Info)| where isnotempty(FQDN) //extract FQDN from Info
+| summarize count() by FQDN, ipid, udpdstport, Length, dnsid //list all DNS reply packet with dnsid, ipid, fqdn
+| join kind=rightanti (trace   //right anti join to get all DNS request without response
+| where Protocol == 'DNS' and (Destination == '168.63.129.16')
+| extend FQDN = extract("([a-zA-Z0-9.-]+\\.[a-zA-Z]{2,})", 1, Info)| where isnotempty(FQDN)
+| project frametime, Source, Destination, ipid, Protocol, Length, Info, udpdstport, udpsrcport, dnsid
+| extend FQDN = extract("([a-zA-Z0-9.-]+\\.[a-zA-Z]{2,})", 1, Info)) on dnsid, $left.FQDN==$right.FQDN, $left.udpdstport==$right.udpsrcport
+| extend aa=tolong(replace_string(frametime,'.',''))/1000
+| extend TT=unixtime_microseconds_todatetime(aa)
+| order by TT asc // sort by timestamp
+| project TT,Source, Destination, ipid, Protocol,Length, FQDN, dnsid,  udpdstport, udpsrcport, Info
+| summarize count() by bin(TT,1s)| render timechart
+```
+![image](./.image/kql_dnsquery_noresponse2.png?raw=true)
+
+
+
+
+
+
