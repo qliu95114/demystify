@@ -479,8 +479,16 @@ if (Test-Path $tracefolder)  #validate
                         pcap2csv -pcapfile "$($pcapfile.FullName)" -csvfile "$($csvfolder)\$($csvfilename)" -jobid $jobid -multithread
                         $j++
                     }
-                    
-                    #need review the tshark process count, if the count is not 0, we need wait until all tshark process exit.
+
+                    # This code is designed to prevent a potential issue in multi-thread mode where the tshark process may not have started yet. To avoid initiating azcopy prematurely, we've incorporated a 10-second delay.
+                    $t01=Get-Date
+                    if ($(($t01-$t0).TotalSeconds) -le 5) 
+                    {
+                        Write-UTCLog "Less 5 seconds to complete multiple threads for tshark batch, wait 10 seconds to ensure tshark process was started" -color "Yellow"
+                        Start-Sleep -Seconds 10
+                    }
+
+                    # Pulling count of the tshark process, if the count is not 0, we need wait until all tshark process exit.
                     $tsharkcount=get-process|where-object {($_.name -eq "tshark") -or ($_.name -eq "editcap")}|measure-object|select-object -expandproperty count
                     Write-UTCLog " tshark count: $($tsharkcount)  " "Yellow"
 
@@ -549,7 +557,7 @@ if (Test-Path $tracefolder)  #validate
                         {
                             #check how many tshark or editcap already started, if total count execed the number of cores, wait for 1 second until the threads count less than cores.                            
                             $azcopy=get-process|where-object {$_.name -eq "azcopy"}|measure-object|select-object -expandproperty count
-                            while ($azcopy -ge $cores*5)
+                            while ($azcopy -ge $cores*5)  #user Core * 5 as max thread count
                             {
                                 Write-UTCLog " azcopy count: $($azcopy) , sleep 1 second " "Yellow"
                                 start-sleep -Seconds 1
@@ -562,6 +570,14 @@ if (Test-Path $tracefolder)  #validate
                             $j++
                         }
 
+                        # This code is designed to prevent a potential issue in multi-thread mode where the azcopy process may not have started yet. To avoid initiating kusto import prematurely, we've incorporated a 10-second delay.
+                        $t11=Get-Date
+                        if ($(($t11-$t1).TotalSeconds) -le 5) 
+                        {
+                            Write-UTCLog "Less 5 seconds to complete multiple threads for tshark batch, wait 10 seconds to ensure tshark process was started" -color "Yellow"
+                            Start-Sleep -Seconds 10
+                        }
+                        
                         #multi-thread azcopy cleanup 
                         $azcopy=get-process|where-object {$_.name -eq "azcopy"}|measure-object|select-object -expandproperty count
 
