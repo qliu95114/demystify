@@ -66,7 +66,7 @@ Flood https://www.bing.com and confirm curl timeout is 1 second, send the result
 
 .EXAMPLE
 Test https://www.bing.com and confirm curl timeout is 1 second , capture http headers X-Azure-Ref and Content-Type
-.\Test-Curl.ps1 -url https://www.bing.com  -timeout 1 -httpheaders "X-Azure-Ref,Content-Type"
+.\Test-Curl.ps1 -url https://www.bing.com  -timeout 1 -httpheaders "X-Azure-Ref;Content-Type"
 
 #>
 
