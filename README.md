@@ -61,6 +61,13 @@ Contents
    "BypassTPMCheck"=dword:00000001
    "BypassRAMCheck"=dword:00000001
    "BypassSecureBootCheck"=dword:00000001
+   '``
+1. On Windows how to treat BIOS time as UTC timezone
+   ```
+   Windows Registry Editor Version 5.00
+
+   [HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\TimeZoneInformation]
+   "RealTimeIsUniversal"=dword:00000001
    ```
 1. Fun AppeII game 
    http://loderunnerwebgame.com/game/
