@@ -53,6 +53,18 @@ Contents
     ACPI\ThermalZone\CHGZ_0,128,45
     ACPI\ThermalZone\PCHZ_0,128,0
    ```
+1. Windows 11 Setup Bypass Registery
+   ```
+   Windows Registry Editor Version 5.00
+
+   [HKEY_LOCAL_MACHINE\SYSTEM\Setup\LabConfig]
+   "BypassTPMCheck"=dword:00000001
+   "BypassRAMCheck"=dword:00000001
+   "BypassSecureBootCheck"=dword:00000001
+   ```
+1. Fun AppeII game 
+   http://loderunnerwebgame.com/game/
+
 
 
 
