@@ -69,7 +69,7 @@ Contents
    [HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\TimeZoneInformation]
    "RealTimeIsUniversal"=dword:00000001
    ```
-1. Fun AppeII game 
+1. Fun Apple II Video Game in 1983
    http://loderunnerwebgame.com/game/
 
 
