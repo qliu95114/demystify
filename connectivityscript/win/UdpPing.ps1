@@ -29,7 +29,7 @@ Param (
     [string]$Server="20.37.85.37",
     [int]$port=9030,
     [ValidateRange(0,99999)][int]$n=10,
-    [ValidateRange(5,1400)][Int]$payloadsize=10
+    [ValidateRange(5,10000)][Int]$payloadsize=10
     
 )
 
