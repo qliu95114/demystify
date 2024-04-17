@@ -93,13 +93,13 @@ Param (
     [Switch]$AsJob
 )
 
-# Powershell Function Send-AIEvent , 2023-08-12 , fix bug in retry logic
+# Powershell Function Send-AIEvent , 2024-04-12
 Function Send-AIEvent{
     param (
                 [Guid]$piKey,
                 [String]$pEventName,
                 [Hashtable]$pCustomProperties,
-                [string]$logpath=$env:temp
+                [string]$logpath=$env:TEMP
     )
         $appInsightsEndpoint = "https://dc.services.visualstudio.com/v2/track"        
         
@@ -138,24 +138,37 @@ Function Send-AIEvent{
                 return    
             }
             catch {
-                $PreciseTimeStamp=(get-date).ToUniversalTime().ToString("yyyy-MM-dd HH:mm:ss")
-                if ($attempt -ge 4)
+                #Write-UTCLog "Send-AIEvent Failure: $($_.Exception.Response.StatusCode.value__), $($_.Exception.Message)" -color "red"
+                # determine if exception code < 400 and >= 500, or code is 429, we will retry
+                $PreciseTimeStamp=((get-date).ToUniversalTime()).ToString("yyyy-MM-dd HH:mm:ss")                
+                if (($_.Exception.Response.StatusCode.value__ -lt 400 -or $_.Exception.Response.StatusCode.value__ -ge 500) -or ($_.Exception.Response.StatusCode.value__ -eq 429))
                 {
-                    Write-Output "retry 3 failure..." 
-                    $sendaimessage =$PreciseTimeStamp+",Fail to send AI message after 3 attemps, message lost"
+                    #retry total 3 times, if failed, add message to aimessage.log and return $null
+                    if ($attempt -ge 4)
+                    {
+                        Write-Output "retry 3 failure..." 
+                        $sendaimessage =$PreciseTimeStamp+", Max retry attemps 3 reached, message lost"
+                        $sendaimessage | Out-File "$($logpath)\aimessage.log" -Append -Encoding utf8
+                        return $null
+                    }
+                    Write-Output "Send-AIEvent Attempt($($attempt)): send aievent failure, retry" 
+                    $sendaimessage =$PreciseTimeStamp+", Attempt($($attempt)) , $($_.Exception.Response.StatusCode.value__), $($_.Exception.Message), retry..."
+                    $sendaimessage | Out-File "$($logpath)\aimessage.log" -Append -Encoding utf8
+                    Start-Sleep -Seconds 1
+                }
+                else {
+                    # unretrable error add message to aimessage.log and return $null
+                    Write-UTCLog "Send-AIEvent unretrable error, message lost, $($_.Exception.Response.StatusCode.value__), $($_.Exception.Message)" -color "red"
+                    $sendaimessage=$PreciseTimeStamp+"Send-AIEvent unretrable error, message lost, $($_.Exception.Response.StatusCode.value__), $($_.Exception.Message)"
                     $sendaimessage | Out-File "$($logpath)\aimessage.log" -Append -Encoding utf8
                     return $null
                 }
-                Write-Output "Attempt($($attempt)): send aievent failure, retry" 
-                $sendaimessage =$PreciseTimeStamp+", Attempt($($attempt)) , wait 1 second, resend AI message"
-                $sendaimessage | Out-File "$($logpath)\aimessage.log" -Append -Encoding utf8
-                Start-Sleep -Seconds 1
             }
             $attempt++
         } until ($success)
         $ProgressPreference = $temp
 }
-    
+
 
 # Start main scription
 
