@@ -16,6 +16,7 @@ Contents
 1. **Folder network\pcap2kusto**: Utilize the pcap2kusto.ps1 script to import PCAP files into Azure Data Explorer (Kusto). This enables you to perform advanced analysis on network packet captures and gain deeper visibility into your network traffic.
 1. **Folder network\mergecapfiles**: Combine multiple PCAP files into a single file using the mergecapfiles.ps1 script. This simplifies the management and analysis of network packet captures by consolidating them into a single, unified file.
 1. **Script network\get-MicrosoftIpAddressRange.ps1**: which helps you find Microsoft Azure and Office 365 IP ranges and details using public data files. This script simplifies the process of identifying and managing IP ranges associated with Microsoft services.
+1. (ExternalLink) **Azure file storage**: [Diagnose Script on Azure File Storage](https://github.com/Azure-Samples/azure-files-samples/tree/master/AzFileDiagnostics)
 
 ## Things are NOT related to Azure Platform 
 
