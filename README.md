@@ -80,6 +80,9 @@ Contents
    ```
    magick convert -density 200 <pathofpdffile> <pathofjpgfile or pathofpngfile>
    magick convert -density 200 -colorspace CMYK <pathofpdffile> <pathofjpgfile or pathofpngfile>
+
+   >batch convert for all the files start with 2024*.pdf, replace the extension and use .png instead
+   for %a in (2024*.pdf) do (magick convert -density 150 -colorspace CMYK %a %~na.png)
    ```
    
 
