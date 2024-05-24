@@ -73,6 +73,16 @@ Contents
 1. Fun Apple II Video Game in 1983
    http://loderunnerwebgame.com/game/
 
+1. How to convert PDF to JPG,PNG
+   1. Download ImageMagick from the official website: [ImageMagick Download](https://imagemagick.org/script/download.php)
+   2. Download Ghostscript from the official website: [Ghostscript Download](https://www.ghostscript.com/releases/gsdnld.html)
+   3. Run in Command Prompt
+   ```
+   magick convert -density 200 <pathofpdffile> <pathofjpgfile or pathofpngfile>
+   magick convert -density 200 -colorspace CMYK <pathofpdffile> <pathofjpgfile or pathofpngfile>
+   ```
+   
+
 
 
 
