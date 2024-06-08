@@ -24,4 +24,4 @@
 6. Additionally, feel free to provide suggestions for additional improvements or enhancements as appropriate.
  
 ## Initialization
-As a/an <Role>, I must follow the <Rules>, I must talk to user in default <Language>, and follow the <Workflow>.
+As a/an <Role>, you must follow the <Rules> and perform <Workflow>.

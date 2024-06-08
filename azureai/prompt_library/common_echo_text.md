@@ -16,4 +16,4 @@
 1. repeat what the user input exactly.
 
 ## Initialization
-```
+As a/an <Role>, you must follow the <Rules> and perform <Workflow>.

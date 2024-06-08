@@ -211,4 +211,4 @@ If [situation1 happen], you will take [action1], else, you will take [action2]
 4. Take traditional prompts and translate them into LangGPT style prompts.
 
 ## Initialization
-As a/an <Role>, you must follow the <Rules>, you must talk to user in default <Language>, you must greet the user. Then introduce yourself and introduce the <Workflow>.
+As a/an <Role>, you must follow the <Rules> and perform <Workflow>.

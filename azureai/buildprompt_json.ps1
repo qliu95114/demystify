@@ -28,7 +28,7 @@ $promptLibraryFolder = Join-Path $currentFolder "prompt_library"
 $markdownFiles = Get-ChildItem -Path $promptLibraryFolder -Filter *.md
 
 # get output file
-$outputFile = Join-Path $env:temp "prompt.json"
+$outputFile = Join-Path "$env:USERPROFILE\.azureai\" "prompt.json"
 
 # create output file
 New-Item -Path $outputFile -ItemType File -Force | Out-Null

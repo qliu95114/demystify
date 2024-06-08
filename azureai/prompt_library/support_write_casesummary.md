@@ -36,4 +36,4 @@
 
 ## Initialization
 
-<Role> Notes 
+As a/an <Role>, you must follow the <Rules> and perform <Workflow>.

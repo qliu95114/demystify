@@ -1,14 +1,14 @@
-# this script build out the azureai-config.ps1 
-# the script will search all the resource group that has OpenAI resource and get the deployment id and name
-# the script will then append the result to %userprofile%\.azureai\azureai-config.json
+# This script builds out the azureai-config.ps1
+# The script searches all resource groups that have OpenAI resources and gets the deployment id and name
+# The script then appends the result to %userprofile%\.azureai\azureai-config.json
 
 Param(
-    [string] $subscriptionId,  # only support one subscription id 
-    [string] $exlude_subid  # use to remove subscription id from the result, only support one subscription id
+    [string] $subscriptionId, # Support only one subscription id
+    [string] $exclude_subid  # Used to remove subscription id from the result, supports only one subscription id
 )
 
 $scriptDir = Split-Path -Path $MyInvocation.MyCommand.Definition -Parent
-. $scriptDir\utils.ps1
+. "$scriptDir\utils.ps1"
 
 # connect-azaccount to login azure
 # get current user bear token and set it to $usertoken
@@ -19,80 +19,85 @@ $scriptDir = Split-Path -Path $MyInvocation.MyCommand.Definition -Parent
 # to get the deployment id and name  
 # append the result to %userprofile%\.azureai\azureai-config.json
 
-# create a list object of Az.Accounts , Az.ResourceGraph and Az.CognitiveServices
+# Ensuring required modules are available
 $modules = @("Az.Accounts", "Az.ResourceGraph", "Az.CognitiveServices")
-
 foreach ($m in $modules) {
     if ((Get-Module -ListAvailable -Name $m).count -gt 0) {
         Write-UTCLog "$m module is installed" "Gray"
-    } else {
+    }
+    else {
         Write-UTCLog "$m module is not installed, installing..." "Yellow"
         Install-Module -Name $m -Force
+        Write-UTCLog "$m module installation complete" "Green"
     }
 }
 
-if ($subcount=Get-AzSubscription | Measure-Object | Select-Object -ExpandProperty Count) {
+# Login to Azure and get subscriptions
+if ($subcount = Get-AzSubscription | Measure-Object | Select-Object -ExpandProperty Count) {
+    $TenantId = (Get-AzContext).Tenant.id
+    Write-UTCLog "TenantId: $TenantId " "Gray"
     Write-UTCLog "You have $subcount subscriptions" "Gray"
-} else {
+}
+else {
     Write-UTCLog "You have no subscriptions, please login to Azure" "Red"
     Connect-AzAccount -ErrorAction SilentlyContinue
 }
 
-# get current user bear token and set it to $usertoken
-$usertoken = Get-AzAccessToken -ResourceUrl "https://management.azure.com/" -ErrorAction SilentlyContinue
-$usertoken = "Bearer " + $usertoken.Token
+# Prepare headers with bearer token for REST calls
+$usertoken = Get-AzAccessToken -ResourceUrl "https://management.azure.com/" -ErrorAction SilentlyContinue -TenantId $TenantId
+if (-not $usertoken) {
+    Write-UTCLog "Failed to obtain user token" "Red"
+    exit
+}
+
 $headers = @{
-    'Authorization' = $usertoken
+    'Authorization' = "Bearer $($usertoken.Token)"
 }
-Write-UTCLog "Get current user Bearer token" "Gray"
+Write-UTCLog "Bearer token acquired" "Gray"
 
-#if subid is not provided, get all the resource group
-if ($subscriptionId -eq "") {
-    $qry = "resources | where type == 'microsoft.cognitiveservices/accounts' | where kind == 'OpenAI'"
-} else {
-    $qry = "resources | where type == 'microsoft.cognitiveservices/accounts' | where kind == 'OpenAI' | where subscriptionId =~ '$($subscriptionId)'" 
+# Construct the query
+$query = "resources | where type == 'microsoft.cognitiveservices/accounts' | where kind == 'OpenAI'"
+if ($subscriptionId) {
+    $query += " | where subscriptionId =~ '$subscriptionId'"
 }
-
-# if exlude_subid is provided, remove the subscription id from the result
-if ($exlude_subid -ne "") {
-    $qry = $qry + "| where subscriptionId !~ '$($exlude_subid)'"
+if ($exclude_subid) {
+    $query += " | where subscriptionId !~ '$exclude_subid'"
 }
 
-$result = Search-AzGraph -Query $qry -ErrorAction SilentlyContinue
-#$result # Format-Table -AutoSize
+Write-UTCLog "Executing query: $query" "Gray"
+$result = Search-AzGraph -Query $query -ErrorAction SilentlyContinue
 
-# if output folder does not exist , create one 
-if (!(Test-Path "$($env:USERPROFILE)\.azureai")) {
-    New-Item -Path "$($env:USERPROFILE)\.azureai" -ItemType Directory -Force
+# Ensure the output directory exists
+$outputDir = "$($env:USERPROFILE)\.azureai"
+if (!(Test-Path -Path $outputDir)) {
+    New-Item -Path $outputDir -ItemType Directory -Force
 }
 
-# if output file exist, request user to confirm before overwrite
-if (Test-Path "$($env:USERPROFILE)\.azureai\azureai-config.json") {
-    $confirm = Read-Host "$($env:USERPROFILE)\.azureai\azureai-config.json already exist, do you want to overwrite it? (y/n)"
-    if ($confirm -eq "y") {
-        Remove-Item "$($env:USERPROFILE)\.azureai\azureai-config.json" -Force
-    } else {
+# Confirm before overwriting existing config file
+$configFile = Join-Path -Path $outputDir -ChildPath "azureai-config.json"
+if (Test-Path -Path $configFile) {
+    $overwrite = Read-Host "$configFile already exists. Overwrite? (Y/N)"
+    if ($overwrite.ToLower() -ne "y") {
+        Write-UTCLog "Operation cancelled by user." "Yellow"
         exit
     }
+    Remove-Item -Path $configFile -Force
 }
 
-$json_all=@()
+$json_all = @()
 
-# loop all the resource group and get the resource id and name and call
-foreach ($subid in $result)
-{
-    $location=$subid.location
-    $sku=$subid.sku.name
+# Loop all the resource group and get the resource id and name and call
+foreach ($subid in $result) {
+    $location = $subid.location
+    $sku = $subid.sku.name
     # get all deployment id and name from Azure OpenAI resource
-    $url="https://management.azure.com/subscriptions/$($subid.subscriptionId)/resourceGroups/$($subid.resourceGroup)/providers/Microsoft.CognitiveServices/accounts/$($subid.name)/deployments?api-version=2023-10-01-preview"
+    $url = "https://management.azure.com/subscriptions/$($subid.subscriptionId)/resourceGroups/$($subid.resourceGroup)/providers/Microsoft.CognitiveServices/accounts/$($subid.name)/deployments?api-version=2023-10-01-preview"
     #Write-Host $url
-    $jsonresult=Invoke-RestMethod -Uri $url -Headers $headers -Method Get 
+    $jsonresult = Invoke-RestMethod -Uri $url -Headers $headers -Method Get 
 
     # get-key key of Azure OpenAI resource
-    Select-AzSubscription -subscriptionid $subid.subscriptionId -ErrorAction SilentlyContinue | Out-Null
-  
-    $key=""
-    $key=Get-AzCognitiveServicesAccountKey -ResourceGroupName $subid.resourceGroup -Name $subid.name -ErrorAction SilentlyContinue
+    Select-AzSubscription -subscriptionid $subid.subscriptionId -ErrorAction SilentlyContinue  -TenantId $TenantId | Out-Null
+    $key = Get-AzCognitiveServicesAccountKey -ResourceGroupName $subid.resourceGroup -Name $subid.name -ErrorAction SilentlyContinue
 
     if ([string]::IsNullOrEmpty($key)) {
         Write-UTCLog "(Fail) Save configuration from subscription $($subid.subscriptionId):$($subid.name), please check if you have contributor permission to the resource."  "Red"
@@ -100,8 +105,7 @@ foreach ($subid in $result)
     else {
         Write-UTCLog "(Success) Save configuration from subscription $($subid.subscriptionId):$($subid.name)" "Green"
         $json = $jsonresult.value | ConvertTo-Json -Depth 100 | convertfrom-json 
-        foreach ($deployment in $json)
-        {
+        foreach ($deployment in $json) {
             #add location and sku to $deployment
             $deployment | Add-Member -MemberType NoteProperty -Name location -Value $location
             $deployment | Add-Member -MemberType NoteProperty -Name skuname -Value $sku
@@ -115,12 +119,9 @@ foreach ($subid in $result)
     # add extra atrributes to the json file
 }
 
-#output json_all to json file
-$json_all | ConvertTo-Json -Depth 100 | Out-File "$($env:USERPROFILE)\.azureai\azureai-config.json"
-
-Write-UTCLog "azureai-config.json is created at $($env:USERPROFILE)\.azureai\azureai-config.json" "Green"
-Write-UTCLog "Please use '.\invoke-azureai-gpt -listconfig' to see sample " "Green"
-
-
+# Output to json file
+$json_all | ConvertTo-Json -Depth 100 | Out-File $configFile
+Write-UTCLog "azureai-config.json is created at $configFile" "Green"
+Write-UTCLog "Use '.\invoke-azureai-gpt -listconfig' to see sample " "Green"
 
 

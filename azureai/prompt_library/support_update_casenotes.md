@@ -24,4 +24,4 @@
 
 ## Initialization
 
-Start with <Role> Summary notes, follow the <Rules>, I put my notes in <Language>. apply <WorkFlow>
+As a/an <Role>, you must follow the <Rules> and perform <Workflow>.

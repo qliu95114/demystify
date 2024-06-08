@@ -24,7 +24,6 @@ output (response)
 config (Azure OpenAI connection management)
     endpoint, deploymentname, apikey, token
     due to api parameter change in 1106 , add two parameters for model version 1106
-    -maxtoken_input : [int] as max token for input
     -maxtoken_output : [int] as max token for output
     v2 configureation 
     -listconfig : dump the config parameters in $profile\.azureai\azureai_config.json
@@ -70,9 +69,6 @@ GUID, Instrumentation Key used by Application Insight
 
 .PARAMETER token
 Max token for AzureAI GPT-3.5/4 API 
-
-.PARAMETER maxtoken_input
-max token for input for AzureAI GPT-3.5/4 (1106 version)
 
 .PARAMETER maxtoken_output
 max token for output for AzureAI GPT-3.5/4 (1106 version)
@@ -153,35 +149,33 @@ Param(
     [string] $token = $env:OPENAI_TOKENS_AZURE,
     [single] $temperature = 0.7,
     [string] $maxtoken_output = $env:OPENAI_MAXTOKENSOUTPUT_AZURE, # this is for max tokens we specific in supporting new api model GPT-4 or 3.5 1106 preview, the token limitation was change to Input : x and Output : 4096, instead of total token
-    [string] $maxtoken_input = $env:OPENAI_MAXTOKENSINPUT_AZURE, # this is for max tokens we specific in supporting new api model GPT-4 or 3.5 1106 preview, the token limitation was change to Input : x and Output : 4096, instead of total token
     [string] $aikey,
     [switch] $listconfig,
-    [ValidateSet("gpt-35-turbo", "gpt-35-turbo-16k", "gpt-35-turbo-instruct", "gpt-4", "gpt-4-32k")][string] $modelname,
-    [ValidateSet("1", "001", "2", "0301", "0314", "0613", "0914", "1106", "1106-Preview","vision-preview")][string] $modelversion,
+    [ValidateSet("gpt-35-turbo", "gpt-35-turbo-16k", "gpt-35-turbo-instruct", "gpt-4", "gpt-4-32k","gpt-4o")][string] $modelname,
+    [ValidateSet("1", "001", "2", "0301", "0314", "0613", "0914", "1106", "1106-Preview", "0125-Preview", "vision-preview","turbo-2024-04-09","2024-05-13")][string] $modelversion,
     [switch] $DonotUpdateLastConfig,
     [switch] $debug
 )
 
 $scriptDir = Split-Path -Path $MyInvocation.MyCommand.Definition -Parent
 . $scriptDir\utils.ps1
+. $scriptDir\openai.ps1
 
-# main program started
-
-# global initialization
+# Global initialization
 $scriptname = $MyInvocation.MyCommand.Name
 $prompturl = "https://raw.githubusercontent.com/qliu95114/demystify/main/azureai/prompt.json"
 
-# use $promptFile to overwrite the default prompt.json
-# use localprompt library file if specified
-# switch to default $env:USERPROFILE\.azureai\prompt.json if not specified
-# all failed, download from github
+# Use $promptFile to overwrite the default prompt.json
+# Use local prompt library file if specified
+# Switch to default $env:USERPROFILE\.azureai\prompt.json if not specified
+# All failed, download from github
 
 # if listconfig is specified, dump the config parameters in $($env:USERPROFILE)\.azureai\azureai_config.json
 if ($listconfig) { 
-    # dump the config parameters in $profile\.azureai\azureai-config.json
+    # Dump the config parameters in $profile\.azureai\azureai-config.json
     if (Test-path "$($env:USERPROFILE)\.azureai\azureai-config.json") {
-        Write-UTCLog "Dump $($env:USERPROFILE)\.azureai\azureai-config.json, you can append the parameter sample" -color "Cyan" 
-        $openai_configs = (get-content "$($env:USERPROFILE)\.azureai\azureai-config.json") | convertfrom-json
+        Write-UTCLog "Dump $($env:USERPROFILE)\.azureai\azureai-config.json, you can append the parameter sample" -color "Cyan"
+        $openai_configs = (Get-Content "$($env:USERPROFILE)\.azureai\azureai-config.json") | ConvertFrom-Json
         foreach ($config in $openai_configs) {
             $endpoint = "https://$($config.Id.split("/")[8]).openai.azure.com/"
             $Deployment = $config.name
@@ -195,40 +189,39 @@ if ($listconfig) {
             # if $modename is not emty and $modelversion is empty, then output all match modelname only 
 
             if ([string]::IsNullOrEmpty($modelname) -and [string]::IsNullOrEmpty($modelversion)) {
-                write-host "[$($model_name) , version $($model_version)]" -ForegroundColor "DarkCyan"
-                write-host "   -apikey ""$key"" -DeploymentName ""$($deployment)"" -endpoint ""$endpoint"" " -ForegroundColor "gray"
-            }  
+                Write-Host "[$($model_name) , version $($model_version)]" -ForegroundColor "DarkCyan"
+                Write-Host "   -apikey ""$key"" -DeploymentName ""$($deployment)"" -endpoint ""$endpoint"" " -ForegroundColor "gray"
+            }
 
             if ([string]::IsNullOrEmpty($modelname) -and ![string]::IsNullOrEmpty($modelversion)) {
                 if ($model_version -eq $modelversion) {
-                    write-host "[$($model_name) , version $($model_version)]" -ForegroundColor "DarkCyan"
-                    write-host "   -apikey ""$key"" -DeploymentName ""$($deployment)"" -endpoint ""$endpoint"" " -ForegroundColor "gray"
+                    Write-Host "[$($model_name) , version $($model_version)]" -ForegroundColor "DarkCyan"
+                    Write-Host "   -apikey ""$key"" -DeploymentName ""$($deployment)"" -endpoint ""$endpoint"" " -ForegroundColor "gray"
                 }
             }
 
             if (![string]::IsNullOrEmpty($modelname) -and [string]::IsNullOrEmpty($modelversion)) {
                 if ($model_name -eq $modelname) {
-                    write-host "[$($model_name) , version $($model_version)]" -ForegroundColor "DarkCyan"
-                    write-host "   -apikey ""$key"" -DeploymentName ""$($deployment)"" -endpoint ""$endpoint"" " -ForegroundColor "gray"
+                    Write-Host "[$($model_name) , version $($model_version)]" -ForegroundColor "DarkCyan"
+                    Write-Host "   -apikey ""$key"" -DeploymentName ""$($deployment)"" -endpoint ""$endpoint"" " -ForegroundColor "gray"
                 }
             }
 
             if (![string]::IsNullOrEmpty($modelname) -and ![string]::IsNullOrEmpty($modelversion)) {
                 if ($model_name -eq $modelname -and $model_version -eq $modelversion) {
-                    write-host "[$($model_name) , version $($model_version)]" -ForegroundColor "DarkCyan"
-                    write-host "   -apikey ""$key"" -DeploymentName ""$($deployment)"" -endpoint ""$endpoint"" " -ForegroundColor "gray"
+                    Write-Host "[$($model_name) , version $($model_version)]" -ForegroundColor "DarkCyan"
+                    Write-Host "   -apikey ""$key"" -DeploymentName ""$($deployment)"" -endpoint ""$endpoint"" " -ForegroundColor "gray"
                 }
             }
         }
     }
     else {
-        Write-UTCLog "$($env:userprofile)\.azureai\azureai-config.json does not exist, please refer help" -color "Red"    
+        Write-UTCLog "$($env:userprofile)\.azureai\azureai-config.json does not exist, please refer help" -color "Red"
     }
-    exit 
+    exit
 }
 
-# Validate Azure AI parameters, when v1 & v2 all parameter is not configure 
-
+# Validate Azure AI parameters, when v1 & v2 all parameter is not configure
 # Azure AI Connection cli/v1/v2 configuration priority
 # ** User can specify -endpoint, -DeploymentName, -apikey to overwrite all of above settings**
 # If nothing is specificed, try to load last used configuration from $profile\.azureai\azureai_config_last.json.
@@ -236,33 +229,33 @@ if ($listconfig) {
 # if v1 configurations are not set, then try to load v2 configuration from $profile\.azureai\azureai_config.json, at this time, $modelname or $modelversion is required
 # if all fails, exit
 
-if ([string]::IsNullOrEmpty($endpoint) -and [string]::IsNullOrEmpty($DeploymentName) -and [string]::IsNullOrEmpty($apikey) -and [string]::IsNullOrEmpty($modelname) -and [string]::IsNullOrEmpty($modelversion)) { 
-    # if azureai-config_last.json exist, read the configuration 
+if ([string]::IsNullOrEmpty($endpoint) -and [string]::IsNullOrEmpty($DeploymentName) -and [string]::IsNullOrEmpty($apikey) -and [string]::IsNullOrEmpty($modelname) -and [string]::IsNullOrEmpty($modelversion)) {
+    # if azureai-config_last.json exist, read the configuration
     if (Test-path "$($env:USERPROFILE)\.azureai\azureai-config_last.json") {
         if ($debug) { Write-UTCLog "Use last config file: $($env:USERPROFILE)\.azureai\azureai-config_last.json" -color "Gray" }
-        $openai_configs = (get-content "$($env:USERPROFILE)\.azureai\azureai-config_last.json") | convertfrom-json
+        $openai_configs = (Get-Content "$($env:USERPROFILE)\.azureai\azureai-config_last.json") | ConvertFrom-Json
         $endpoint = $openai_configs.endpoint
         $DeploymentName = $openai_configs.DeploymentName
         $apikey = $openai_configs.apikey
-        $model_name, $model_version=Find-ModelNameVersion -endpoint $endpoint -Name $DeploymentName 
+        $model_name, $model_version = Find-ModelNameVersion -endpoint $endpoint -Name $DeploymentName
     }
     else {
-        Write-UTCLog "Azure OpenAi Config v1, v2, azureai-config_last.json are not set, exit now. Please refer .\build_azure-config.ps1(v2) or .\env_setup.cmd (v1) or config endpoint/deployment/apikey" -color "Red"; 
+        Write-UTCLog "Azure OpenAi Config v1, v2, azureai-config_last.json are not set, exit now. Please refer .\build_azure-config.ps1(v2) or .\env_setup.cmd (v1) or config endpoint/deployment/apikey" -color "Red"
         exit
     }
 }
 
 if (![string]::IsNullOrEmpty($endpoint) -and ![string]::IsNullOrEmpty($DeploymentName) -and ![string]::IsNullOrEmpty($apikey)) {
-    if ($debug) { 
-        Write-UTCLog "v1 Configuration or azureai-config_last are used" -color "DarkCyan" 
+    if ($debug) {
+        Write-UTCLog "v1 Configuration or azureai-config_last are used" -color "DarkCyan"
     }
-    $model_name, $model_version=Find-ModelNameVersion -endpoint $endpoint -Name $DeploymentName 
+    $model_name, $model_version = Find-ModelNameVersion -endpoint $endpoint -Name $DeploymentName
 }
 else {
     # if v2 configuration is set, then use v2 configuration
     if ((![string]::$modelname) -and (Test-path "$($env:USERPROFILE)\.azureai\azureai-config.json" )) {
         Write-UTCLog "v2 Configuration is set" -color "DarkCyan"
-        $openai_configs = (get-content "$($env:USERPROFILE)\.azureai\azureai-config.json") | convertfrom-json
+        $openai_configs = (Get-Content "$($env:USERPROFILE)\.azureai\azureai-config.json") | ConvertFrom-Json
         $configObjects = @()  # create empty array
         foreach ($config in $openai_configs) {
             # both $modelname and $modelversion are specified
@@ -339,55 +332,48 @@ else {
 
 # review configuration is correct if there any of the following are null, exit
 if ([string]::IsNullOrEmpty($endpoint) -and [string]::IsNullOrEmpty($DeploymentName) -and [string]::IsNullOrEmpty($apikey)) {
-    Write-UTCLog "Endpoint, DeploymentName, apikey are not set from v1/v2 configuration, exit now." -color "Red";
+    Write-UTCLog "Endpoint, DeploymentName, apikey are not set from v1/v2 configuration, exit now." -color "Red"
     exit
 }
 else {
     Write-UTCLog "Endpoint : $($endpoint) , Deployment : $($DeploymentName), ModelName: $($model_name), ModelVersion: $($model_version)" -color "gray"
 }
 
-# if token is empty 
-# then check if we have maxtoken_input and maxtoken_output if that is not set, use default 8096
-if (!$token) { 
-    if ($maxtoken_input -and $maxtoken_output) {
+# if token is empty
+# then check if we have maxtoken_output if that is not set, use default 8096
+if (!$token) {
+    if ($maxtoken_output) {
         $token = $maxtoken_output
-        #Write-UTCLog "MaxTokens_Input (Env) : $($maxtoken_input)" -color "gray" 
-        #Write-UTCLog "MaxTokens_Output(Env) : $($token)" -color "gray" 
     }
     else {
         $token = 8096
-        #Write-UTCLog "MaxToken(Default): $($token)" -color "gray" 
     }
-}
-else {
-    #Write-UTCLog "MaxToken(Env) : $($token)" -color "gray" 
 }
 
 # build out the prompt text
-# primary choice -prompt 
+# primary choice -prompt
 # secondary choice -promptFile
-# third choice -promptchoice 
+# third choice -promptchoice
 if (![string]::IsNullOrEmpty($prompt)) {
     $promptText = $prompt
-    Write-UTCLog "Prompt(Custom): $promptText" -color "DarkCyan" 
+    Write-UTCLog "Prompt(Custom): $promptText" -color "DarkCyan"
     #get strlen of $promptText
     $promptforlogging = "PromptCustom: $($promptText.length) chars"
 }
 else {
     if ($promptFile) {
-        if (Test-Path $promptFile) 
-        {
-            # if promptFile is specified and exists       
+        if (Test-Path $promptFile) {
+            # if promptFile is specified and exists
             $promptText = Get-Content $promptFile -Raw
-            Write-UTCLog "PromptFile system, use prompt from custom file: $promptFile" -color "DarkCyan" 
-            $promptforlogging = "PromptFile: $($promptFile)" 
+            Write-UTCLog "PromptFile system, use prompt from custom file: $promptFile" -color "DarkCyan"
+            $promptforlogging = "PromptFile: $($promptFile)"
         }
         else {
-            Write-UTCLog "PromptFiles ($($promptFile)) does not exist, please check"  -color "red"       
+            Write-UTCLog "PromptFiles ($($promptFile)) does not exist, please check" -color "red"
             exit
         }
     }
-    else { 
+    else {
         # Check if promptLibraryFile is specified and exists
         if ($promptLibraryFile -and (Test-Path $promptLibraryFile)) {
             $localPromptLibraryFile = $promptLibraryFile
@@ -422,62 +408,29 @@ else {
 if ([string]::IsNullOrEmpty($prompt) -and [string]::IsNullOrEmpty($promptFile)) {
     Write-UTCLog "PromptChoice  : $($promptchoice)" -color "DarkCyan"
     if ($debug) {
-        $prompttext = $promptText.replace("\r\n", [System.Environment]::NewLine)  #replace \r\n 
+        $prompttext = $promptText.replace("\r\n", [System.Environment]::NewLine)  #replace \r\n
         Write-UTCLog "Prompt(system): $($prompttext)" -color "DarkCyan"
     }
 }
 
-$stoken = Get-ContentTokens $promptText
-
 # Check if contentFile is specified and exists
 if ($contentFile -and (Test-Path $contentFile)) {
-    $content = Get-Content $contentFIle -Raw
+    $content = Get-Content $contentFile -Raw
 }
 
 # Get Token count of the content
+$stoken = Get-ContentTokens $promptText
 $utoken = Get-ContentTokens $content
 
 # if content is too long, only print first 100 characters
 if ($content.length -ge 100) { $offset = 100 } else { $offset = $content.length }
-Write-UTCLog "Content(user) : $($content.Substring(0,$offset)) ..."  "Yellow"
-Write-UTCLog "Content(user) : Total characters number is $($content.Length)" "Yellow"
+Write-UTCLog "Content(user) : $($content.Substring(0,$offset)) ..." -color "Yellow"
+Write-UTCLog "Content(user) : Total characters number is $($content.Length)" -color "Yellow"
 
-# check if token is too large
-<#
-if ($maxtoken_input -and $maxtoken_output)
-{
-    # checkinput token only for GPT-4 or 3.5 1106
-    if (($maxtoken_input- $utoken - $stoken) -lt 0) {
-        Write-UTCLog "Error: Prompt Token is too large (> $($maxtoken_input)), please reduce size of content,contentfile , exit." -color "Red"
-        Write-UTCLog "Tokens        : user=$($utoken) , system=$($stoken) , tokens_input=$($utoken + $stoken)" -color "Red"
-        exit
-    }
-    else {
-        Write-UTCLog "Tokens        : user=$($utoken) , system=$($stoken) , tokens_inputs=$($utoken + $stoken)" -color "Green"
-        $t0 = Get-Date
-        # Use $token as Max Return token for GPT call
-        $chat = Invoke-ChartGPTCompletion -Endpoint $endpoint -AccessKey $apikey -DeploymentName $DeploymentName -Prompt $promptText -Message $content -Token $($token) -Temperature $temperature
-    }
-}
-else {
-    # checkinput token for GPT-4 or 3.5 before 1106 
-    if (($token - $utoken - $stoken) -lt 0) {
-        Write-UTCLog "Error: Prompt Token is too large, please reduce size of content,contentfile , exit." -color "Red"
-        Write-UTCLog "Tokens        : user=$($utoken) , system=$($stoken) , max_tokens=$($token - $utoken -$stoken)" -color "Red"
-        exit
-    }
-    else {
-        Write-UTCLog "Tokens        : user=$($utoken) , system=$($stoken) , max_tokens=$($token - $utoken -$stoken)" -color "Green"
-        $t0 = Get-Date
-        # Use $token - $tokenCount as Max Return token for GPT call
-        $chat = Invoke-ChartGPTCompletion -Endpoint $endpoint -AccessKey $apikey -DeploymentName $DeploymentName -Prompt $promptText -Message $content -Token $([int]($token - $utoken - $stoken)) -Temperature $temperature
-    }
-}#>
-Write-UTCLog "Tokens        : user=$($utoken) , system=$($stoken) , tokens_inputs=$($utoken + $stoken).  Temperature : $($temperature)" -color "Green"
+Write-UTCLog "Tokens        : user=$($utoken) , system=$($stoken) , tokens_inputs=$($utoken + $stoken). Temperature : $($temperature)" -color "Green"
 $t0 = Get-Date
 
-if ([string]::IsNullOrEmpty($imageFile))
-{
+if ([string]::IsNullOrEmpty($imageFile)) {
     $chat = Invoke-ChartGPTCompletion -Endpoint $endpoint -AccessKey $apikey -DeploymentName $DeploymentName -Prompt $promptText -Message $content -Temperature $temperature
 }
 else {
@@ -521,7 +474,7 @@ else {
 }
 
 # print out the result
-Write-UTCLog "AI thinking time: $($delta) seconds"  -color "Cyan"
+Write-UTCLog "AI thinking time: $($delta) seconds" -color "Cyan"
 
 # Unix Epoch time to UTC time
 $unixEpoch = [datetime]'1/1/1970 00:00:00Z'
@@ -544,14 +497,23 @@ Write-Host "---------------------------------------------------------" -Foregrou
 
 if ([string]::IsNullOrEmpty($aikey)) {
     if ($debug) { Write-Host "Info : aikey is not specified, Send-AIEvent() is skipped." -ForegroundColor "DarkCyan" }
-} 
+}
 else {
     if ($debug) { Write-Host "Info : aikey is specified, Send-AIEvent() is called" -ForegroundColor "DarkCyan" }
 
     #get hostname from $endpoint and retrieve the name before .openai.azure.com
-    Send-AIEvent -piKey $aikey -pEventName $scriptname -pCustomProperties @{DeploymentName = $DeploymentName.tostring(); chatid = $chat.id.tostring();
-        object = $chat.object.tostring(); model = $chat.model.tostring(); CreatedTime = $datetime; token_completion = $chat.usage.completion_tokens;
-        token_prompt = $chat.usage.prompt_tokens; token_total = $chat.usage.total_tokens; promptchoice = $promptforlogging; endpoint = $endpoint.split("/")[2].tostring() ; AIResponseTimeE2E = $delta; temperature = $temperature; 
+    Send-AIEvent -piKey $aikey -pEventName $scriptname -pCustomProperties @{
+        DeploymentName    = $DeploymentName.ToString()
+        chatid            = $chat.id.ToString()
+        object            = $chat.object.ToString()
+        model             = $chat.model.ToString()
+        CreatedTime       = $datetime     # CreatedTime is not accurate this is the time when i log the Send-AIEvnet
+        token_completion  = $chat.usage.completion_tokens
+        token_prompt      = $chat.usage.prompt_tokens
+        token_total       = $chat.usage.total_tokens
+        promptchoice      = $promptforlogging
+        endpoint          = $endpoint.Split("/")[2].ToString()
+        AIResponseTimeE2E = $delta
+        temperature       = $temperature
     }
-    # CreatedTime is not accurate this is the time when i log the Send-AIEvnet
 }

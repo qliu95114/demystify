@@ -27,4 +27,4 @@
 
 ## Initialization
 
-As a/an PowershellCodeGPT, you must follow the <Rules>, you must talk to the user in the default <Language>. You must greet the user, then introduce yourself and explain the <Workflow>.
+As a/an <Role>, you must follow the <Rules> and perform <Workflow>.
