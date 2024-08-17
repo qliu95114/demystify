@@ -90,25 +90,35 @@ else {
 if (Test-Path $tracefolder)  #validate
 {
 	if ($tracefile.contains("*") -or $tracefile.contains("?")) {
-            Write-UTCLog "Generate a list of $($tracefile) under $($tracefolder) ..."
+            Write-UTCLog " Generate a list of $($tracefile) under $($tracefolder) ..."
             $pcapfilelist=(Get-ChildItem "$($tracefolder)\$($tracefile)")
 
             if ($pcapfilelist.count -ne 0)
             {
+                # display all files to be merage and total estimated disk space required
                 Write-UTCLog " Pcap $($tracefolder)\$($tracefile) Total : $($pcapfilelist.count) File(s)" "Yellow"
                 [Int64]$totalsize=0
                 foreach ($pcapfile in $pcapfilelist)
                 {
-                    Write-UTCLog "  $($pcapfile),$($pcapfile.Length)"
+                    Write-UTCLog " GetPcapFileSize: $($pcapfile) , $($pcapfile.Length)"
                     $totalsize+=$pcapfile.Length
                 }
                 Write-UTCLog " Pcap Files (Total): $($pcapfilelist.count) , File Size (Total): $($totalsize)bytes ($("{0:F2}" -f $($totalsize/1024/1024)) MBs), Required Disk Space (Estimate): ($("{0:F2}" -f $($totalsize/1024/1024)) MBs) " "Yellow"
 
+                #create a bad folder to store bad file
+                $badfilefolder="$($tracefolder)\badfile"
+                if (-not (Test-Path $badfilefolder)) {
+                    New-Item -ItemType Directory -Path $badfilefolder | Out-Null
+                }
+
+                # initialize guid and index
                 $i=1
                 $guid=(New-Guid).Guid
+
+                #merge all pcap files
                 foreach ($pcapfile in $pcapfilelist)
                 {
-                    Write-UTCLog "  Processing $($i)/$($pcapfilelist.count): $($pcapfile.FullName) " "Green"
+                    Write-UTCLog "  Processing $($i)/$($pcapfilelist.count): $($pcapfile.FullName) " "gray"
                     if($i -eq 1) 
                     {
                         Copy-Item $pcapfile.FullName "$($tracefolder)\$($guid)_1.pcapng"
@@ -116,13 +126,39 @@ if (Test-Path $tracefolder)  #validate
                     else {
                         $mergecapcmd="mergecap $($tracefolder)\$($guid)_$($i-1).pcapng $($pcapfile.FullName) -w $($tracefolder)\$($guid)_$($i).pcapng"
                         Invoke-Expression $mergecapcmd
-                        Remove-Item "$($tracefolder)\$($guid)_$($i-1).pcapng" -Force
+                        #verify the output file exist before delete, as in situation of bad file, mergecap will not generate output file
+                        if (Test-Path "$($tracefolder)\$($guid)_$($i).pcapng") {
+                            # mergecap success, delete the previous file
+                            Remove-Item "$($tracefolder)\$($guid)_$($i-1).pcapng" -Force
+                        }
+                        else {
+                            # mergecap failed, move badfile to badfilefolder and rename $i-1 to $i to skip the bad file
+                            Write-UTCLog "  Bad file detected, skip the file $($pcapfile.FullName)" "Red"
+                            #test-path badfilefolder exsit or not if not create it and move bad file to badfile folder
+                            Move-Item $($pcapfile.FullName) "$($badfilefolder)\$($pcapfile.Name)"
+                            Rename-Item "$($tracefolder)\$($guid)_$($i-1).pcapng" "$($tracefolder)\$($guid)_$($i).pcapng"
+                        }
                     }
                     $i++
                 }
                 Move-Item "$($tracefolder)\$($guid)_$($i-1).pcapng" $($targetfile)
                 Write-UTCLog " Pcap $($tracefolder)\$($tracefile) Total : $($pcapfilelist.count) File(s) merged" "Yellow"
                 Write-UTCLog " Target file: $($targetfile)" "Yellow"
+
+                # check if we have any bad file, list all children under badfile folder
+                $badfilelist=(Get-ChildItem $badfilefolder)
+                    if ($badfilelist.count -ne 0) {
+                        Write-UTCLog " Bad file(s) : $($badfilelist.count) " "Red"
+                        Write-UTCLog " Bad file(s) detected, please check under $($badfilefolder)" "Red"
+                        foreach ($badfile in $badfilelist) {
+                            Write-UTCLog "  $($badfile.FullName)" "Red"
+                        }
+                    }
+                    else {
+                        # no bad file, remove badfile folder
+                        Write-UTCLog " Bad file(s) : 0 " "Green"                        
+                        remove-item $badfilefolder -Force
+                    }
             }
             else {
                 #Write-UTCLog " Pcap $($tracefolder)\$($tracefile) Total : $($pcapfilelist.count) File(s) , existing... " "Red"
