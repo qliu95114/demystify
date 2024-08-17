@@ -138,32 +138,24 @@ if (Test-Path $tracefolder)  #validate
                             Move-Item $($pcapfile.FullName) "$($badfilefolder)\$($pcapfile.Name)"
                             Rename-Item "$($tracefolder)\$($guid)_$($i-1).pcapng" "$($tracefolder)\$($guid)_$($i).pcapng"
                         }
+                        #verify the output file exist before delete, as in situation of bad file, mergecap will not generate output file
+                        if (Test-Path "$($tracefolder)\$($guid)_$($i).pcapng") {
+                            # mergecap success, delete the previous file
+                            Remove-Item "$($tracefolder)\$($guid)_$($i-1).pcapng" -Force
+                        }
+                        else {
+                            # mergecap failed, move badfile to badfilefolder and rename $i-1 to $i to skip the bad file
+                            Write-UTCLog "  Bad file detected, skip the file $($pcapfile.FullName)" "Red"
+                            #test-path badfilefolder exsit or not if not create it and move bad file to badfile folder
+                            Move-Item $($pcapfile.FullName) "$($badfilefolder)\$($pcapfile.Name)"
+                            Rename-Item "$($tracefolder)\$($guid)_$($i-1).pcapng" "$($tracefolder)\$($guid)_$($i).pcapng"
+                        }
                     }
                     $i++
                 }
                 Move-Item "$($tracefolder)\$($guid)_$($i-1).pcapng" $($targetfile)
                 Write-UTCLog " Pcap $($tracefolder)\$($tracefile) Total : $($pcapfilelist.count) File(s) merged" "Yellow"
                 Write-UTCLog " Target file: $($targetfile)" "Yellow"
-
-                # check if we have any bad file, list all children under badfile folder
-                if (Test-Path $badfilefolder) {
-                    $badfilelist=(Get-ChildItem $badfilefolder)
-                        if ($badfilelist.count -ne 0) {
-                            Write-UTCLog " Bad file(s) : $($badfilelist.count) " "Red"
-                            Write-UTCLog " Bad file(s) detected, please check under $($badfilefolder)" "Red"
-                            foreach ($badfile in $badfilelist) {
-                                Write-UTCLog "  $($badfile.FullName)" "Red"
-                            }
-                        }
-                        else {
-                            # no bad file, remove badfile folder
-                            Write-UTCLog " Bad file(s) : 0 " "Green"                        
-                            remove-item $badfilefolder -Force
-                        }
-                }
-                else {
-                    <# Action when all if and elseif conditions are false #>
-                }
             }
             else {
                 Write-UTCLog " Did not find anything under $($tracefolder)\$($tracefile), please check..." "Yellow"
