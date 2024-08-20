@@ -146,7 +146,7 @@ while ($true)
 {
     # read the last copy timestamp
     $lastcopy = Get-Content $lastcopyfile
-    Write-UTCLog "Last copy timestamp is $lastcopy" -color "yellow"
+    Write-UTCLog "Last Copied : $lastcopy" -color "yellow"
 
     # list all files from source folder A
     $files = Get-ChildItem $srcfolder -Recurse
@@ -158,7 +158,7 @@ while ($true)
     # copy the files to the destination folder
     foreach ($file in $files) {
         Copy-Item $file.FullName -Destination $dstfolder
-        Write-UTCLog "File $file copied to $dstfolder"
+        Write-UTCLog "File $($file.FullName) copied to $dstfolder"
         $copyflag = $true
     }
 
