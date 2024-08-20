@@ -21,7 +21,7 @@ GUID, Instrumentation Key used by Application Insight
 
 .EXAMPLE
 replication d:\folder2 d:\folder1 12345678-1234-1234-1234-123456789012 
-.\folder_replica.ps1 -srcfolder d:\folder2 -destfolder d:\folder1 
+.\iphone_replica.ps1 -srcfolder d:\folder2 -destfolder d:\folder1 
 
 .NOTES
 Author: qliu
@@ -163,29 +163,31 @@ while ($true)
     foreach ($file in $files) {
         # if file extension is .mov, copy to destination\video folder , anything else copy to destination\picture folder
         if ($file.Extension -eq ".mov") {
-            $dstfolder = "$dstfolder\Video"
+            if (Test-Path "$dstfolder\Video\$($file.Name)") {
+                Write-UTCLog "File $($file.FullName) already exist in $dstfolder\Video, skip"  "yellow"
+            }
+            else {
+                Copy-Item $file.FullName -Destination "$dstfolder\Video" -Force            
+                Write-UTCLog "File $($file.FullName) copied to $dstfolder\Video" "green"
+            }
         }
         else {
-            $dstfolder = "$dstfolder\Picture"
+            if (Test-Path "$dstfolder\Picture\$($file.Name)") {
+                Write-UTCLog "File $($file.FullName) already exist in $dstfolder\Picture, skip"  "yellow"
+            }
+            else {                
+                Copy-Item $file.FullName -Destination "$dstfolder\Picture" -Force            
+                Write-UTCLog "File $($file.FullName) copied to $dstfolder\Picture" "green"
+            }
         }
-
-        # if dest file already exist, skip
-        if (Test-Path "$dstfolder\$($file.Name)") {
-            Write-UTCLog "File $($file.FullName) already exist in $dstfolder, skip"  "yellow"
-            continue
-        }
-        else {
-            Copy-Item $file.FullName -Destination $dstfolder -Force
-            Write-UTCLog "File $($file.FullName) copied to $dstfolder" "green"
-            $copyflag = $true
-        }
+        $copyflag = $true
     }
 
     # log the complete time back to file_replica_lastcopy.txt
     if ($copyflag) {
-        #get LastAccessTimeUtc from the latest file and update file_replica_lastcopy.txt
-        Write-UTCLog "Next Copy StartTime : $($lastestfile.LastAccessTimeUtc.ToString("yyyy-MM-dd HH:mm:ss"))" -color "yellow"
-        $lastestfile.LastAccessTimeUtc.ToString("yyyy-MM-dd HH:mm:ss") | Out-File $lastcopyfile
+        #get LastAccessTimeUtc from the latest file and update file_replica_lastcopy.txt (set 1 hour early for the last sync file to avoid file sync latency problem could miss some early files)
+        Write-UTCLog "Next Copy StartTime : $($lastestfile.LastAccessTimeUtc.AddHours(-1).ToString("yyyy-MM-dd HH:mm:ss"))" -color "yellow"
+        $lastestfile.LastAccessTimeUtc.AddHours(-1).ToString("yyyy-MM-dd HH:mm:ss") | Out-File $lastcopyfile
     }
     Write-UTCLog "Sleep 15 seconds" -color "yellow"
     Start-Sleep -Seconds 15 
