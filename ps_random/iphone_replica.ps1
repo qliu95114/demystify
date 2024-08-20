@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-# this script will replicate the folder A to folder B with specific timestamp and log the event to Azure Application Insights
+# this script will replicate the folder A to folder B with specific timestamp and this is for iphone folder specific 
 
 .DESCRIPTION
 This script is used to replicate source folder A to folder B
@@ -41,6 +41,7 @@ Function Write-UTCLog ([string]$message, [string]$color = "white") {
     $logdate = ((get-date).ToUniversalTime()).ToString("yyyy-MM-dd HH:mm:ss")
     $logstamp = "[" + $logdate + "]," + $message
     Write-Host $logstamp -ForegroundColor $color
+    $logstamp | Out-File "C:\Log\folder_replica_log.txt" -Append -Encoding ASCII
 }
 
 # Powershell Function Send-AIEvent , 2024-04-12
@@ -154,19 +155,37 @@ while ($true)
     # list all files which are behind the last replica timestamp
     $files = $files | Where-Object { $_.LastWriteTime.ToUniversalTime() -gt $lastcopy }
 
+    # sort $file in $files and find the lastest timestamp
+    $lastestfile = $files | Sort-Object LastWriteTime -Descending | Select-Object -First 1
+
     $copyflag = $false
     # copy the files to the destination folder
     foreach ($file in $files) {
-        Copy-Item $file.FullName -Destination $dstfolder
-        Write-UTCLog "File $($file.FullName) copied to $dstfolder"
-        $copyflag = $true
+        # if file extension is .mov, copy to destination\video folder , anything else copy to destination\picture folder
+        if ($file.Extension -eq ".mov") {
+            $dstfolder = "$dstfolder\Video"
+        }
+        else {
+            $dstfolder = "$dstfolder\Picture"
+        }
+
+        # if dest file already exist, skip
+        if (Test-Path "$dstfolder\$($file.Name)") {
+            Write-UTCLog "File $($file.FullName) already exist in $dstfolder, skip"  "yellow"
+            continue
+        }
+        else {
+            Copy-Item $file.FullName -Destination $dstfolder -Force
+            Write-UTCLog "File $($file.FullName) copied to $dstfolder" "green"
+            $copyflag = $true
+        }
     }
 
     # log the complete time back to file_replica_lastcopy.txt
     if ($copyflag) {
-        #get current timestamp and write to file_replica_lastcopy.txt
-        $currenttime = (Get-Date).ToUniversalTime()
-        $currenttime.ToString("yyyy-MM-dd HH:mm:ss") | Out-File $lastcopyfile
+        #get LastAccessTimeUtc from the latest file and update file_replica_lastcopy.txt
+        Write-UTCLog "Next Copy StartTime : $($lastestfile.LastAccessTimeUtc.ToString("yyyy-MM-dd HH:mm:ss"))" -color "yellow"
+        $lastestfile.LastAccessTimeUtc.ToString("yyyy-MM-dd HH:mm:ss") | Out-File $lastcopyfile
     }
     Write-UTCLog "Sleep 15 seconds" -color "yellow"
     Start-Sleep -Seconds 15 
