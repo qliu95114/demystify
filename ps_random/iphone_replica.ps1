@@ -149,6 +149,15 @@ while ($true)
     $lastcopy = Get-Content $lastcopyfile
     Write-UTCLog "Last Copied : $lastcopy" -color "yellow"
 
+    #use robocopy to replication video and audo
+    $robocopy = "robocopy $srcfolder $dstfolder\Picture /e /xf *.mov /r:1 /w:1"
+    Write-UTCLog "Robocopy : $robocopy" -color "yellow"
+    Invoke-Expression $robocopy
+
+    $robocopy = "robocopy $srcfolder $dstfolder\Video *.mov /r:1 /w:1"
+    Write-UTCLog "Robocopy : $robocopy" -color "yellow"
+    Invoke-Expression $robocopy
+
     # list all files from source folder A
     $files = Get-ChildItem $srcfolder -Recurse
 
@@ -158,6 +167,11 @@ while ($true)
     # sort $file in $files and find the lastest timestamp
     $lastestfile = $files | Sort-Object LastWriteTime -Descending | Select-Object -First 1
 
+    #get LastAccessTimeUtc from the latest file and update file_replica_lastcopy.txt (set 1 hour early for the last sync file to avoid file sync latency problem could miss some early files)
+    Write-UTCLog "Next Copy StartTime : $($lastestfile.LastAccessTimeUtc.AddHours(-1).ToString("yyyy-MM-dd HH:mm:ss"))" -color "yellow"
+    $lastestfile.LastAccessTimeUtc.ToString("yyyy-MM-dd HH:mm:ss") | Out-File $lastcopyfile
+
+    <#
     $copyflag = $false
     # copy the files to the destination folder
     foreach ($file in $files) {
@@ -188,7 +202,7 @@ while ($true)
         #get LastAccessTimeUtc from the latest file and update file_replica_lastcopy.txt (set 1 hour early for the last sync file to avoid file sync latency problem could miss some early files)
         Write-UTCLog "Next Copy StartTime : $($lastestfile.LastAccessTimeUtc.AddHours(-1).ToString("yyyy-MM-dd HH:mm:ss"))" -color "yellow"
         $lastestfile.LastAccessTimeUtc.AddHours(-1).ToString("yyyy-MM-dd HH:mm:ss") | Out-File $lastcopyfile
-    }
+    }#>
     Write-UTCLog "Sleep 15 seconds" -color "yellow"
     Start-Sleep -Seconds 15 
 }
