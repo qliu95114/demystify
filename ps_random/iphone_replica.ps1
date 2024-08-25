@@ -159,13 +159,9 @@ while ($true)
     Invoke-Expression $robocopy
 
     # list all files from source folder A
-    $files = Get-ChildItem $srcfolder -Recurse
-    # sort $file in $files and find the lastest timestamp
-    $lastestfile = $files | Sort-Object LastWriteTime -Descending | Select-Object -First 1
-
     #get LastAccessTimeUtc from the latest file and update file_replica_lastcopy.txt (set 1 hour early for the last sync file to avoid file sync latency problem could miss some early files)
-    Write-UTCLog "Next Copy StartTime : $($lastestfile.LastAccessTimeUtc.ToString("yyyy-MM-dd HH:mm:ss"))" -color "yellow"
-    $lastestfile.LastAccessTimeUtc.ToString("yyyy-MM-dd HH:mm:ss") | Out-File $lastcopyfile
+    Write-UTCLog "Last Copy StartTime : $((get-date).ToUniversalTime().ToString("yyyy-MM-dd HH:mm:ss"))" -color "yellow"
+    (get-date).ToUniversalTime().ToString("yyyy-MM-dd HH:mm:ss") | Out-File $lastcopyfile
 
     Write-UTCLog "Sleep 15 seconds" -color "yellow"
     Start-Sleep -Seconds 15 
