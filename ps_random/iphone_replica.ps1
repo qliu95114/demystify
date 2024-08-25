@@ -167,38 +167,6 @@ while ($true)
     Write-UTCLog "Next Copy StartTime : $($lastestfile.LastAccessTimeUtc.ToString("yyyy-MM-dd HH:mm:ss"))" -color "yellow"
     $lastestfile.LastAccessTimeUtc.ToString("yyyy-MM-dd HH:mm:ss") | Out-File $lastcopyfile
 
-    <#
-    $copyflag = $false
-    # copy the files to the destination folder
-    foreach ($file in $files) {
-        # if file extension is .mov, copy to destination\video folder , anything else copy to destination\picture folder
-        if ($file.Extension -eq ".mov") {
-            if (Test-Path "$dstfolder\Video\$($file.Name)") {
-                Write-UTCLog "File $($file.FullName) already exist in $dstfolder\Video, skip"  "yellow"
-            }
-            else {
-                Copy-Item $file.FullName -Destination "$dstfolder\Video" -Force            
-                Write-UTCLog "File $($file.FullName) copied to $dstfolder\Video" "green"
-            }
-        }
-        else {
-            if (Test-Path "$dstfolder\Picture\$($file.Name)") {
-                Write-UTCLog "File $($file.FullName) already exist in $dstfolder\Picture, skip"  "yellow"
-            }
-            else {                
-                Copy-Item $file.FullName -Destination "$dstfolder\Picture" -Force            
-                Write-UTCLog "File $($file.FullName) copied to $dstfolder\Picture" "green"
-            }
-        }
-        $copyflag = $true
-    }
-
-    # log the complete time back to file_replica_lastcopy.txt
-    if ($copyflag) {
-        #get LastAccessTimeUtc from the latest file and update file_replica_lastcopy.txt (set 1 hour early for the last sync file to avoid file sync latency problem could miss some early files)
-        Write-UTCLog "Next Copy StartTime : $($lastestfile.LastAccessTimeUtc.AddHours(-1).ToString("yyyy-MM-dd HH:mm:ss"))" -color "yellow"
-        $lastestfile.LastAccessTimeUtc.AddHours(-1).ToString("yyyy-MM-dd HH:mm:ss") | Out-File $lastcopyfile
-    }#>
     Write-UTCLog "Sleep 15 seconds" -color "yellow"
     Start-Sleep -Seconds 15 
 }
