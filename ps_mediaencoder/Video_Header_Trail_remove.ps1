@@ -38,6 +38,7 @@ Param (
     [Parameter(Mandatory=$true)][string]$filename,
     [string]$outputfolder="\\192.168.3.17\g$\DOWNLOADS\transfer\ffmpeg",
     [string]$logfolder="\\192.168.3.17\g$\DOWNLOADS\ffmpeg_log\cut",
+    [ValidateSet("h264_nvenc","h264_amf")][string]$gpu="h264_amf",
     [int]$bitrate, # in Kbps
     [int]$startsecs=0,
     [int]$lastsecs=0
@@ -182,10 +183,11 @@ If ((Test-Path $filename) -and (Test-Path $outputfolder))
     $starttime=([timespan]::fromseconds($startsecs)).ToString().split(".")[0]
     $endtime = ([timespan]::fromseconds($endsecs)).ToString().split(".")[0]
     Write-UTCLog "Target : ($($outputfile)): $($starttime)($($startsecs)) - $($endtime)($($endsecs)), Bitrate: $($bitrate)k"  "Yellow"
+    Write-UTCLog "GPU: $($gpu)" "Green"
 
     #direct cut without encoding, this will cause a few seconds black screen for target file. 
     #$ffcmd="ffmpeg.exe -y -i ""$($filename)"" -ss $($starttime).000 -to $($endtime).000  -c:v copy -map 0:v:0? -c:a copy -map 0:a? -c:s copy -map 0:s? -map_chapters 0 -map_metadata 0 -f mp4 -threads 0 ""$($outputfile)"" 2> ""$($logfile)"""
-    $ffcmd="ffmpeg.exe -y -i ""$($filename)"" -ss $($starttime).000 -to $($endtime).000  -c:v h264_nvenc -b:v $($bitrate)k -pix_fmt yuv420p -vf ""scale=1920:-2"" -map 0:v:0? -c:a copy -map 0:1 -c:a aac -b:a $($bitrate_audio)k -c:s mov_text -map 0:s? -map_chapters 0 -map_metadata 0 -f mp4 -threads 0 ""$($outputfile)"" 2> ""$($logfile)"""
+    $ffcmd="ffmpeg.exe -y -i ""$($filename)"" -ss $($starttime).000 -to $($endtime).000  -c:v $($gpu) -b:v $($bitrate)k -pix_fmt yuv420p -vf ""scale=1920:-2"" -map 0:v:0? -c:a copy -map 0:1 -c:a aac -b:a $($bitrate_audio)k -c:s mov_text -map 0:s? -map_chapters 0 -map_metadata 0 -f mp4 -threads 0 ""$($outputfile)"" 2> ""$($logfile)"""
     Write-UTCLog "CMD: $($ffcmd)" "Green"
     Write-UTCLog "Cut/Encode Start : $($filename) " "Green"
     $st=Get-date;  Invoke-Expression $ffcmd; $et=Get-date
