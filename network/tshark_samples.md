@@ -117,7 +117,7 @@ For big trace analyze, use Azure Data Explorer (aka. kusto) is good way to speed
 |Delta-Time|\| order by TT asc // sort by timestamp<br>//add you filter<br>\| extend  delta_in_ms=toreal(datetime_diff('nanosecond',TT, prev(TT)))/1000000 //get DeltaTimeDisplayed in Kusto Way<br>\| project  delta_in_ms
 |Encap Packets|\| extend SourceCA=tostring(split(Source,',')[countof(Source,',')])//if this is encap traffic, get inner ip address only<br>\| extend DestCA=tostring(split(Destination,',')[countof(Destination,',')])//if this is encap traffic, get inner ip address only<br>\| extend SourcePA=tostring(split(Source,',')[countof(Source,',')-1])<br>\| extend DestPA=tostring(split(Destination,',')[countof(Destination,',')-1])//if this is encap traffic, get inner ip address only<br>\| extend ipidinnner=split(ipid,',')[countof(ipid,',')] //if this is encap traffic, get inner ipid only<br>\| extend ipTTLInner=split(ipTTL,',')[countof(ipTTL,',')] //if this is encap traffic, get inner ipTTL only|
 |Time shift|\| extend TT=datetime_add('second', -19, TT)|
-|Conversation||
+|Conversation|\|extend flowhash=hash(IPToInt(SourceCA)+IPToInt(DestCA))+hash(toint(tcpsrcport)+toint(tcpdstport))|
 
 Here is my favorite fields commonly used when analyze TCP/UDP network trace, Encap Trace file are supported. 
 
@@ -157,6 +157,7 @@ trace
 | order by TT asc // sort by timestamp
 | extend  delta_in_ms=toreal(datetime_diff('nanosecond',TT, prev(TT)))/1000000  //get DeltaTimeDisplayed in Kusto Way
 | project TT,delta_in_ms, SourceCA, DestCA, ipidinnner,ipTTLInner, Protocol,tcpseq, tcpack, Length, Info, tcpsrcport, tcpdstport, tcpFlags//,ethsrc, ethdst, frameprotocol
+| extend tcpflowhash=hash(IPToInt(SourceCA)+IPToInt(DestCA))+hash(toint(tcpsrcport)+toint(tcpdstport))
 | take 20  //get 20 record from top
 
 //to take last 10 record
