@@ -421,13 +421,23 @@ Handle a corrupt capture(cut-in-middle) file and extract the first [xxx] frames 
 1. **Determine the Number of Packets**: Use `capinfos` to find out how many packets are in the corrupted file.
    ```bash
    C:\Program Files\Wireshark> capinfos C:\Downloads\mycap.bad.pcap
+   <removed>
+   Number of interfaces in file: 1
+   Interface #0 info:
+                        Encapsulation = Ethernet (1 - ether)
+                        Capture length = 256
+                        Time precision = microseconds (6)
+                        Time ticks per second = 1000000
+                        Number of stat entries = 0
+                        Number of packets = 41579
    ```
-   This command provides details about the capture file, including the total number of packets.
-2. **Extract the First 41579 Frames**: Use `editcap` to cut the trace down to the first 2000 frames, assuming these are problem-free.
+   This command provides details about the capture file, including the total number of packets 41579.
+2. **Extract the First 41579 Frames**: Use `editcap` to cut the trace down to the first 41579 frames, assuming these are problem-free.
    ```bash
    C:\Program Files\Wireshark> editcap -r C:\Downloads\mycap.bad.pcap C:\Downloads\mycap.fix.pcap 1-41579
    ```
 3. **Verify the Output**: Open the file `mycap.fix.pcap` in Wireshark to ensure there are no error messages.
+
 This process helps you create a clean capture file for analysis.
 
 
