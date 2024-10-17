@@ -99,7 +99,7 @@ Function pcap2csv ([string]$pcapfile,[string]$csvfile,[string]$jobid,[switch]$mu
         }
     }
     $pcapfilename=(Get-ChildItem $pcapfile).basename
-    $cmdtshark="""$($tsharkcli)"" -r ""$($pcapfile)"" -T fields -e frame.number -e frame.time_epoch -e frame.time_delta_displayed -e ip.src -e ip.dst -e ip.id -e _ws.col.Protocol -e tcp.seq -e tcp.ack -e frame.len -e tcp.srcport -e tcp.dstport -e udp.srcport -e udp.dstport -e tcp.analysis.ack_rtt -e frame.protocols -e _ws.col.Info -e eth.src -e eth.dst -e ipv6.src -e ipv6.dst -e ip.proto -e dns.id -e ip.ttl -e ip.flags -e tcp.flags -e tcp.window_size_value -e esp.sequence -E header=y -E separator=, -E quote=d > ""$($csvfile)"""    <# Action when all if and elseif conditions are false #>
+    $cmdtshark="""$($tsharkcli)"" -r ""$($pcapfile)"" -T fields -e frame.number -e frame.time_epoch -e frame.time_delta_displayed -e ip.src -e ip.dst -e ip.id -e _ws.col.Protocol -e tcp.seq -e tcp.ack -e frame.len -e tcp.srcport -e tcp.dstport -e udp.srcport -e udp.dstport -e tcp.analysis.ack_rtt -e frame.protocols -e _ws.col.Info -e eth.src -e eth.dst -e ipv6.src -e ipv6.dst -e ip.proto -e dns.id -e ip.ttl -e ip.flags -e tcp.flags -e tcp.window_size_value -e esp.sequence -e mysql.command -E header=y -E separator=, -E quote=d > ""$($csvfile)"""    <# Action when all if and elseif conditions are false #>
     $cmdtshark|out-file "$($workingfolder)\$($jobid)_0_$($pcapfilename)_pcap2csv.cmd" -Encoding ascii
     if ($debug) 
         {   
@@ -408,7 +408,7 @@ else {
         {
             # generate creata table kql file
             $kqlnewtable0=".drop table $($kustotable)"
-            $kqlnewtable1=".create table $($kustotable) (framenumber:long,frametime:string,DeltaDisplayed:string,Source:string,Destination:string,ipid:string,Protocol:string,tcpseq:string,tcpack:string,Length:int,tcpsrcport:int,tcpdstport:int,udpsrcport:int,udpdstport:int,tcpackrtt:string,frameprotocol:string,Info:string,ethsrc:string,ethdst:string,SourceV6:string,DestinationV6:string,ipProtocol:string,dnsid:string,ipTTL:string,ipFlags:string,tcpFlags:string,tcpwindowsize:int,espseq:string)"
+            $kqlnewtable1=".create table $($kustotable) (framenumber:long,frametime:string,DeltaDisplayed:string,Source:string,Destination:string,ipid:string,Protocol:string,tcpseq:string,tcpack:string,Length:int,tcpsrcport:int,tcpdstport:int,udpsrcport:int,udpdstport:int,tcpackrtt:string,frameprotocol:string,Info:string,ethsrc:string,ethdst:string,SourceV6:string,DestinationV6:string,ipProtocol:string,dnsid:string,ipTTL:string,ipFlags:string,tcpFlags:string,tcpwindowsize:int,espseq:string,mysqlcmd:string)"
             $kqlnewtable0|out-file "$($workingfolder)\$($jobid)_0_createtable.kql" -Encoding ascii
             $kqlnewtable1|out-file "$($workingfolder)\$($jobid)_0_createtable.kql" -Encoding ascii -Append
             $kqlcmd="$($kustocli) ""$kustoendpoint"" -script:""$($workingfolder)\$($jobid)_0_createtable.kql"""
