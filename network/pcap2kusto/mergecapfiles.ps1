@@ -146,22 +146,26 @@ if (Test-Path $tracefolder)  #validate
                 Write-UTCLog " Target file: $($targetfile)" "Yellow"
 
                 # check if we have any bad file, list all children under badfile folder
-                $badfilelist=(Get-ChildItem $badfilefolder)
-                    if ($badfilelist.count -ne 0) {
-                        Write-UTCLog " Bad file(s) : $($badfilelist.count) " "Red"
-                        Write-UTCLog " Bad file(s) detected, please check under $($badfilefolder)" "Red"
-                        foreach ($badfile in $badfilelist) {
-                            Write-UTCLog "  $($badfile.FullName)" "Red"
+                if (Test-Path $badfilefolder) {
+                    $badfilelist=(Get-ChildItem $badfilefolder)
+                        if ($badfilelist.count -ne 0) {
+                            Write-UTCLog " Bad file(s) : $($badfilelist.count) " "Red"
+                            Write-UTCLog " Bad file(s) detected, please check under $($badfilefolder)" "Red"
+                            foreach ($badfile in $badfilelist) {
+                                Write-UTCLog "  $($badfile.FullName)" "Red"
+                            }
                         }
-                    }
-                    else {
-                        # no bad file, remove badfile folder
-                        Write-UTCLog " Bad file(s) : 0 " "Green"                        
-                        remove-item $badfilefolder -Force
-                    }
+                        else {
+                            # no bad file, remove badfile folder
+                            Write-UTCLog " Bad file(s) : 0 " "Green"                        
+                            remove-item $badfilefolder -Force
+                        }
+                }
+                else {
+                    <# Action when all if and elseif conditions are false #>
+                }
             }
             else {
-                #Write-UTCLog " Pcap $($tracefolder)\$($tracefile) Total : $($pcapfilelist.count) File(s) , existing... " "Red"
                 Write-UTCLog " Did not find anything under $($tracefolder)\$($tracefile), please check..." "Yellow"
             }        
         }
