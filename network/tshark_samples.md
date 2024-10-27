@@ -148,11 +148,10 @@ Sample query
 ``` kql
 //convert epoch time to UTC display time with Seconds, handle flowhash
 let IPToInt = (ip:string) {  // define IPToInt function
-    toint(split(ip, ".")[0]) * 256 * 256 * 256 +
-    toint(split(ip, ".")[1]) * 256 * 256 +
-    toint(split(ip, ".")[2]) * 256 +
-    toint(split(ip, ".")[3])
-};
+    toint(split(ip, '.')[0]) * 256 * 256 * 256 +
+    toint(split(ip, '.')[1]) * 256 * 256 +
+    toint(split(ip, '.')[2]) * 256 +
+    toint(split(ip, '.')[3])};
 trace 
 | extend aa=tolong(replace_string(frametime,'.',''))/1000
 | extend TT=unixtime_microseconds_todatetime(aa)
@@ -187,16 +186,16 @@ ipProtocoli=='1',hash(IPToInt(SourceCA)+IPToInt(DestCA)),
 
 //decode Azure Service Endpoint or Private Link ipv6 ipaddress
 //SourceV6 and DestinationV6 has ipv6 address, let's use the following query to decode that ip address to Sourcev4decode, Destv4decode
-| extend ip_a=toint(strcat('0x',trim_end("[a-z0-9]{2}",tostring(split(SourceV6,':')[6]))))
+| extend ip_a=toint(strcat('0x',trim_end('[a-z0-9]{2}',tostring(split(SourceV6,':')[6]))))
 | extend ip_b=toint(strcat('0x',tostring(split(SourceV6,':')[6])))-ip_a*256
-| extend ip_c=toint(strcat('0x',trim_end("[a-z0-9]{2}",tostring(split(SourceV6,':')[7]))))
+| extend ip_c=toint(strcat('0x',trim_end('[a-z0-9]{2}',tostring(split(SourceV6,':')[7]))))
 | extend ip_d=toint(strcat('0x',tostring(split(SourceV6,':')[7])))-ip_c*256
 | extend Sourcev4decode=strcat(tostring(ip_a),'.',tostring(ip_b),'.',tostring(ip_c),'.',tostring(ip_d))
 | extend Sourcev4decode=iff(Sourcev4decode == '...',SourceV6,Sourcev4decode)
 | project-away ip_a, ip_b, ip_c , ip_d
-| extend ip_a=toint(strcat('0x',trim_end("[a-z0-9]{2}",tostring(split(DestinationV6,':')[6]))))
+| extend ip_a=toint(strcat('0x',trim_end('[a-z0-9]{2}',tostring(split(DestinationV6,':')[6]))))
 | extend ip_b=toint(strcat('0x',tostring(split(DestinationV6,':')[6])))-ip_a*256
-| extend ip_c=toint(strcat('0x',trim_end("[a-z0-9]{2}",tostring(split(DestinationV6,':')[7]))))
+| extend ip_c=toint(strcat('0x',trim_end('[a-z0-9]{2}',tostring(split(DestinationV6,':')[7]))))
 | extend ip_d=toint(strcat('0x',tostring(split(DestinationV6,':')[7])))-ip_c*256
 | extend Destv4decode=strcat(tostring(ip_a),'.',tostring(ip_b),'.',tostring(ip_c),'.',tostring(ip_d))
 | extend Destv4decode=iff(Destv4decode == '...',DestinationV6,Destv4decode)

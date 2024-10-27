@@ -150,7 +150,7 @@ function CSVtoContainer([string]$csvfile,[string]$sastoken,[switch]$multithread)
 function CSVtoKustoCluster([string]$csvfile,[string]$kustoendpoint,[string]$kustotable,[string]$sastoken,[string]$jobid,[switch]$multithread=$false)
 {
     if ($debug) {Write-UTCLog  " +++function:CSVtoKustoCluster " "cyan"}
-    #use azcopy copy CSV to storage account, if this is thread then skip copy as file should already be there
+    #use azcopy copy CSV to storage account, if this is multi-thread then skip copy as file should already be there
     if ($multithread){}else { CSVtoContainer -csvfile $csvfile -sastoken $sastoken }
 
     #create ingress kql file
@@ -163,18 +163,102 @@ function CSVtoKustoCluster([string]$csvfile,[string]$kustoendpoint,[string]$kust
     
     #generate SAS token and kql file
     $csvsas="$($sastoken.split('?')[0])/$($csvfilename)?$($sastoken.split('?')[1])"  
-    $kqlcsvblob=".ingest into table $($kustotable) (@""$($csvsas)"") with (format='csv',ignoreFirstRecord=true)"
+    $kqlcsvblob0=".drop table $($kustotable)_temp"
+    $kqlcsvblob1=".create table $($kustotable)_temp (framenumber:long,frametime:string,DeltaDisplayed:string,Source:string,Destination:string,ipid:string,Protocol:string,tcpseq:string,tcpack:string,Length:int,tcpsrcport:int,tcpdstport:int,udpsrcport:int,udpdstport:int,tcpackrtt:string,frameprotocol:string,Info:string,ethsrc:string,ethdst:string,SourceV6:string,DestinationV6:string,ipProtocol:string,dnsid:string,ipTTL:string,ipFlags:string,tcpFlags:string,tcpwindowsize:int,espseq:string,mysqlcmd:string)"
+    $kqlcsvblob2=".ingest into table $($kustotable)_temp (@""$($csvsas)"") with (format='csv',ignoreFirstRecord=true)"
 
     if ($multithread)
     {
         #multithread mode, append all Kusto query in one $($jobid)_1_ingress.kql
         # KQL need be single thread to process as it will lock the table
         Write-UTCLog "  +++ ksql:$($jobid)_1_ingress.kql, appending($($kustotable)) from blob [$($csvfilename)]" -color "Green"
-        $kqlcsvblob|out-file "$($workingfolder)\$($jobid)_1_ingress.kql" -Encoding ascii -Append  
+        $kqlcsvblob0|out-file "$($workingfolder)\$($jobid)_1_ingress.kql" -Encoding ascii -Append  
+        $kqlcsvblob1|out-file "$($workingfolder)\$($jobid)_1_ingress.kql" -Encoding ascii -Append  
+        $kqlcsvblob2|out-file "$($workingfolder)\$($jobid)_1_ingress.kql" -Encoding ascii -Append  
+        ".set-or-append $($kustotable) <|&"|out-file "$($workingfolder)\$($jobid)_1_ingress.kql" -Encoding ascii -Append 
+        "let IPToInt = (ip:string) {&"|out-file "$($workingfolder)\$($jobid)_1_ingress.kql" -Encoding ascii -Append 
+        "    toint(split(ip, '.')[0]) * 256 * 256 * 256 +&"|out-file "$($workingfolder)\$($jobid)_1_ingress.kql" -Encoding ascii -Append 
+        "    toint(split(ip, '.')[1]) * 256 * 256 +&"|out-file "$($workingfolder)\$($jobid)_1_ingress.kql" -Encoding ascii -Append 
+        "    toint(split(ip, '.')[2]) * 256 +&"|out-file "$($workingfolder)\$($jobid)_1_ingress.kql" -Encoding ascii -Append 
+        "    toint(split(ip, '.')[3])};&"|out-file "$($workingfolder)\$($jobid)_1_ingress.kql" -Encoding ascii -Append 
+        "$($kustotable)_temp &"|out-file "$($workingfolder)\$($jobid)_1_ingress.kql" -Encoding ascii -Append 
+        "| extend aa=tolong(replace_string(frametime,'.',''))/1000&"|out-file "$($workingfolder)\$($jobid)_1_ingress.kql" -Encoding ascii -Append 
+        "| extend TT=unixtime_microseconds_todatetime(aa)&"|out-file "$($workingfolder)\$($jobid)_1_ingress.kql" -Encoding ascii -Append 
+        "| extend SourceCA=tostring(split(Source,',')[countof(Source,',')])//return inner src ip addres&"|out-file "$($workingfolder)\$($jobid)_1_ingress.kql" -Encoding ascii -Append 
+        "| extend DestCA=tostring(split(Destination,',')[countof(Destination,',')])//return inner dest ip addres&"|out-file "$($workingfolder)\$($jobid)_1_ingress.kql" -Encoding ascii -Append 
+        "| extend SourcePA=tostring(split(Source,',')[countof(Source,',')-1])//return outer src ip addres&"|out-file "$($workingfolder)\$($jobid)_1_ingress.kql" -Encoding ascii -Append 
+        "| extend DestPA=tostring(split(Destination,',')[countof(Destination,',')-1])//return outer dest ip addres&"|out-file "$($workingfolder)\$($jobid)_1_ingress.kql" -Encoding ascii -Append 
+        "| extend ipidinner=split(ipid,',')[countof(ipid,',')] //return inner ipid&"|out-file "$($workingfolder)\$($jobid)_1_ingress.kql" -Encoding ascii -Append 
+        "| extend ipTTLInner=split(ipTTL,',')[countof(ipTTL,',')] //return inner ipTTL&"|out-file "$($workingfolder)\$($jobid)_1_ingress.kql" -Encoding ascii -Append 
+        "| extend ethsrci=tostring(split(ethsrc,',')[countof(ethsrc,',')]) //return inner src eth.addr&"|out-file "$($workingfolder)\$($jobid)_1_ingress.kql" -Encoding ascii -Append 
+        "| extend ethdsti=tostring(split(ethdst,',')[countof(ethdst,',')]) //return inner dest eth.addr&"|out-file "$($workingfolder)\$($jobid)_1_ingress.kql" -Encoding ascii -Append 
+        "| extend ipProtocoli=tostring(split(ipProtocol,',')[countof(ipProtocol,',')]) //return inner ipProtocol &"|out-file "$($workingfolder)\$($jobid)_1_ingress.kql" -Encoding ascii -Append 
+        "| project-away framenumber, frametime, DeltaDisplayed, aa&"|out-file "$($workingfolder)\$($jobid)_1_ingress.kql" -Encoding ascii -Append 
+        "| extend flowhash=case(&"|out-file "$($workingfolder)\$($jobid)_1_ingress.kql" -Encoding ascii -Append 
+        "ipProtocoli=='6', hash(IPToInt(SourceCA)+IPToInt(DestCA))+hash(toint(tcpsrcport)*toint(tcpdstport)),&"|out-file "$($workingfolder)\$($jobid)_1_ingress.kql" -Encoding ascii -Append 
+        "ipProtocoli=='17', hash(IPToInt(SourceCA)+IPToInt(DestCA))+hash(toint(udpsrcport)*toint(udpdstport)),&"|out-file "$($workingfolder)\$($jobid)_1_ingress.kql" -Encoding ascii -Append 
+        "ipProtocoli=='1',hash(IPToInt(SourceCA)+IPToInt(DestCA)),0)&"|out-file "$($workingfolder)\$($jobid)_1_ingress.kql" -Encoding ascii -Append 
+        "| extend ip_a=toint(strcat('0x',trim_end('[a-z0-9]{2}',tostring(split(SourceV6,':')[6]))))&"|out-file "$($workingfolder)\$($jobid)_1_ingress.kql" -Encoding ascii -Append 
+        "| extend ip_b=toint(strcat('0x',tostring(split(SourceV6,':')[6])))-ip_a*256&"|out-file "$($workingfolder)\$($jobid)_1_ingress.kql" -Encoding ascii -Append 
+        "| extend ip_c=toint(strcat('0x',trim_end('[a-z0-9]{2}',tostring(split(SourceV6,':')[7]))))&"|out-file "$($workingfolder)\$($jobid)_1_ingress.kql" -Encoding ascii -Append 
+        "| extend ip_d=toint(strcat('0x',tostring(split(SourceV6,':')[7])))-ip_c*256&"|out-file "$($workingfolder)\$($jobid)_1_ingress.kql" -Encoding ascii -Append 
+        "| extend Sourcev4decode=strcat(tostring(ip_a),'.',tostring(ip_b),'.',tostring(ip_c),'.',tostring(ip_d))&"|out-file "$($workingfolder)\$($jobid)_1_ingress.kql" -Encoding ascii -Append 
+        "| extend Sourcev4decode=iff(Sourcev4decode == '...',SourceV6,Sourcev4decode)&"|out-file "$($workingfolder)\$($jobid)_1_ingress.kql" -Encoding ascii -Append 
+        "| project-away ip_a, ip_b, ip_c , ip_d&"|out-file "$($workingfolder)\$($jobid)_1_ingress.kql" -Encoding ascii -Append 
+        "| extend ip_a=toint(strcat('0x',trim_end('[a-z0-9]{2}',tostring(split(DestinationV6,':')[6]))))&"|out-file "$($workingfolder)\$($jobid)_1_ingress.kql" -Encoding ascii -Append 
+        "| extend ip_b=toint(strcat('0x',tostring(split(DestinationV6,':')[6])))-ip_a*256&"|out-file "$($workingfolder)\$($jobid)_1_ingress.kql" -Encoding ascii -Append 
+        "| extend ip_c=toint(strcat('0x',trim_end('[a-z0-9]{2}',tostring(split(DestinationV6,':')[7]))))&"|out-file "$($workingfolder)\$($jobid)_1_ingress.kql" -Encoding ascii -Append 
+        "| extend ip_d=toint(strcat('0x',tostring(split(DestinationV6,':')[7])))-ip_c*256&"|out-file "$($workingfolder)\$($jobid)_1_ingress.kql" -Encoding ascii -Append 
+        "| extend Destv4decode=strcat(tostring(ip_a),'.',tostring(ip_b),'.',tostring(ip_c),'.',tostring(ip_d))&"|out-file "$($workingfolder)\$($jobid)_1_ingress.kql" -Encoding ascii -Append 
+        "| extend Destv4decode=iff(Destv4decode == '...',DestinationV6,Destv4decode)&"|out-file "$($workingfolder)\$($jobid)_1_ingress.kql" -Encoding ascii -Append 
+        "| project-away ip_a, ip_b, ip_c, ip_d&"|out-file "$($workingfolder)\$($jobid)_1_ingress.kql" -Encoding ascii -Append 
+        "| project-reorder flowhash, TT, SourcePA, DestPA, SourceCA, DestCA, ethsrci, ethdsti, ipProtocoli, Protocol,ipidinner, ipTTLInner, tcpseq, tcpack, tcpFlags,Length, Info, tcpsrcport, tcpdstport, udpsrcport, udpdstport"|out-file "$($workingfolder)\$($jobid)_1_ingress.kql" -Encoding ascii -Append 
+        $kqlcsvblob0|out-file "$($workingfolder)\$($jobid)_1_ingress.kql" -Encoding ascii -Append  
     }
     else {
         #single thread mode, execute kusto for single thread complete the command 
-        $kqlcsvblob|out-file "$($workingfolder)\$($jobid)_1_$($(Get-ChildItem $csvfile).BaseName)_ingress.kql" -Encoding ascii #still create the single file for debug purpose
+        $kqlcsvblob0|out-file "$($workingfolder)\$($jobid)_1_$($(Get-ChildItem $csvfile).BaseName)_ingress.kql" -Encoding ascii
+        $kqlcsvblob1|out-file "$($workingfolder)\$($jobid)_1_$($(Get-ChildItem $csvfile).BaseName)_ingress.kql" -Encoding ascii
+        $kqlcsvblob2|out-file "$($workingfolder)\$($jobid)_1_$($(Get-ChildItem $csvfile).BaseName)_ingress.kql" -Encoding ascii
+        ".set-or-append $($kustotable) <|&"|out-file "$($workingfolder)\$($jobid)_1_$($(Get-ChildItem $csvfile).BaseName)_ingress.kql" -Encoding ascii -Append 
+        "let IPToInt = (ip:string) {&"|out-file "$($workingfolder)\$($jobid)_1_$($(Get-ChildItem $csvfile).BaseName)_ingress.kql" -Encoding ascii -Append 
+        "    toint(split(ip, '.')[0]) * 256 * 256 * 256 +&"|out-file "$($workingfolder)\$($jobid)_1_$($(Get-ChildItem $csvfile).BaseName)_ingress.kql" -Encoding ascii -Append 
+        "    toint(split(ip, '.')[1]) * 256 * 256 +&"|out-file "$($workingfolder)\$($jobid)_1_$($(Get-ChildItem $csvfile).BaseName)_ingress.kql" -Encoding ascii -Append 
+        "    toint(split(ip, '.')[2]) * 256 +&"|out-file "$($workingfolder)\$($jobid)_1_$($(Get-ChildItem $csvfile).BaseName)_ingress.kql" -Encoding ascii -Append 
+        "    toint(split(ip, '.')[3])};&"|out-file "$($workingfolder)\$($jobid)_1_$($(Get-ChildItem $csvfile).BaseName)_ingress.kql" -Encoding ascii -Append 
+        "$($kustotable)_temp &"|out-file "$($workingfolder)\$($jobid)_1_$($(Get-ChildItem $csvfile).BaseName)_ingress.kql" -Encoding ascii -Append 
+        "| extend aa=tolong(replace_string(frametime,'.',''))/1000&"|out-file "$($workingfolder)\$($jobid)_1_$($(Get-ChildItem $csvfile).BaseName)_ingress.kql" -Encoding ascii -Append 
+        "| extend TT=unixtime_microseconds_todatetime(aa)&"|out-file "$($workingfolder)\$($jobid)_1_$($(Get-ChildItem $csvfile).BaseName)_ingress.kql" -Encoding ascii -Append 
+        "| extend SourceCA=tostring(split(Source,',')[countof(Source,',')])//return inner src ip addres&"|out-file "$($workingfolder)\$($jobid)_1_$($(Get-ChildItem $csvfile).BaseName)_ingress.kql" -Encoding ascii -Append 
+        "| extend DestCA=tostring(split(Destination,',')[countof(Destination,',')])//return inner dest ip addres&"|out-file "$($workingfolder)\$($jobid)_1_$($(Get-ChildItem $csvfile).BaseName)_ingress.kql" -Encoding ascii -Append 
+        "| extend SourcePA=tostring(split(Source,',')[countof(Source,',')-1])//return outer src ip addres&"|out-file "$($workingfolder)\$($jobid)_1_$($(Get-ChildItem $csvfile).BaseName)_ingress.kql" -Encoding ascii -Append 
+        "| extend DestPA=tostring(split(Destination,',')[countof(Destination,',')-1])//return outer dest ip addres&"|out-file "$($workingfolder)\$($jobid)_1_$($(Get-ChildItem $csvfile).BaseName)_ingress.kql" -Encoding ascii -Append 
+        "| extend ipidinner=split(ipid,',')[countof(ipid,',')] //return inner ipid&"|out-file "$($workingfolder)\$($jobid)_1_$($(Get-ChildItem $csvfile).BaseName)_ingress.kql" -Encoding ascii -Append 
+        "| extend ipTTLInner=split(ipTTL,',')[countof(ipTTL,',')] //return inner ipTTL&"|out-file "$($workingfolder)\$($jobid)_1_$($(Get-ChildItem $csvfile).BaseName)_ingress.kql" -Encoding ascii -Append 
+        "| extend ethsrci=tostring(split(ethsrc,',')[countof(ethsrc,',')]) //return inner src eth.addr&"|out-file "$($workingfolder)\$($jobid)_1_$($(Get-ChildItem $csvfile).BaseName)_ingress.kql" -Encoding ascii -Append 
+        "| extend ethdsti=tostring(split(ethdst,',')[countof(ethdst,',')]) //return inner dest eth.addr&"|out-file "$($workingfolder)\$($jobid)_1_$($(Get-ChildItem $csvfile).BaseName)_ingress.kql" -Encoding ascii -Append 
+        "| extend ipProtocoli=tostring(split(ipProtocol,',')[countof(ipProtocol,',')]) //return inner ipProtocol &"|out-file "$($workingfolder)\$($jobid)_1_$($(Get-ChildItem $csvfile).BaseName)_ingress.kql" -Encoding ascii -Append 
+        "| project-away framenumber, frametime, DeltaDisplayed, aa&"|out-file "$($workingfolder)\$($jobid)_1_$($(Get-ChildItem $csvfile).BaseName)_ingress.kql" -Encoding ascii -Append 
+        "| extend flowhash=case(&"|out-file "$($workingfolder)\$($jobid)_1_$($(Get-ChildItem $csvfile).BaseName)_ingress.kql" -Encoding ascii -Append 
+        "ipProtocoli=='6', hash(IPToInt(SourceCA)+IPToInt(DestCA))+hash(toint(tcpsrcport)*toint(tcpdstport)),&"|out-file "$($workingfolder)\$($jobid)_1_$($(Get-ChildItem $csvfile).BaseName)_ingress.kql" -Encoding ascii -Append 
+        "ipProtocoli=='17', hash(IPToInt(SourceCA)+IPToInt(DestCA))+hash(toint(udpsrcport)*toint(udpdstport)),&"|out-file "$($workingfolder)\$($jobid)_1_$($(Get-ChildItem $csvfile).BaseName)_ingress.kql" -Encoding ascii -Append 
+        "ipProtocoli=='1',hash(IPToInt(SourceCA)+IPToInt(DestCA)),0)&"|out-file "$($workingfolder)\$($jobid)_1_$($(Get-ChildItem $csvfile).BaseName)_ingress.kql" -Encoding ascii -Append 
+        "| extend ip_a=toint(strcat('0x',trim_end('[a-z0-9]{2}',tostring(split(SourceV6,':')[6]))))&"|out-file "$($workingfolder)\$($jobid)_1_$($(Get-ChildItem $csvfile).BaseName)_ingress.kql" -Encoding ascii -Append 
+        "| extend ip_b=toint(strcat('0x',tostring(split(SourceV6,':')[6])))-ip_a*256&"|out-file "$($workingfolder)\$($jobid)_1_$($(Get-ChildItem $csvfile).BaseName)_ingress.kql" -Encoding ascii -Append 
+        "| extend ip_c=toint(strcat('0x',trim_end('[a-z0-9]{2}',tostring(split(SourceV6,':')[7]))))&"|out-file "$($workingfolder)\$($jobid)_1_$($(Get-ChildItem $csvfile).BaseName)_ingress.kql" -Encoding ascii -Append 
+        "| extend ip_d=toint(strcat('0x',tostring(split(SourceV6,':')[7])))-ip_c*256&"|out-file "$($workingfolder)\$($jobid)_1_$($(Get-ChildItem $csvfile).BaseName)_ingress.kql" -Encoding ascii -Append 
+        "| extend Sourcev4decode=strcat(tostring(ip_a),'.',tostring(ip_b),'.',tostring(ip_c),'.',tostring(ip_d))&"|out-file "$($workingfolder)\$($jobid)_1_$($(Get-ChildItem $csvfile).BaseName)_ingress.kql" -Encoding ascii -Append 
+        "| extend Sourcev4decode=iff(Sourcev4decode == '...',SourceV6,Sourcev4decode)&"|out-file "$($workingfolder)\$($jobid)_1_$($(Get-ChildItem $csvfile).BaseName)_ingress.kql" -Encoding ascii -Append 
+        "| project-away ip_a, ip_b, ip_c , ip_d&"|out-file "$($workingfolder)\$($jobid)_1_$($(Get-ChildItem $csvfile).BaseName)_ingress.kql" -Encoding ascii -Append 
+        "| extend ip_a=toint(strcat('0x',trim_end('[a-z0-9]{2}',tostring(split(DestinationV6,':')[6]))))&"|out-file "$($workingfolder)\$($jobid)_1_$($(Get-ChildItem $csvfile).BaseName)_ingress.kql" -Encoding ascii -Append 
+        "| extend ip_b=toint(strcat('0x',tostring(split(DestinationV6,':')[6])))-ip_a*256&"|out-file "$($workingfolder)\$($jobid)_1_$($(Get-ChildItem $csvfile).BaseName)_ingress.kql" -Encoding ascii -Append 
+        "| extend ip_c=toint(strcat('0x',trim_end('[a-z0-9]{2}',tostring(split(DestinationV6,':')[7]))))&"|out-file "$($workingfolder)\$($jobid)_1_$($(Get-ChildItem $csvfile).BaseName)_ingress.kql" -Encoding ascii -Append 
+        "| extend ip_d=toint(strcat('0x',tostring(split(DestinationV6,':')[7])))-ip_c*256&"|out-file "$($workingfolder)\$($jobid)_1_$($(Get-ChildItem $csvfile).BaseName)_ingress.kql" -Encoding ascii -Append 
+        "| extend Destv4decode=strcat(tostring(ip_a),'.',tostring(ip_b),'.',tostring(ip_c),'.',tostring(ip_d))&"|out-file "$($workingfolder)\$($jobid)_1_$($(Get-ChildItem $csvfile).BaseName)_ingress.kql" -Encoding ascii -Append 
+        "| extend Destv4decode=iff(Destv4decode == '...',DestinationV6,Destv4decode)&"|out-file "$($workingfolder)\$($jobid)_1_$($(Get-ChildItem $csvfile).BaseName)_ingress.kql" -Encoding ascii -Append 
+        "| project-away ip_a, ip_b, ip_c, ip_d&"|out-file "$($workingfolder)\$($jobid)_1_$($(Get-ChildItem $csvfile).BaseName)_ingress.kql" -Encoding ascii -Append 
+        "| project-reorder flowhash, TT, SourcePA, DestPA, SourceCA, DestCA, ethsrci, ethdsti, ipProtocoli, Protocol,ipidinner, ipTTLInner, tcpseq, tcpack, tcpFlags,Length, Info, tcpsrcport, tcpdstport, udpsrcport, udpdstport"|out-file "$($workingfolder)\$($jobid)_1_$($(Get-ChildItem $csvfile).BaseName)_ingress.kql" -Encoding ascii -Append 
+        $kqlcsvblob0|out-file "$($workingfolder)\$($jobid)_1_$($(Get-ChildItem $csvfile).BaseName)_ingress.kql" -Encoding ascii -Append  
         if ($debug) {Write-UTCLog "  ++kql: $($kqlcsvblob)"  "cyan"}
         #execute kusto for single thread complete the command below for multiple thread 
         $kqlcmd="$($kustocli) ""$kustoendpoint"" -script:""$($workingfolder)\$($jobid)_1_$($(Get-ChildItem $csvfile).BaseName)_ingress.kql"""
@@ -408,11 +492,11 @@ else {
         {
             # generate creata table kql file
             $kqlnewtable0=".drop table $($kustotable)"
-            $kqlnewtable1=".create table $($kustotable) (framenumber:long,frametime:string,DeltaDisplayed:string,Source:string,Destination:string,ipid:string,Protocol:string,tcpseq:string,tcpack:string,Length:int,tcpsrcport:int,tcpdstport:int,udpsrcport:int,udpdstport:int,tcpackrtt:string,frameprotocol:string,Info:string,ethsrc:string,ethdst:string,SourceV6:string,DestinationV6:string,ipProtocol:string,dnsid:string,ipTTL:string,ipFlags:string,tcpFlags:string,tcpwindowsize:int,espseq:string,mysqlcmd:string)"
             $kqlnewtable0|out-file "$($workingfolder)\$($jobid)_0_createtable.kql" -Encoding ascii
-            $kqlnewtable1|out-file "$($workingfolder)\$($jobid)_0_createtable.kql" -Encoding ascii -Append
+            #$kqlnewtable1=".create table $($kustotable) (framenumber:long,frametime:string,DeltaDisplayed:string,Source:string,Destination:string,ipid:string,Protocol:string,tcpseq:string,tcpack:string,Length:int,tcpsrcport:int,tcpdstport:int,udpsrcport:int,udpdstport:int,tcpackrtt:string,frameprotocol:string,Info:string,ethsrc:string,ethdst:string,SourceV6:string,DestinationV6:string,ipProtocol:string,dnsid:string,ipTTL:string,ipFlags:string,tcpFlags:string,tcpwindowsize:int,espseq:string,mysqlcmd:string)"
+            #$kqlnewtable1|out-file "$($workingfolder)\$($jobid)_0_createtable.kql" -Encoding ascii -Append
             $kqlcmd="$($kustocli) ""$kustoendpoint"" -script:""$($workingfolder)\$($jobid)_0_createtable.kql"""
-            Write-UTCLog " (Kusto.Cli.exe) create new table $($kustotable) @ $($kustoendpoint)" -color "Green"
+            Write-UTCLog " (Kusto.Cli.exe) remove table if that exist $($kustotable) @ $($kustoendpoint)" -color "Green"
             if ($debug) {Write-UTCLog "  ++kqlcmd: $($kqlcmd)" "cyan"}
             #execute kusto
             if ($debug) {Invoke-Expression  $kqlcmd} else {Invoke-Expression  $kqlcmd| Out-Null}
@@ -534,7 +618,7 @@ if (Test-Path $tracefolder)  #validate
                                 $time=((get-date).ToUniversalTime()).ToString("yyyy-MM-dd HH:mm:ss.fff")
                                 Write-UTCLog " Please be patience , this might take a while for importing, To debug progress, you can use kusto query below " "Yellow"
                                 Write-Host "---------------------------------------------------------------------------------------" -ForegroundColor "Gray"    
-                                Write-Host " .show commands | where StartedOn > datetime('$($time)')| where CommandType == 'DataIngestPull'| project StartedOn, CommandType, State, User, FailureReason, Text " -ForegroundColor "Gray"
+                                Write-Host " .show commands | where StartedOn > datetime('$($time)')|where CommandType in ('DataIngestPull','TableSetOrAppend')|order by StartedOn asc|extend Delta_in_ms=toreal(datetime_diff('nanosecond',StartedOn, prev(StartedOn)))/1000000 | project StartedOn, Delta_in_ms, CommandType, State, User, FailureReason, Text" -ForegroundColor "Gray"
                                 Write-Host "---------------------------------------------------------------------------------------" -ForegroundColor "Gray"
                                 if ($debug) {Invoke-Expression  $kqlcmd} else {Invoke-Expression  $kqlcmd| Out-Null}
                             }
