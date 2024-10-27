@@ -117,7 +117,7 @@ For big trace analyze, use Azure Data Explorer (aka. kusto) is good way to speed
 |Delta-Time|\| order by TT asc // sort by timestamp<br>//add you filter<br>\| extend  delta_in_ms=toreal(datetime_diff('nanosecond',TT, prev(TT)))/1000000 //get DeltaTimeDisplayed in Kusto Way<br>\| project  delta_in_ms
 |Encap Packets|\| extend SourceCA=tostring(split(Source,',')[countof(Source,',')])//if this is encap traffic, get inner source ip address<br>\| extend DestCA=tostring(split(Destination,',')[countof(Destination,',')])//if this is encap traffic, get inner dest ip address<br>\| extend SourcePA=tostring(split(Source,',')[countof(Source,',')-1])//if this is encap traffic, get outer Source Ip<br>\| extend DestPA=tostring(split(Destination,',')[countof(Destination,',')-1])//if this is encap traffic, get outer Dest Ip<br>\| extend ipidinnner=split(ipid,',')[countof(ipid,',')] //if this is encap traffic, get inner ipid<br>\| extend ipTTLInner=split(ipTTL,',')[countof(ipTTL,',')] //if this is encap traffic, get inner ipTTL|
 |Time shift|\| extend TT=datetime_add('second', -19, TT)|
-|Conversation|\|extend flowhash=hash(IPToInt(SourceCA)+IPToInt(DestCA))+hash(toint(tcpsrcport)+toint(tcpdstport))|
+|Conversation|\|extend flowhash=hash(IPToInt(SourceCA)+IPToInt(DestCA))+hash(toint(tcpsrcport)*toint(tcpdstport))|
 
 Here is my favorite fields commonly used when analyze TCP/UDP network trace, Encap Trace file are supported. 
 
@@ -146,22 +146,64 @@ Sample query
 1. Filter data 
 
 ``` kql
-//convert epoch time to UTC display time with Seconds
+//convert epoch time to UTC display time with Seconds, handle flowhash
+let IPToInt = (ip:string) {  // define IPToInt function
+    toint(split(ip, ".")[0]) * 256 * 256 * 256 +
+    toint(split(ip, ".")[1]) * 256 * 256 +
+    toint(split(ip, ".")[2]) * 256 +
+    toint(split(ip, ".")[3])
+};
 trace 
 | extend aa=tolong(replace_string(frametime,'.',''))/1000
 | extend TT=unixtime_microseconds_todatetime(aa)
-| extend SourceCA=tostring(split(Source,',')[countof(Source,',')])//if this is encap traffic, get inner ip addres only
-| extend DestCA=tostring(split(Destination,',')[countof(Destination,',')])//if this is encap traffic, get inner ip addres only
-| extend ipidinnner=split(ipid,',')[countof(ipid,',')] //if this is encap traffic, get inner ipid only
-| extend ipTTLInner=split(ipTTL,',')[countof(ipTTL,',')] //if this is encap traffic, get inner ipTTL only
+| extend SourceCA=tostring(split(Source,',')[countof(Source,',')])//return inner src ip address
+| extend DestCA=tostring(split(Destination,',')[countof(Destination,',')])//return inner dest ip address
+| extend SourcePA=tostring(split(Source,',')[countof(Source,',')-1])//return outer src ip address
+| extend DestPA=tostring(split(Destination,',')[countof(Destination,',')-1])//return outer dest ip address
+| extend ipidinner=split(ipid,',')[countof(ipid,',')] //return inner ipid
+| extend ipTTLInner=split(ipTTL,',')[countof(ipTTL,',')] //return inner ipTTL
+| extend ethsrci=tostring(split(ethsrc,',')[countof(ethsrc,',')]) //return inner src eth.addr
+| extend ethdsti=tostring(split(ethdst,',')[countof(ethdst,',')]) //return inner dest eth.addr
+| extend ipProtocoli=tostring(split(ipProtocol,',')[countof(ipProtocol,',')]) //return inner ipProtocol 
+| project-away framenumber, frametime, DeltaDisplayed, aa //remove unused field
+| extend flowhash=case(   //calc the flowhash based on the ipProtocol value icmp/udp/tcp , only take the inner protocol
+ipProtocoli=='6', hash(IPToInt(SourceCA)+IPToInt(DestCA))+hash(toint(tcpsrcport)*toint(tcpdstport)),
+ipProtocoli=='17', hash(IPToInt(SourceCA)+IPToInt(DestCA))+hash(toint(udpsrcport)*toint(udpdstport)),
+ipProtocoli=='1',hash(IPToInt(SourceCA)+IPToInt(DestCA)),
+0
+) 
+| project-reorder flowhash, TT, SourcePA, DestPA, SourceCA, DestCA, ethsrci, ethdsti, ipProtocoli, Protocol,ipidinner, ipTTLInner, tcpseq, tcpack, tcpFlags,Length, Info, tcpsrcport, tcpdstport, udpsrcport, udpdstport
+| take 20  //get 20 record from top
+
+//to get deltatime displayed, this is more useful when view by conversation(flowhash), so move to second part of the function
+//| order or flowhah or filter by flowhas first
 | order by TT asc // sort by timestamp
 | extend  delta_in_ms=toreal(datetime_diff('nanosecond',TT, prev(TT)))/1000000  //get DeltaTimeDisplayed in Kusto Way
-| project TT,delta_in_ms, SourceCA, DestCA, ipidinnner,ipTTLInner, Protocol,tcpseq, tcpack, Length, Info, tcpsrcport, tcpdstport, tcpFlags//,ethsrc, ethdst, frameprotocol
-| extend tcpflowhash=hash(IPToInt(SourceCA)+IPToInt(DestCA))+hash(toint(tcpsrcport)+toint(tcpdstport))
+| project flowhash,TT,delta_in_ms, SourceCA, DestCA, ipidinnner,ipTTLInner, Protocol,tcpseq, tcpack, Length, Info, tcpsrcport, tcpdstport, tcpFlags//,ethsrc, ethdst, frameprotocol
 | take 20  //get 20 record from top
 
 //to take last 10 record
 | order by TT desc | take 10 | order by TT asc // take last 10 records
+
+//decode Azure Service Endpoint or Private Link ipv6 ipaddress
+//SourceV6 and DestinationV6 has ipv6 address, let's use the following query to decode that ip address to Sourcev4decode, Destv4decode
+| extend ip_a=toint(strcat('0x',trim_end("[a-z0-9]{2}",tostring(split(SourceV6,':')[6]))))
+| extend ip_b=toint(strcat('0x',tostring(split(SourceV6,':')[6])))-ip_a*256
+| extend ip_c=toint(strcat('0x',trim_end("[a-z0-9]{2}",tostring(split(SourceV6,':')[7]))))
+| extend ip_d=toint(strcat('0x',tostring(split(SourceV6,':')[7])))-ip_c*256
+| extend Sourcev4decode=strcat(tostring(ip_a),'.',tostring(ip_b),'.',tostring(ip_c),'.',tostring(ip_d))
+| extend Sourcev4decode=iff(Sourcev4decode == '...',SourceV6,Sourcev4decode)
+| project-away ip_a, ip_b, ip_c , ip_d
+| extend ip_a=toint(strcat('0x',trim_end("[a-z0-9]{2}",tostring(split(DestinationV6,':')[6]))))
+| extend ip_b=toint(strcat('0x',tostring(split(DestinationV6,':')[6])))-ip_a*256
+| extend ip_c=toint(strcat('0x',trim_end("[a-z0-9]{2}",tostring(split(DestinationV6,':')[7]))))
+| extend ip_d=toint(strcat('0x',tostring(split(DestinationV6,':')[7])))-ip_c*256
+| extend Destv4decode=strcat(tostring(ip_a),'.',tostring(ip_b),'.',tostring(ip_c),'.',tostring(ip_d))
+| extend Destv4decode=iff(Destv4decode == '...',DestinationV6,Destv4decode)
+| project-away ip_a, ip_b, ip_c , ip_d
+
+//For improved query performance, it's recommended to first create a new table with hash values. This allows you to work directly with the hashed table, simplifying complex queries.
+.set-or-replace trace_hash <| (use the first table above)
 ```
 Result:
 ```
