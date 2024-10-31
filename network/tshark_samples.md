@@ -481,6 +481,16 @@ Handle a corrupt capture(cut-in-middle) file and extract the first [xxx] frames 
 
 This process helps you create a clean capture file for analysis.
 
+## Sample 13 - Handle duplicate logged packets in tcpdump , for example NVA or multi-layer capture. 
 
+-d  Attempts to remove duplicate packets. 
+-I  Ignore the specified number of bytes at the beginning of the frame during MD5 hash calculation
+
+   ```
+   C:\Program Files\Wireshark\editcap -d test.pcap test_dedup.pcap
+
+   # Ignore first 26 bytes and start dedup
+   C:\Program Files\Wireshark\editcap -d -I 26 test.pcap test_dedup.pcap
+   ```
 
 
