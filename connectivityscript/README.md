@@ -43,9 +43,15 @@ Sample output
 ## Windows - Powershell (HTTP/HTTPS - Invoke-WebRequest(IWR))
 |Powershell Command-Prompt|Powershell Core Command-Prompt|
 |-|-|
-|Script will use one TCP stream, same source port, continoue traffic.|Script will create new tcp stream for every IWR request|
+|Script will use one TCP stream, same source port, continoue traffic. |Script will create new tcp stream for every IWR request|
 ```
+# configure the maximum idle time to 10 miniutes for a connection in the .NET framework, default 100 seconds.
+[System.Net.ServicePointManager]::MaxServicePointIdleTime = 600000
+
+# invoke-webrequest sample
 $url="https://www.bing.com";$interval=1;$timeout=5;while ($true) {try {$iwr=Invoke-WebRequest -Uri $url -UseBasicParsing -TimeoutSec $timeout;"{0},{1},{2},{3},{4}" -f (Get-Date).ToUniversalTime().ToString("yyyy-MM-dd HH:mm:ss"),$($url),$iwr.StatusCode,$iwr.StatusDescription,$iwr.RawContentLength } catch {    $iwr = $_.Exception.Message; "{0},{1},{2}" -f (Get-Date).ToUniversalTime().ToString("yyyy-MM-dd HH:mm:ss"),$url,$iwr }; sleep $interval}
+
+
 ```
 Sample output
 ```
