@@ -1,0 +1,5 @@
+AppName,ExeName,ParentPath
+OutlookForWindows,olk.exe,C:\Program Files\WindowsApps\Microsoft.OutlookForWindows_*_x64__8wekyb3d8bbwe
+Terminal,WindowsTerminal.exe,C:\Program Files\WindowsApps\Microsoft.WindowsTerminal_*_x64__8wekyb3d8bbwe
+Teams,ms-teams.exe,C:\Program Files\WindowsApps\MSTeams_*__8wekyb3d8bbwe
+RemoteDesktop,msrdcw.exe,C:\Program Files\WindowsApps\MicrosoftCorporationII.AzureVirtualDesktopHostApp_*__8wekyb3d8bbwe
