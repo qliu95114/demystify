@@ -82,7 +82,7 @@ Contents
    magick convert -density 200 -colorspace CMYK <pathofpdffile> <pathofjpgfile or pathofpngfile>
 
    >batch convert for all the files start with 2024*.pdf, replace the extension and use .png instead
-   for %a in (2024*.pdf) do (magick convert -density 150 -colorspace CMYK %a %~na.png)
+   for %a in (2024*.pdf) do (magick convert -density 150 -colorspace CMYK "%a" "%~na.png")
    ```
 
 1. How to convert PDF(s) to text by GhostScript
@@ -90,8 +90,8 @@ Contents
    rem one pdf file
    gswin64c -sDEVICE=txtwrite -o output.txt input.pdf
 
-   rem *.pdf
-   for %a in (*.pdf) do (gswin64c -sDEVICE=txtwrite -o %~na.txt %a)
+   rem *.pdf to *.txt 
+   for %a in (*.pdf) do (gswin64c -sDEVICE=txtwrite -o "%~na.txt" "%a")
    ```
    
    
