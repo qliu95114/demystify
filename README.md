@@ -73,7 +73,7 @@ Contents
 1. Fun Apple II Video Game in 1983
    http://loderunnerwebgame.com/game/
 
-1. How to convert PDF to JPG,PNG by script
+1. How to convert PDF(s) to JPG,PNG by GhostScript
    1. Download ImageMagick from the official website: [ImageMagick Download](https://imagemagick.org/script/download.php)
    2. Download Ghostscript from the official website: [Ghostscript Download](https://www.ghostscript.com/releases/gsdnld.html)
    3. Run in Command Prompt
@@ -84,6 +84,16 @@ Contents
    >batch convert for all the files start with 2024*.pdf, replace the extension and use .png instead
    for %a in (2024*.pdf) do (magick convert -density 150 -colorspace CMYK %a %~na.png)
    ```
+
+1. How to convert PDF(s) to text by GhostScript
+   ```
+   rem one pdf file
+   gswin64c -sDEVICE=txtwrite -o output.txt input.pdf
+
+   rem *.pdf
+   for %a in (*.pdf) do (gswin64c -sDEVICE=txtwrite -o %~na.txt %a)
+   ```
+   
    
 
 
