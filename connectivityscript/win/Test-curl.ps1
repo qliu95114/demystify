@@ -371,14 +371,14 @@ else {
                     foreach ($link in $urllist)
                     {
                         $urlitem="";$urlip=""
-                        $urlip=$link.split(';')[0]
-                        $urlitem=$link.split(';')[1]
+                        $urlip=$link.split(';')[1]
+                        $urlitem=$link.split(';')[0]
                         if ([string]::IsNullOrEmpty($urlitem)){
                             Write-UTCLog " Url $($j)/$($urllist.count) - $($i)/$($count) : (empty) , skipping invoke_curl.... "  "yellow"
                         }
                         else{
                             Write-UTCLog " Url $($j)/$($urllist.count) - $($i)/$($count) : $($urlitem)   UrlIpAddr  : $($urlip)"   "Green"
-                            $syscost=Measure-Command {invoke_curl -url $url -ipaddr $urlipaddr -containerid $containerid -httpheaders $httpheaders -httprequestheaders $httprequestheaders}
+                            $syscost=Measure-Command {invoke_curl -url $urlitem -ipaddr $urlip -containerid $containerid -httpheaders $httpheaders -httprequestheaders $httprequestheaders}
                             if (($delay - $syscost.TotalMilliseconds) -gt 0 )
                                 {
                                     Write-UTCLog " Sleep $($delay - $syscost.TotalMilliseconds) ms" "gray"
@@ -407,7 +407,7 @@ else {
                         }
                         else{
                             Write-UTCLog " Url $($j)/$($urllist.count) - $($i)/forever : $($urlitem)   UrlIpAddr  : $($urlip)"   "Green"
-                            $syscost=Measure-Command {invoke_curl -url $url -ipaddr $urlipaddr -containerid $containerid -httpheaders $httpheaders -httprequestheaders $httprequestheaders}
+                            $syscost=Measure-Command {invoke_curl -url $urlitem -ipaddr $urlip -containerid $containerid -httpheaders $httpheaders -httprequestheaders $httprequestheaders}
                             if (($delay - $syscost.TotalMilliseconds) -gt 0 )
                                 {
                                     Write-UTCLog " Sleep $($delay - $syscost.TotalMilliseconds) ms" "gray"
