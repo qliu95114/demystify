@@ -26,14 +26,14 @@ function FFMpegCommand (
     Write-UTCLog "Command to execute: $($ffcmd)"
     Write-UTCLog "Begining MP3 FileConvert $($srcfile) to $($dstfile)" "Green"
     $st=Get-date
-    iex $ffcmd
+    Invoke-Expression $ffcmd
     $et=Get-date
     Write-UTCLog "Complete MP3 FileConvert $($dstfile) , time : $(($et-$st).TotalSeconds) (secs)" "Yellow"
 }
 
-$PSScriptRoot = Split-Path -Parent -Path $MyInvocation.MyCommand.Definition
+$ScriptRootFolder = Split-Path -Parent -Path $MyInvocation.MyCommand.Definition
 
-Write-UTCLog "Script start @ $($PSScriptRoot)"
+Write-UTCLog "Script start @ $($ScriptRootFolder)"
 Write-UTCLog "Searching FileName : $($filepattern)"
 Write-UTCLog "Source Folder: $($srcpath)"
 $oldvids = Get-ChildItem "$($srcpath)\$($filepattern)"
@@ -56,7 +56,7 @@ foreach ($oldvid in $oldvids)
     if (Test-Path "$($destpath)\$($newvid)") 
         {if ((Read-Host "Destination File $($destpath)\$($newvid) Exist! Do you want to delete and continue [Y/N]").tolower() -eq "y") 
             {
-                del "$($destpath)\$($newvid)" 
+                Remove-Item "$($destpath)\$($newvid)" 
                 write-UTCLog "Destination File $($destpath)\$($newvid) deleted" "Yellow"
                 FFMpegCommand -srcfile "$($oldvid.FullName)" -dstfile "$($destpath)\$($newvid)" -logfile "$($destpath)\$($logfile)" -profile "$($profile)"
             }
