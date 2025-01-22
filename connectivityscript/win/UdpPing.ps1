@@ -95,7 +95,7 @@ Write-UTCLog "Session Started" -color Yellow
 Write-UTCLog "Server : $($Server)     Port : $($Port)   N(repeat) : $($n)  Payloadsize : $($payloadsize)" -color Green
 
 # create header of log file
-$logfile = $logpath + "\udping_" + $Server + "_" + $port + "_" + (get-date).ToUniversalTime().ToString("yyyyMMdd_HHmmss") + ".log"
+$logfile = $logpath + "\udping_" + $Server + "_" + $port + "_" + (get-date).ToUniversalTime().ToString("yyyyMMdd_HHmmss") + ".csv"
 $header= "timestamp,Server,Port,Message,Result,Latency"
 $header | Out-File $logfile -Encoding utf8 -append
 Write-UTCLog "Log file : $logfile" -color Green
