@@ -55,9 +55,10 @@ foreach ($h in $hosts) {
 
         # Calculate the latency statistics for the host
         if ($latencies.Count -gt 0) {
-            $avgLatency = ($latencies | Measure-Object -Average).Average
+            # Average latency need be in x.xx format two decimal places
+            $avgLatency = [math]::Round(($latencies | Measure-Object -Average).Average, 2)
             $maxLatency = ($latencies | Measure-Object -Maximum).Maximum
-            $minLatency = ($latencies | Measure-Object -Minimum).Minimum
+            $minLatency = ($latencies | Measure-Object -Minimum).Minimum 
         } else {
             $avgLatency = "N/A"
             $maxLatency = "N/A"
