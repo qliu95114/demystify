@@ -9,3 +9,7 @@ mspaint,PaintApp\mspaint.exe,C:\Program Files\WindowsApps\Microsoft.Paint_*_x64_
 Whiteboard,MicrosoftWhiteboard\MicrosoftWhiteboard.exe,C:\Program Files\WindowsApps\Microsoft.Whiteboard_*_x64__8wekyb3d8bbwe
 WindowsStore,WinStore.App.exe,C:\Program Files\WindowsApps\Microsoft.WindowsStore_*_x64__8wekyb3d8bbwe
 M365Copilot,WebViewHost.exe,C:\Program Files\WindowsApps\Microsoft.MicrosoftOfficeHub_*_x64__8wekyb3d8bbwe
+ClipChamp,Clipchamp\Clipchamp.exe,C:\Program Files\WindowsApps\Clipchamp.Clipchamp_*_x64__yxz26nhyzhsrt
+drawio,app\draw.io.exe,C:\Program Files\WindowsApps\draw.io.draw.ioDiagrams_*_x64__1zh33159kp73c
+MediaPlayer,Microsoft.Media.Player.exe,C:\Program Files\WindowsApps\Microsoft.ZuneMusic_*_x64__8wekyb3d8bbwe
+Photos,Photos.exe,C:\Program Files\WindowsApps\Microsoft.Windows.Photos_*_x64__8wekyb3d8bbwe
