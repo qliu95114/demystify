@@ -25,16 +25,17 @@ Contents
 1. **ps_mediaencoder** : Powershell script with ffmpeg 
 1. How to install Windows Terminal on Windows Server 2022/2019
    1. Go to [MS STORE link](https://store.rg-adguard.net/)
-   2. Choose **PackageFamilyName**, Search Microsoft.UI.Xaml.2.8_8wekyb3d8bbwe and Microsoft.VCLibs.140.00.UWPDesktop_8wekyb3d8bbwe
-   3. Download [Microsoft.UI.Xaml.2.8_8.2310.30001.0_x64__8wekyb3d8bbwe.appx](http://tlu.dl.delivery.mp.microsoft.com/filestreamingservice/files/251bbb12-dbfc-4820-b0ff-c4dfa70ffb09?P1=1723447519&P2=404&P3=2&P4=A3MMz53WZCm9IVOueU0EcBq9rfamD4UgkW538ErD5HrR06yfivfpGshtQC63FqxZUvwnIRZmCl6CWLMjeGnxDg%3d%3d)
-   4. Downlaod [Microsoft.VCLibs.140.00.UWPDesktop_8wekyb3d8bbwe](http://tlu.dl.delivery.mp.microsoft.com/filestreamingservice/files/8a26c76e-5a63-42d5-9f7d-df053c273363?P1=1670124447&P2=404&P3=2&P4=SOgVXaRGFTkCWtPYEwF6eXQpfKSIOAjRs%2fQotvgUTkTYMgooAxXVu0P8UWsKEWpMlhln5s6BwkIIlM7sdle5ew%3d%3d)
-   5. Download [Windows Terminal(latest)](https://github.com/microsoft/terminal/releases?WT.mc_id=modinfra-26926-thmaure)
-   6. Go to download folder 
+   2. Choose **PackageFamilyName**, Search **Microsoft.UI.Xaml.2.8_8wekyb3d8bbwe** and **Microsoft.VCLibs.140.00.UWPDesktop_8wekyb3d8bbwe**, choose the largest file match your CPU type
+   3. Download [Windows Terminal(latest)](https://github.com/microsoft/terminal/releases?WT.mc_id=modinfra-26926-thmaure)
+   4. Go to download folder 
       ```
        Add-AppxPackage -Path C:\setup\Microsoft.VCLibs.140.00.UWPDesktop_14.0.30704.0_x64__8wekyb3d8bbwe.appx
        Add-AppxPackage -Path C:\setup\Microsoft.UI.Xaml.2.8_8.2310.30001.0_x64__8wekyb3d8bbwe.appx
        Add-AppxPackage -Path C:\setup\Microsoft.WindowsTerminal_Win11_1.15.2875.0_8wekyb3d8bbwe.msixbundle
       ```
+1. How to install HEVC (h.265 on Windows 11 native)
+   1. Go to [MS STORE link](https://store.rg-adguard.net/)
+   2. Choose **PackageFamilyName**, Search **Microsoft.HEVCVideoExtension_8wekyb3d8bbwe** and choose the largest file match your CPU type
 1. How to get temperature
    
    WMIC version
