@@ -1,9 +1,10 @@
 # this script scan all source folder with given file naming pattern and convert all video to target folder with same file name. 
 
 Param (
-    [string]$srcpath="d:\temp",
-    [string]$destpath="d:\temp\crf_25",
+    [string]$srcpath="K:\Downloads\Transfer",
+    [string]$destpath="G:\DOWNLOADS\transfer\ffmpeg",
     [string]$filepattern="*.mp4",
+    [string]$logfolder="G:\DOWNLOADS\ffmpeg_log",
 	[int]$mychoice=9999
 )
 
@@ -40,7 +41,7 @@ function FFMpegCommand (
     Write-UTCLog "Command to execute: $($ffcmd)"
     Write-UTCLog "Begining MP4 FileConvert $($srcfile) to $($dstfile)" "Green"
     $st=Get-date
-    iex $ffcmd
+    Invoke-Expression $ffcmd
     $et=Get-date
     Write-UTCLog "Complete MP4 FileConvert $($dstfile) , time : $(($et-$st).TotalSeconds) (secs)" "Yellow"
 }
@@ -64,12 +65,11 @@ if (Test-path $destpath)
 
 if (Test-Path "$($PSScriptRoot)\ffmpeg_profile.json") {
 
-    $profilelist=(gc "$($PSScriptRoot)\ffmpeg_profile.json")|convertfrom-Json
+    $profilelist=(get-content "$($PSScriptRoot)\ffmpeg_profile.json")|convertfrom-Json
     for ($i=0;$i -lt $profilelist.count;$i++)
     {
         Write-Host "$($i) : $($profilelist[$i].Suffix)"
     }
-    #$choice=Read-HostWithDelay -Delay 10 -Prompt "make your choice (0 - $($profilelist.count-1))" 
 	if (($mychoice -eq 9999) -or ($mychoice -gt $profilelist.count))
 	{
 		$choice=Read-Host "make your choice (0 - $($profilelist.count-1))" 
@@ -79,8 +79,6 @@ if (Test-Path "$($PSScriptRoot)\ffmpeg_profile.json") {
 		$choice=$mychoice
 	}
     Write-Host "Your select $($choice) : $($profilelist[$choice].Suffix)"
-    #$profile= " -c:v libx264 -preset veryslow -crf 25 -pix_fmt yuv420p -vf ""scale=trunc(iw/2)*2:trunc(ih/2)*2"" -map 0:v:0? -c:a copy -map 0:a? -c:s copy -map 0:s? -map_chapters 0 -map_metadata 0 -f mp4 -threads 0"
-    #$profile= "-c:v libx264 -preset veryslow -crf 25 -pix_fmt yuv420p -vf ""scale=trunc(iw/2)*2:trunc(ih/2)*2"" -map 0:v:0? -c:a ac3 -b:a 196k -map 0:a? -c:s mov_text -map 0:s? -map_chapters 0 -map_metadata 0 -f mp4 -threads 0"
 
     foreach ($oldvid in $oldvids) {
     $newvid = $oldvid.basename+".mp4"
@@ -88,17 +86,17 @@ if (Test-Path "$($PSScriptRoot)\ffmpeg_profile.json") {
     if (Test-Path "$($destpath)\$($newvid)") 
         {if ((Read-Host "Destination File $($destpath)\$($newvid) Exist! Do you want to delete and continue [Y/N]").tolower() -eq "y") 
             {
-                del "$($destpath)\$($newvid)" 
+                Remove-Item "$($destpath)\$($newvid)" -Force
                 write-UTCLog "Destination File $($destpath)\$($newvid) deleted" "Yellow"
-                FFMpegCommand -srcfile "$($oldvid.FullName)" -dstfile "$($destpath)\$($newvid)" -logfile "$($destpath)\$($logfile)" -profile "$($profilelist[$choice].commandline)" -prefix "$($profilelist[$choice].prefix)"
+                FFMpegCommand -srcfile "$($oldvid.FullName)" -dstfile "$($destpath)\$($newvid)" -logfile "$($logfolder)\$($logfile)" -profile "$($profilelist[$choice].commandline)" -prefix "$($profilelist[$choice].prefix)"
             }
         else{
-                write-UTCLog "Skip convert the file as destination file exists" "Yellow"
+                Write-UTCLog "Skip convert the file as destination file exists" "Yellow"
         }
     }
     else
     {
-        FFMpegCommand -srcfile "$($oldvid.FullName)" -dstfile "$($destpath)\$($newvid)" -logfile "$($destpath)\$($logfile)" -profile "$($profilelist[$choice].commandline)" -prefix "$($profilelist[$choice].prefix)"
+        FFMpegCommand -srcfile "$($oldvid.FullName)" -dstfile "$($destpath)\$($newvid)" -logfile "$($logfolder)\$($logfile)" -profile "$($profilelist[$choice].commandline)" -prefix "$($profilelist[$choice].prefix)"
     }}
     Write-UTCLog "File Covert complete, check Destination Folder: $($destpath)"
 }
