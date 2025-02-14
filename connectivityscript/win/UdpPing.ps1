@@ -36,7 +36,8 @@ Param (
     [int]$timeout=1000, #timeout in ms
     [int]$wait=1000, #wait time in ms
     [ValidateRange(0,99999)][int]$n=10, #0 forever
-    [ValidateRange(5,10000)][Int]$payloadsize=10,
+    [ValidateRange(5,10000)][Int]$payloadsize=10,  #put a hack value here, if the payload size is 1314, the will be ms-team fake STUN protocol 
+    #$hexstring="00 03 00 30 21 12 a4 42 67 64 29 c0 9d 9a ba b5 68 5e b8 b6 00 0f 00 04 72 c6 4b c6 80 37 00 04 00 00 00 02 80 08 00 04 00 00 00 06 80 06 00 04 00 00 00 01 00 10 00 04 00 00 2e e0 80 55 00 04 00 01 00 02"
     [string]$logpath=$env:temp,# log file path and log filename will be udping_$server_$port_yyyymmdd_hhmmss.log
     [string]$aikey,
     [switch]$debug
@@ -47,7 +48,7 @@ Function Write-UTCLog ([string]$message,[string]$color)
 {
     	$logdate = ((get-date).ToUniversalTime()).ToString("yyyy-MM-dd HH:mm:ss")
     	$logstamp = "["+$logdate + "]," + $message
-      Write-Host $logstamp -ForegroundColor $color
+       Write-Host $logstamp -ForegroundColor $color
 #    	Write-Output $logstamp | Out-File $logfile -Encoding ASCII -append
 }
 
@@ -141,8 +142,17 @@ function Send-UdpDatagram
       $EndPoints = New-Object System.Net.IPEndPoint($Address, $Port) 
       $Socket = New-Object System.Net.Sockets.UDPClient 
       $Socket.Client.ReceiveTimeout = $timeout
-      $EncodedText = [Text.Encoding]::ASCII.GetBytes($Message) 
-      Write-UTCLog "Send Message    : $($Message)" -color yellow
+
+      if ($Message -eq "STUN") {
+            $EncodedText = "00 03 00 30 21 12 a4 42 67 64 29 c0 9d 9a ba b5 68 5e b8 b6 00 0f 00 04 72 c6 4b c6 80 37 00 04 00 00 00 02 80 08 00 04 00 00 00 06 80 06 00 04 00 00 00 01 00 10 00 04 00 00 2e e0 80 55 00 04 00 01 00 02"
+            $EncodedText =  $EncodedText  -split ' ' | ForEach-Object { [Convert]::ToByte($_, 16) }
+            Write-UTCLog "Send Message    : STUN FAKE MESSAGE 00 03 00 30 21 12 a4 ... " -color yellow
+      }
+      else {
+            $EncodedText = [Text.Encoding]::ASCII.GetBytes($Message) 
+            Write-UTCLog "Send Message    : $($Message)" -color yellow
+      }
+      
       $startTime = get-date 
       $Socket.Send($EncodedText, $EncodedText.Length, $EndPoints) | Out-Null
       
@@ -153,8 +163,14 @@ function Send-UdpDatagram
             $totalSeconds = "{0:N4}" -f ($endTime-$startTime).TotalSeconds
             # compare $ReceMessage with $Message, write output to log file
             if ($ReceMessage -ne $Message) {
+                  if ($Message -eq "STUN") {
+                        $ReceMessage = "STUN FAKE MESSAGE"; $status="CompareSkip"
+                  }
+                  else {
+                        $status="Corrupt"
+                  }
                   Write-UTCLog "Receive Message : $($ReceMessage) , Latency: $($totalSeconds) s" -color Yellow
-                  $logmessage = (($startTime).ToUniversalTime()).ToString("yyyy-MM-dd HH:mm:ss") + "," + $EndPoint + "," + $Port + "," + $ReceMessage + ",Corrupt," + $totalSeconds
+                  $logmessage = (($startTime).ToUniversalTime()).ToString("yyyy-MM-dd HH:mm:ss") + "," + $EndPoint + "," + $Port + "," + $ReceMessage + ","+$status+"," + $totalSeconds
                   $logmessage | Out-File $logfile -Encoding utf8 -append
                   if ([string]::IsNullOrEmpty($aikey)) {
                         if ($debug) {Write-Host "Info : aikey is not specified, Send-AIEvent() is skipped." -ForegroundColor "Gray"}
@@ -162,7 +178,7 @@ function Send-UdpDatagram
                     else 
                     {
                         if ($debug) {Write-Host "Info : aikey is specified, Send-AIEvent() is called" -ForegroundColor "Green"}
-                        Send-AIEvent -piKey $aikey -pEventName $scriptname -pCustomProperties @{PreciseTimeStamp=($startTime).ToUniversalTime().ToString("yyyy-MM-dd HH:mm:ss");Server=$EndPoint;Port=$Port;Message=$Message;Result="Corrupt";Latency=$totalSeconds} -logpath $logpath
+                        Send-AIEvent -piKey $aikey -pEventName $scriptname -pCustomProperties @{PreciseTimeStamp=($startTime).ToUniversalTime().ToString("yyyy-MM-dd HH:mm:ss");Server=$EndPoint;Port=$Port;Message=$Message;Result=$status;Latency=$totalSeconds} -logpath $logpath
                   }
             }
             else {
@@ -191,7 +207,7 @@ function Send-UdpDatagram
               else 
               {
                   if ($debug) {Write-Host "Info : aikey is specified, Send-AIEvent() is called" -ForegroundColor "Green"}
-                  Send-AIEvent -piKey $aikey -pEventName $scriptname -pCustomProperties @{PreciseTimeStamp=($startTime).ToUniversalTime().ToString("yyyy-MM-dd HH:mm:ss");Server=$EndPoint;Port=$Port;Message=$Message;Result="NoResponse(Timeout $timeout (ms)";Latency="-"} -logpath $logpath
+                  Send-AIEvent -piKey $aikey -pEventName $scriptname -pCustomProperties @{PreciseTimeStamp=($startTime).ToUniversalTime().ToString("yyyy-MM-dd HH:mm:ss");Server=$EndPoint;Port=$Port;Message=$Message;Result="NoResponse(Timeout $timeout (ms))";Latency="-"} -logpath $logpath
               }
       }
       $Socket.Close() 
@@ -213,8 +229,14 @@ if ($n -eq 0)
 {
       while ($true)
       {
-            #create a message payload with random characters
-            for ($j=1;$j -le $payloadsize;$j++) {  $message += (65..90) | Get-Random | % {[char]$_}}
+            if ($payloadsize -eq 1314)
+            {
+                $message = "STUN"
+            }
+            else {
+                #create a message payload with random characters
+                for ($j=1;$j -le $payloadsize;$j++) {  $message += (65..90) | Get-Random | % {[char]$_}}
+            }
             Send-UdpDatagram -EndPoint $Server -Port $port -Message $message -timeout $timeout -logfile $logfile
             Start-Sleep -Milliseconds $wait
             $message=""
@@ -222,11 +244,17 @@ if ($n -eq 0)
 }
 else {
       for ($i=1;$i -le $n; $i++) {
+        if ($payloadsize -eq 1314)
+        {
+            $message = "STUN"
+        }
+        else {
             #create a message payload with random characters
             for ($j=1;$j -le $payloadsize;$j++) {  $message += (65..90) | Get-Random | % {[char]$_}}
-            $receMessage=Send-UdpDatagram -EndPoint $Server -Port $port -Message $message -timeout $timeout  -logfile $logfile
-            Start-Sleep -Milliseconds $wait
-            $message=""
+        }
+        $receMessage=Send-UdpDatagram -EndPoint $Server -Port $port -Message $message -timeout $timeout  -logfile $logfile
+        Start-Sleep -Milliseconds $wait
+        $message=""
       }
 }
 
