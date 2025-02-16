@@ -38,7 +38,7 @@ Param (
     [Parameter(Mandatory=$true)][string]$filename,
     [string]$outputfolder="\\192.168.3.17\g$\DOWNLOADS\transfer\ffmpeg",
     [string]$logfolder="\\192.168.3.17\g$\DOWNLOADS\ffmpeg_log\cut",
-    [ValidateSet("h264_qsv","h264_nvenc","h264_amf","hevc_qsv","hevc_nvenc","hevc_amf")][string]$gpu="h264_qsv",
+    [ValidateSet("h264_qsv","h264_nvenc","h264_amf","hevc_qsv","hevc_nvenc","hevc_amf")][string]$gpu="hevc_qsv",
     [int]$crf, #introduct crf if crf is specified, crf will override bitrate 
     #Range	0-51
     #H.264	Recommended CRF Range 18 28
@@ -126,8 +126,7 @@ if (($startsecs -ge 86400) -or ($lastsecs -ge 86400)) {Write-UTCLog "Start / Las
 
 If ((Test-Path $filename) -and (Test-Path $outputfolder))
 {
-    #$VideoLength=((Get-ExtendedProperties  $filename)| where {$_.Property -eq "Length"}).Value
-    #$videoduration=[int]$VideoLength.split(":")[0]*3600+[int]$VideoLength.split(":")[1]*60+[int]$VideoLength.split(":")[2]
+
 
     #use ffprobe to get video duration
     $videoduration=ffprobe ""$($filename)"" -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 -v error
@@ -194,10 +193,10 @@ If ((Test-Path $filename) -and (Test-Path $outputfolder))
     # if $crf is null or not specified 
     if ($crf -eq $null)
     {
-        $ffcmd="ffmpeg.exe -y -i ""$($filename)"" -ss $($starttime).000 -to $($endtime).000  -c:v $($gpu) -crf $($crf) -preset slow -pix_fmt nv12 -vf ""scale=1920:-2"" -map 0:v:0? -c:a copy -map 0:1 -c:a aac -b:a $($bitrate_audio)k -c:s mov_text -map 0:s? -map_chapters 0 -map_metadata 0 -f mp4 -threads 0 ""$($outputfile)"" 2> ""$($logfile)"""
+        $ffcmd="ffmpeg.exe -y -i ""$($filename)"" -ss $($starttime).000 -to $($endtime).000  -c:v $($gpu) -crf $($crf) -preset slow -pix_fmt nv12 -vf ""scale=1920:-2"" -map 0:v:0? -map 0:a:0? -c:a aac -b:a $($bitrate_audio)k -c:s mov_text -map 0:s? -map_chapters 0 -map_metadata 0 -f mp4 -threads 0 ""$($outputfile)"" 2> ""$($logfile)"""
     }
     else {
-        $ffcmd="ffmpeg.exe -y -i ""$($filename)"" -ss $($starttime).000 -to $($endtime).000  -c:v $($gpu) -b:v $($bitrate)k -pix_fmt nv12 -vf ""scale=1920:-2"" -map 0:v:0? -c:a copy -map 0:1 -c:a aac -b:a $($bitrate_audio)k -c:s mov_text -map 0:s? -map_chapters 0 -map_metadata 0 -f mp4 -threads 0 ""$($outputfile)"" 2> ""$($logfile)"""
+        $ffcmd="ffmpeg.exe -y -i ""$($filename)"" -ss $($starttime).000 -to $($endtime).000  -c:v $($gpu) -b:v $($bitrate)k -pix_fmt nv12 -vf ""scale=1920:-2"" -map 0:v:0? -map 0:a:0? -c:a aac -b:a $($bitrate_audio)k -c:s mov_text -map 0:s? -map_chapters 0 -map_metadata 0 -f mp4 -threads 0 ""$($outputfile)"" 2> ""$($logfile)"""
     }
     Write-UTCLog "CMD: $($ffcmd)" "Green"
     Write-UTCLog "Cut/Encode Start : $($filename) " "Green"

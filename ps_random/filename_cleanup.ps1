@@ -31,7 +31,7 @@ Date: 2025-01-12, first version
 # Powershell Function Write-UTCLog , 2024-04-12
 
 Param(
-    [string]$folder,
+    [string]$folder=$(Get-Location),
     [string]$str2remove,
     [string]$str2prefixadd,
     [string]$str2replace_source,
@@ -46,6 +46,18 @@ Function Write-UTCLog ([string]$message, [string]$color = "white") {
 
 # remove the [any] from the filename
 $files = Get-ChildItem $folder -File 
+
+# display the list of files and require a concent if those are the files user want to process and user has 5 seconds and then auto confirm yes
+Write-UTCLog "The following files will be processed under $($folder):" -color "cyan"
+foreach ($file in $files) {
+    Write-UTCLog $file.Name
+}
+
+$confirmation = Read-Host "Do you want to process these files? (Y/N)"
+if (($confirmation -ne "Y") -or ($confirmation -ne "y")) {
+    Write-UTCLog "User canceled the script." -color "yellow"
+    exit
+}
 
 foreach ($file in $files) {
     $newName = $file.Name -replace '\[.*\]', ''
