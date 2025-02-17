@@ -1,4 +1,3 @@
-#requires -version 3
 <#
     Get the named extended property(s) from the file or all available properties
     With code from https://rkeithhill.wordpress.com/2005/12/10/msh-get-extended-properties-of-a-file/
@@ -104,7 +103,7 @@ Function Get-ExtendedProperties
         ForEach( $property in $properties )
         {
             $index = $propertiesToIndex[ $property ]
-            If( $index -ne $null )
+            If( $null -ne $index )
             {
                 $myFolder.GetDetailsOf( $myFile , $index -as [int] )
             }
@@ -191,7 +190,7 @@ If ((Test-Path $filename) -and (Test-Path $outputfolder))
     #direct cut without encoding, this will cause a few seconds black screen for target file. 
     # change to nv12 and enable support for all gpu brand intel_qsv , nvidia_nvenc, amd_amf
     # if $crf is null or not specified 
-    if ($crf -eq $null)
+    if ($null -eq $crf)
     {
         $ffcmd="ffmpeg.exe -y -i ""$($filename)"" -ss $($starttime).000 -to $($endtime).000  -c:v $($gpu) -crf $($crf) -preset slow -pix_fmt nv12 -vf ""scale=1920:-2"" -map 0:v:0? -map 0:a:0? -c:a aac -b:a $($bitrate_audio)k -c:s mov_text -map 0:s? -map_chapters 0 -map_metadata 0 -f mp4 -threads 0 ""$($outputfile)"" 2> ""$($logfile)"""
     }
