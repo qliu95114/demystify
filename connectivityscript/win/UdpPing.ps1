@@ -144,7 +144,12 @@ function Send-UdpDatagram
       $Socket.Client.ReceiveTimeout = $timeout
 
       if ($Message -eq "STUN") {
-            $EncodedText = "00 03 00 30 21 12 a4 42 67 64 29 c0 9d 9a ba b5 68 5e b8 b6 00 0f 00 04 72 c6 4b c6 80 37 00 04 00 00 00 02 80 08 00 04 00 00 00 06 80 06 00 04 00 00 00 01 00 10 00 04 00 00 2e e0 80 55 00 04 00 01 00 02"
+            # STUN Refresh request 
+            #$EncodedText = "00 03 00 30 21 12 a4 42 67 64 29 c0 9d 9a ba b5 68 5e b8 b6 00 0f 00 04 72 c6 4b c6 80 37 00 04 00 00 00 02 80 08 00 04 00 00 00 06 80 06 00 04 00 00 00 01 00 10 00 04 00 00 2e e0 80 55 00 04 00 01 00 02" 
+            # Allocated Request Bandwidth:350
+            $EncodedText = "00 03 00 28 21 12 a4 42 a2 3f 22 ce 46 fe ee b8 e7 0d 0c 91 00 0f 00 04 72 c6 4b c6 80 08 00 04 00 00 00 06 80 06 00 04 00 00 00 01 00 10 00 04 00 00 01 5e 80 55 00 04 00 00 00 02"
+            # Allocated Response Bandwidth:350 + realm with nonc
+            # $EncodedText = "00 03 00 b2 21 12 a4 42 1e 89 49 05 a2 33 1a f4 c0 71 30 ac 00 0f 00 04 72 c6 4b c6 80 08 00 04 00 00 00 06 80 06 00 04 00 00 00 01 00 10 00 04 00 00 01 5e 80 55 00 04 00 00 00 02 80 95 00 08 6e 43 d8 45 47 2d 88 1f 00 14 00 14 b0 c6 fa ca 72 f4 50 9c 3f 2c ad ea 19 0a a1 ac e5 cd 93 06 00 15 00 0a 22 72 74 63 6d 65 64 69 61 22 00 06 00 30 04 00 00 1c 96 88 63 6f 27 be 5b ef f8 38 72 92 ba f3 99 40 b8 83 98 dd 00 00 00 00 61 77 9f 8a 7c 4c 24 65 41 d3 a2 89 34 93 19 f6 36 dc 8b 60 00 08 00 20 b8 fe a5 f7 25 06 c2 32 b7 e6 e9 7a 3a e2 d7 bc 97 22 44 13 2f 3e df 7e 24 05 75 cc 0d ed db 9a"
             $EncodedText =  $EncodedText  -split ' ' | ForEach-Object { [Convert]::ToByte($_, 16) }
             Write-UTCLog "Send Message    : STUN FAKE MESSAGE 00 03 00 30 21 12 a4 ... " -color yellow
       }
