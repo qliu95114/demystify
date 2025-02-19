@@ -11,12 +11,30 @@ Contents
 1. **ADX for Storage Analytics Logs**: Learn how to leverage Azure Data Explorer (ADX) to analyze Storage Analytics logs with ease. By following a few simple steps, you can gather logs from customers and other sources without the need for complex log configuration.
 1. **ADX for Network Trace PCAPs**: Explore the capabilities of ADX in analyzing network trace PCAPs. This functionality enables you to gather network traces from customers and efficiently analyze them using ADX's powerful querying capabilities.
 1. **ADX for NSGFlowLogV2**: Discover how ADX can be utilized to analyze NSGFlowLogV2, allowing you to obtain raw JSON logs from customers and other sources without the need for extensive log configuration. ADX simplifies the process of extracting valuable insights from network flow logs.
+1. **Use CSV directly by Kusto**: the following show to query csv save on public url without import. 
+   ```sql
+   let spike_time = datetime(2025-02-15T10:00:00.000Z);
+   let CIDRRanges = (
+       externaldata (
+           CIDRCountry:string,
+           CIDR:string,
+           CIDRCountryName:string,
+           CIDRContinent:string,
+           CIDRContinentName:string,
+           CIDRSource:string
+       ) ['https://firewalliplists.gypthecat.com/lists/kusto/kusto-cidr-countries.csv.zip']
+       with (ignoreFirstRecord=true)
+   );
+   CIDRRanges
+   | take 200
+   ```
 1. **ADX for Random Text Logs**: Learn how ADX can be used to analyze various types of random text logs, such as Linux secure logs and DNS fail logs. By leveraging ADX's query language, you can gain valuable insights from these logs and identify potential issues in your environment.
 1. **Linux_bash**: Access a post-boot script designed specifically for Azure VMs running Linux. This script provides a set of useful commands and configurations to optimize your Linux-based VMs.
 1. **Folder network\pcap2kusto**: Utilize the pcap2kusto.ps1 script to import PCAP files into Azure Data Explorer (Kusto). This enables you to perform advanced analysis on network packet captures and gain deeper visibility into your network traffic.
 1. **Folder network\mergecapfiles**: Combine multiple PCAP files into a single file using the mergecapfiles.ps1 script. This simplifies the management and analysis of network packet captures by consolidating them into a single, unified file.
 1. **Script network\get-MicrosoftIpAddressRange.ps1**: which helps you find Microsoft Azure and Office 365 IP ranges and details using public data files. This script simplifies the process of identifying and managing IP ranges associated with Microsoft services.
 1. (ExternalLink) **Azure file storage**: [Diagnose Script on Azure File Storage](https://github.com/Azure-Samples/azure-files-samples/tree/master/AzFileDiagnostics)
+
 
 ## Things are NOT related to Azure Platform 
 
