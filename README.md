@@ -11,7 +11,7 @@ Contents
 1. **ADX for Storage Analytics Logs**: Learn how to leverage Azure Data Explorer (ADX) to analyze Storage Analytics logs with ease. By following a few simple steps, you can gather logs from customers and other sources without the need for complex log configuration.
 1. **ADX for Network Trace PCAPs**: Explore the capabilities of ADX in analyzing network trace PCAPs. This functionality enables you to gather network traces from customers and efficiently analyze them using ADX's powerful querying capabilities.
 1. **ADX for NSGFlowLogV2**: Discover how ADX can be utilized to analyze NSGFlowLogV2, allowing you to obtain raw JSON logs from customers and other sources without the need for extensive log configuration. ADX simplifies the process of extracting valuable insights from network flow logs.
-1. **Use CSV directly by Kusto**: the following show to query csv save on public url without import. 
+1. **Use CSV directly by Kusto**: the following show to query csv save on public url without import.  For More [Blocklist & Kusto table](https://firewalliplists.gypthecat.com/kusto-tables/)
    ```sql
    let spike_time = datetime(2025-02-15T10:00:00.000Z);
    let CIDRRanges = (
