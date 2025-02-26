@@ -53,6 +53,20 @@ foreach ($h in $hosts) {
             }
         }
 
+        # Get the IP address of the host, retry 3 times if failed
+        $ip = ""
+        for ($j = 0; $j -lt 10; $j++) {
+                $iplist=(Resolve-DnsName $hostname).IPAddress
+                $ip=$iplist.split(',')[0]
+                if ("" -ne $ip) 
+                {
+                    break
+                }
+                else {
+                    start-sleep -Milliseconds 50
+                }
+        }
+        
         # Calculate the latency statistics for the host
         if ($latencies.Count -gt 0) {
             # Average latency need be in x.xx format two decimal places
@@ -69,6 +83,7 @@ foreach ($h in $hosts) {
         [PSCustomObject]@{
             Cloud = $cloud
             Hostname = $hostname
+            IPAddress = $ip
             Latency_min = $minLatency
             Latency_max = $maxLatency
             Latency_avg  = $avgLatency
