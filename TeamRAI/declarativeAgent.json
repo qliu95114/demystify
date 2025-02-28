@@ -7,6 +7,20 @@
         { 
             "name": "TeamsMessages", 
             "channels_by_url": []  
+        },
+        {
+            "name": "WebSearch",
+            "sites": [
+              {
+                "url": "https://microsoft.sharepoint.com/"
+              }
+            ]
+        },
+        {
+          "name": "GraphicArt"
+        },
+        {
+          "name": "CodeInterpreter"
         }
     ] 
 } 

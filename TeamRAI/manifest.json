@@ -1,7 +1,7 @@
 ﻿{
     "$schema":  "https://developer.microsoft.com/json-schemas/teams/v1.19/MicrosoftTeams.schema.json",
     "manifestVersion":  "1.19",
-    "version":  "1.0.1",
+    "version":  "1.0.2",
     "id":  "fd834233-c406-4172-91b3-295085b6a034",
     "developer":  {
                       "name":  "Qing Liu",

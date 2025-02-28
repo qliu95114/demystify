@@ -2,6 +2,11 @@
 # and this file format is Cloud,Hostname
 # script will test url and measure the latency
 
+# Parameter help description
+Param(
+    [string]$csvfile="$PSScriptRoot\azurespeed_armlocation.csv",
+    [int]$pingcount=10
+)
 
 Function Write-UTCLog ([string]$message,[string]$color="Green")
 {
@@ -10,14 +15,25 @@ Function Write-UTCLog ([string]$message,[string]$color="Green")
         Write-Host $logstamp -ForegroundColor $color
 }
 
-$pingcount = 10         # Ping the hostname 10 times
-$hosts = Import-Csv -Path azurespeed_armlocation.csv
-Write-UTCLog "Each Ping Test count $($pingcount)" 
-Write-UTCLog "Total hosts: $($hosts.count)" 
+# test if the file exists in the current directory, if not, download it from the URL
+if (Test-Path $csvfile) {
+    Write-UTCLog "File $($csvfile) exists." "Green"
+} else {
+    Write-UTCLog "File $($csvfile) does not exist. Downloading from URL..." "Yellow"
+    $url = "https://raw.githubusercontent.com/qliu95114/demystify/refs/heads/main/ps_azure/azurespeed_armlocation.csv"
+    Invoke-WebRequest -Uri $url -OutFile "$env:temp\\azurespeed_armlocation.csv"
+    $csvfile="$env:temp\\azurespeed_armlocation.csv"
+    Write-UTCLog "File downloaded to $($csvfile)" "Green"
+}
+$hosts = Import-Csv -Path $csvfile
+Write-UTCLog "PingTest Count : $($pingcount)" 
+Write-UTCLog "DomainName (total): $($hosts.count)" 
 
 $st=Get-Date
 # Create a runspace pool for multi-threading
-$runspacePool = [RunspaceFactory]::CreateRunspacePool(1, $hosts.count) # Min 1 thread, Max Host.Count threads
+$maxThreads = [math]::Min((Get-CimInstance Win32_ComputerSystem).NumberOfLogicalProcessors * 2, $hosts.count)
+Write-UTCLog "Threads (total): $maxThreads"
+$runspacePool = [RunspaceFactory]::CreateRunspacePool(1, $maxThreads) # Min 1 thread, Max calculated threads
 $runspacePool.Open()
 
 # Create a list to hold the runspaces
@@ -109,13 +125,18 @@ $runspacePool.Close()
 # Display the results in a nicely formatted table
 $results | Sort-Object Latency_min | Format-Table -AutoSize 
 
-if (Test-path $env:temp\azurespeed_armlocation_result.csv) {
-    Remove-Item $env:temp\azurespeed_armlocation_result.csv
-}
-else {
-    $results | Sort-Object Latency_min | Export-Csv -Path $env:temp\azurespeed_armlocation_result.csv -NoTypeInformation    <# Action when all if and elseif conditions are false #>
-}
 $et=Get-Date
 $duration = ($et - $st).TotalSeconds
 Write-UTCLog "Finished in $($duration) Seconds" 
+# generate new file name append "_result" in the same directory as the input file.
+$csvresultfile=$csvfile.split('\')[-1].split('.')[0]+"_result.csv"
+$resultfile="$env:temp\$csvresultfile"
+if (Test-path $resultfile) {
+    Write-UTCLog "File $($resultfile) exists. Remove it." "Yellow"
+    Remove-Item $resultfile
+}
+
+$results | Sort-Object Latency_min | Export-Csv -Path $resultfile -NoTypeInformation    <# Action when all if and elseif conditions are false #>
+Write-UTCLog "Export result to $($resultfile)" "Green"
+
 #notepad++.exe $env:temp\azurespeed_armlocation_result.csv
