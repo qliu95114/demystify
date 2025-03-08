@@ -16,8 +16,15 @@
 # author : qliu
 # time : 2023-06-23
 
-$containerid=([xml](c:\windows\system32\curl "http://168.63.129.16/machine?comp=goalstate" -H "x-ms-guest-agent-name: WaAgent-2.7.0.0 (2.7.0.0)" -H "x-ms-version: 2012-11-30" -A """")).GoalState.Container.ContainerId
-$InstanceId=([xml](c:\windows\system32\curl "http://168.63.129.16/machine?comp=goalstate" -H "x-ms-guest-agent-name: WaAgent-2.7.0.0 (2.7.0.0)" -H "x-ms-version: 2012-11-30" -A """")).GoalState.Container.RoleInstanceList.RoleInstance.InstanceId
+# if c:\windows\system32\curl not exist, we will use irm to replace
+if (Test-Path "c:\windows\system32\curl") {
+    $containerid=([xml](c:\windows\system32\curl "http://168.63.129.16/machine?comp=goalstate" -H "x-ms-guest-agent-name: WaAgent-2.7.0.0 (2.7.0.0)" -H "x-ms-version: 2012-11-30" -A """")).GoalState.Container.ContainerId
+    $InstanceId=([xml](c:\windows\system32\curl "http://168.63.129.16/machine?comp=goalstate" -H "x-ms-guest-agent-name: WaAgent-2.7.0.0 (2.7.0.0)" -H "x-ms-version: 2012-11-30" -A """")).GoalState.Container.RoleInstanceList.RoleInstance.InstanceId
+}
+else {
+    $containerid=(Invoke-RestMethod "http://168.63.129.16/machine?comp=goalstate" -Headers @{"x-ms-guest-agent-name"="WaAgent-2.7.0.0 (2.7.0.0)";"x-ms-version"="2012-11-30"} -UseBasicParsing -UserAgent "WaAgent-2.7.0.0 (2.7.0.0)").GoalState.Container.ContainerId
+    $InstanceId=(Invoke-RestMethod "http://168.63.129.16/machine?comp=goalstate" -Headers @{"x-ms-guest-agent-name"="WaAgent-2.7.0.0 (2.7.0.0)";"x-ms-version"="2012-11-30"} -UseBasicParsing -UserAgent "WaAgent-2.7.0.0 (2.7.0.0)").GoalState.Container.RoleInstanceList.RoleInstance.InstanceId
+}
 
 $logdate = ((get-date).ToUniversalTime()).ToString("yyyy-MM-dd HH:mm:ss")
 

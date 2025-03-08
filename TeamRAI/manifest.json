@@ -1,0 +1,43 @@
+﻿{
+    "$schema":  "https://developer.microsoft.com/json-schemas/teams/v1.19/MicrosoftTeams.schema.json",
+    "manifestVersion":  "1.19",
+    "version":  "1.0.2",
+    "id":  "fd834233-c406-4172-91b3-295085b6a034",
+    "developer":  {
+                      "name":  "Qing Liu",
+                      "websiteUrl":  "https://aka.ms/qliutsg",
+                      "privacyUrl":  "https://www.example.com/privacy",
+                      "termsOfUseUrl":  "https://www.example.com/termofuse"
+                  },
+    "icons":  {
+                  "color":  "color.png",
+                  "outline":  "outline.png"
+              },
+    "name":  {
+                 "short":  "TeamsRAI",
+                 "full":  "TeamsRAI (Retrieval-Augmented Intelligence)"
+             },
+    "description":  {
+                        "short":  "Build by Declarative Agent for Teams Retrieval-Augmented Intelligence",
+                        "full":  "Microsoft Teams is a versatile app designed to streamline and enhance communication and collaboration within organizations. It integrates Retrieval-Augmented Generation (RAG) technology to improve the efficiency and accuracy of information retrieval. This feature leverages advanced search capabilities to retrieve relevant data and generate insightful responses, making team interactions more productive and informed. Microsoft Teams ensures seamless connectivity, enabling users to access essential information quickly and make well-informed decisions effortlessly."
+                    },
+    "accentColor":  "#FFFFFF",
+    "composeExtensions":  [
+
+                          ],
+    "permissions":  [
+                        "identity",
+                        "messageTeamMembers"
+                    ],
+    "copilotAgents":  {
+                          "declarativeAgents":  [
+                                                    {
+                                                        "id":  "declarativeAgent",
+                                                        "file":  "declarativeAgent.json"
+                                                    }
+                                                ]
+                      },
+    "validDomains":  [
+
+                     ]
+}
