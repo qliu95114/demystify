@@ -71,17 +71,31 @@ Function Invoke-ChartGPTCompletion {
         [Parameter(Mandatory = $true)][string]$DeploymentName,
         [Parameter(Mandatory = $true)][string]$Prompt,
         [Parameter(Mandatory = $true)][string]$Message,
+        [string]$serverless="False",
         [int]$token=8000,
         [single]$temperature=0.7
     )
 
-    $api_version = "2024-02-01"
+    #$api_version = "2024-02-01"
+    $api_version = "2024-10-21"
 
-    $url = "$($endpoint)openai/deployments/$($DeploymentName)/chat/completions?api-version=$($api_version)"
-    Write-UTCLog "AI Endpoints: $($url)" "DarkCyan"
+    if ( $serverless -eq "True")
+    {
+        $url = "$($endpoint)v1/chat/completions?api-version=$($api_version)"
+        Write-UTCLog "AI Endpoints: $($url)" "DarkCyan"
 
-    $headers = @{
-        "api-key" = $AccessKey
+        $headers = @{
+            "Authorization" = $AccessKey
+        }
+    }
+    else
+    {
+        $url = "$($endpoint)openai/deployments/$($DeploymentName)/chat/completions?api-version=$($api_version)"
+        Write-UTCLog "AI Endpoints: $($url)" "DarkCyan"
+
+        $headers = @{
+            "api-key" = $AccessKey
+        }
     }
 
     $promptPayload = [PSCustomObject]@{

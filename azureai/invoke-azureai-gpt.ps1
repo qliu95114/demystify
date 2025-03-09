@@ -3,11 +3,27 @@
 Work with Azure OpenAI API via Powershell
 
 .DESCRIPTION
-This script is used to work with AzureAI GPT API, send content to AzureAI and get the response. 
-Allow user to select different promptchoice from prompt.json to fine tune the response.
-Allow user to use text file as large user prompt. 
-Allow user to save the response to a completion file.
-Allow user to specfic promptfile as system prompt instead of using default prompt.json & promptchoice.
+This script interacts with the AzureAI GPT API to send content and receive responses. It includes the following features:
+
+1. Enables users to select different prompt choices from a `prompt.json` file to fine-tune the response.
+2. Allows the use of a text file as a large user prompt.
+3. Provides the option to save the response to a completion file.
+4. Permits specifying a custom prompt file as a system prompt instead of the default `prompt.json` and prompt choices.
+5. Automatically uses `alias.prompt.json` for prompt mapping based on the `-contentfile` option. require `-UseAutoPromptMapping` to enable this feature.
+
+alias.prompt.json is used to map the prompt file to the related prompt file.
+============================================
+[
+   {
+      "file": "d:\\temp\\email.txt",
+      "prompt": "d:\\temp\\email.prompt"
+   },
+   {
+      "file": "d:\\temp\\email2.txt",
+      "prompt": "d:\\temp\\email2.prompt"
+   }
+]
+
 Parameters are divided into four categories:
 
 input (user prompt - only one of below two is required or needed）
@@ -149,11 +165,12 @@ Param(
     [string] $token = $env:OPENAI_TOKENS_AZURE,
     [single] $temperature = 0.7,
     [string] $maxtoken_output = $env:OPENAI_MAXTOKENSOUTPUT_AZURE, # this is for max tokens we specific in supporting new api model GPT-4 or 3.5 1106 preview, the token limitation was change to Input : x and Output : 4096, instead of total token
-    [string] $aikey,
+    [string] $aikey = "5dd80b58-481f-4846-8a97-602a2563b631",
     [switch] $listconfig,
-    [ValidateSet("gpt-35-turbo", "gpt-35-turbo-16k", "gpt-35-turbo-instruct", "gpt-4", "gpt-4-32k","gpt-4o")][string] $modelname,
-    [ValidateSet("1", "001", "2", "0301", "0314", "0613", "0914", "1106", "1106-Preview", "0125-Preview", "vision-preview","turbo-2024-04-09","2024-05-13")][string] $modelversion,
+    [ValidateSet("gpt-35-turbo", "gpt-35-turbo-16k", "gpt-35-turbo-instruct", "gpt-4", "gpt-4-32k","gpt-4o","gpt-4o-mini","gpt-4o-realtime-preview","DeepSeek-R1","DeepSeek-V3","Phi-4")][string] $modelname,
+    [ValidateSet("1", "001", "2","3","0301", "0314", "0613", "0914", "1106", "1106-Preview", "0125-Preview", "vision-preview","turbo-2024-04-09","2024-05-13","2024-11-20","2024-08-06","2024-07-18","2024-10-01")][string] $modelversion,
     [switch] $DonotUpdateLastConfig,
+    [switch] $UseAutoPromptMapping,
     [switch] $debug
 )
 
@@ -177,7 +194,14 @@ if ($listconfig) {
         Write-UTCLog "Dump $($env:USERPROFILE)\.azureai\azureai-config.json, you can append the parameter sample" -color "Cyan"
         $openai_configs = (Get-Content "$($env:USERPROFILE)\.azureai\azureai-config.json") | ConvertFrom-Json
         foreach ($config in $openai_configs) {
-            $endpoint = "https://$($config.Id.split("/")[8]).openai.azure.com/"
+            if ($config.type -like "Microsoft.CognitiveServices/Serverless") 
+            {   
+                $endpoint = "https://$($config.Id.split("/")[8]).$($config.location+'.')models.ai.azure.com/"
+            }
+            else
+            {
+                $endpoint = "https://$($config.Id.split("/")[8]).openai.azure.com/"
+            }   
             $Deployment = $config.name
             $key = $config.key1
             $model_name = $config.properties.model.name
@@ -238,6 +262,7 @@ if ([string]::IsNullOrEmpty($endpoint) -and [string]::IsNullOrEmpty($DeploymentN
         $DeploymentName = $openai_configs.DeploymentName
         $apikey = $openai_configs.apikey
         $model_name, $model_version = Find-ModelNameVersion -endpoint $endpoint -Name $DeploymentName
+        $serverless= $openai_configs.serverless
     }
     else {
         Write-UTCLog "Azure OpenAi Config v1, v2, azureai-config_last.json are not set, exit now. Please refer .\build_azure-config.ps1(v2) or .\env_setup.cmd (v1) or config endpoint/deployment/apikey" -color "Red"
@@ -263,7 +288,16 @@ else {
                 if (($config.properties.model.name -eq $modelname) -and ($config.properties.model.version -eq $modelversion)) {
                     $c = New-Object PSObject
                     $c | Add-Member -MemberType NoteProperty -Name location -Value $config.location
-                    $c | Add-Member -MemberType NoteProperty -Name endpoint -Value "https://$($config.Id.split("/")[8]).openai.azure.com/"
+                    if ($config.type -like "Microsoft.CognitiveServices/Serverless") 
+                    {   
+                        $c | Add-Member -MemberType NoteProperty -Name endpoint -Value  "https://$($config.Id.split("/")[8]).$($config.location+'.')models.ai.azure.com/"
+                        $c | Add-Member -MemberType NoteProperty -Name Serverless -Value "True"
+                    }
+                    else
+                    {
+                        $c | Add-Member -MemberType NoteProperty -Name endpoint -Value  "https://$($config.Id.split("/")[8]).openai.azure.com/"
+                        $c | Add-Member -MemberType NoteProperty -Name Serverless -Value "False"
+                    }   
                     $c | Add-Member -MemberType NoteProperty -Name DeploymentName -Value $config.name
                     $c | Add-Member -MemberType NoteProperty -Name apikey -Value $config.key1
                     $c | Add-Member -MemberType NoteProperty -Name model_name -Value $config.properties.model.name
@@ -277,7 +311,17 @@ else {
                 if ($config.properties.model.name -eq $modelname) {
                     $c = New-Object PSObject
                     $c | Add-Member -MemberType NoteProperty -Name location -Value $config.location
-                    $c | Add-Member -MemberType NoteProperty -Name endpoint -Value "https://$($config.Id.split("/")[8]).openai.azure.com/"
+                    if ($config.type -like "Microsoft.CognitiveServices/Serverless") 
+                    {   
+                        $c | Add-Member -MemberType NoteProperty -Name endpoint -Value  "https://$($config.Id.split("/")[8]).$($config.location+'.')models.ai.azure.com/"
+                        $c | Add-Member -MemberType NoteProperty -Name Serverless -Value "True"
+                    }
+                    else
+                    {
+                        $c | Add-Member -MemberType NoteProperty -Name endpoint -Value  "https://$($config.Id.split("/")[8]).openai.azure.com/"
+                        $c | Add-Member -MemberType NoteProperty -Name Serverless -Value "False"
+                        
+                    } 
                     $c | Add-Member -MemberType NoteProperty -Name DeploymentName -Value $config.name
                     $c | Add-Member -MemberType NoteProperty -Name apikey -Value $config.key1
                     $c | Add-Member -MemberType NoteProperty -Name model_name -Value $config.properties.model.name
@@ -291,7 +335,15 @@ else {
                 if ($config.properties.model.version -eq $modelversion) {
                     $c = New-Object PSObject
                     $c | Add-Member -MemberType NoteProperty -Name location -Value $config.location
-                    $c | Add-Member -MemberType NoteProperty -Name endpoint -Value "https://$($config.Id.split("/")[8]).openai.azure.com/"
+                    {   
+                        $c | Add-Member -MemberType NoteProperty -Name endpoint -Value  "https://$($config.Id.split("/")[8]).$($config.location+'.')models.ai.azure.com/"
+                        $c | Add-Member -MemberType NoteProperty -Name Serverless -Value "True"
+                    }
+                    else
+                    {
+                        $c | Add-Member -MemberType NoteProperty -Name endpoint -Value  "https://$($config.Id.split("/")[8]).openai.azure.com/"
+                        $c | Add-Member -MemberType NoteProperty -Name Serverless -Value "False"
+                    } 
                     $c | Add-Member -MemberType NoteProperty -Name DeploymentName -Value $config.name
                     $c | Add-Member -MemberType NoteProperty -Name apikey -Value $config.key1
                     $c | Add-Member -MemberType NoteProperty -Name model_name -Value $config.properties.model.name
@@ -314,6 +366,7 @@ else {
             $apikey = $configObjects[0].apikey
             $model_name = $configObjects[0].model_name
             $model_version = $configObjects[0].model_version
+            $serverless= $configObjects[0].Serverless
         }
         else {
             # if more than 1 model found, use random one
@@ -323,6 +376,7 @@ else {
             $apikey = $configObjects[$random].apikey
             $model_name = $configObjects[$random].model_name
             $model_version = $configObjects[$random].model_version
+            $serverless= $configObjects[0].Serverless
         }
     }
     else {
@@ -336,7 +390,7 @@ if ([string]::IsNullOrEmpty($endpoint) -and [string]::IsNullOrEmpty($DeploymentN
     exit
 }
 else {
-    Write-UTCLog "Endpoint : $($endpoint) , Deployment : $($DeploymentName), ModelName: $($model_name), ModelVersion: $($model_version)" -color "gray"
+    Write-UTCLog "Endpoint : $($endpoint) , Deployment : $($DeploymentName), ModelName: $($model_name), ModelVersion: $($model_version), Serverless: $($serverless)" -color "gray"
 }
 
 # if token is empty
@@ -351,15 +405,37 @@ if (!$token) {
 }
 
 # build out the prompt text
-# primary choice -prompt
-# secondary choice -promptFile
+# When $UseAutoPromptMapping -eq True & -ContentFile is specfied , generate -promptfile settings
+# primary choice -promptFile
+# secondary choice -prompt
 # third choice -promptchoice
-if (![string]::IsNullOrEmpty($prompt)) {
-    $promptText = $prompt
-    Write-UTCLog "Prompt(Custom): $promptText" -color "DarkCyan"
-    #get strlen of $promptText
-    $promptforlogging = "PromptCustom: $($promptText.length) chars"
+# fallback to Default "You are an AI assistant that helps people find information."
+
+# when $useAutoPromptMapping is true , need check auto prompt mapping from alias.prompt.json if that is exist and search the -promptfile in the alias.prompt.json, 
+# this only be tiggered and try to set the -promptfile settings when the mapping file does exist.
+if ((Test-Path "$($env:USERPROFILE)\.azureai\$($env:username).prompt.json") -and ![string]::IsNullOrEmpty($contentFile) -and $UseAutoPromptMapping) 
+{
+    $aliasPromptLibraryFile = "$($env:USERPROFILE)\.azureai\$($env:username).prompt.json"
+    $aliasPromptLibraryJson = Get-Content $aliasPromptLibraryFile -Encoding UTF8 | ConvertFrom-Json
+    $promptFile = ($aliasPromptLibraryJson | Where-Object { $_.'file' -eq $contentFile }).prompt
+    # if promptFile is not found in alias.prompt.json, use default prompt
+    if (![string]::IsNullOrEmpty($promptFile)) {
+        Write-UTCLog "Prompt(AutoMapping): $($promptFile)" -Color "DarkCyan" 
+        $promptforlogging = "PromptFile : $($promptFile)"
+    }
+    else {
+        Write-UTCLog "Prompt(AutoMapping): No Mapping file, please check , fall back to default -prompt or -promptlibrary " -Color "Yellow" 
+    }
 }
+
+# assume -promptfile is set prompt, we will skill all the 
+if (![string]::IsNullOrEmpty($prompt) -and ([string]::IsNullOrEmpty($promptfile)))
+    {
+        $promptText = $prompt
+        Write-UTCLog "Prompt(Custom): $promptText" -color "DarkCyan"
+        #get strlen of $promptText
+        $promptforlogging = "PromptCustom: $($promptText.length) chars"
+    }
 else {
     if ($promptFile) {
         if (Test-Path $promptFile) {
@@ -400,7 +476,9 @@ else {
         $promptforlogging = "PromptChoice: $($promptchoice)"
         if ($debug) { Write-Host $promptText -ForegroundColor "DarkCyan" }
         if ([string]::IsNullOrEmpty($promptText)) {
-            $promptText = "You are an AI assistant that helps people find information."
+                # if promptchoice is not found, use default prompt
+                $promptText = "You are an AI assistant that helps people find information."
+                $promptforlogging = "PromptDefault"
         }
     }
 }
@@ -431,10 +509,10 @@ Write-UTCLog "Tokens        : user=$($utoken) , system=$($stoken) , tokens_input
 $t0 = Get-Date
 
 if ([string]::IsNullOrEmpty($imageFile)) {
-    $chat = Invoke-ChartGPTCompletion -Endpoint $endpoint -AccessKey $apikey -DeploymentName $DeploymentName -Prompt $promptText -Message $content -Temperature $temperature
+    $chat = Invoke-ChartGPTCompletion -Endpoint $endpoint -AccessKey $apikey -DeploymentName $DeploymentName -Prompt $promptText -Message $content -Temperature $temperature -Serverless $serverless
 }
 else {
-    $chat = Invoke-ChartGPTCompletionVision -Endpoint $endpoint -AccessKey $apikey -DeploymentName $DeploymentName -Prompt $promptText -Message $content -Temperature $temperature -imageFile $imageFile
+    $chat = Invoke-ChartGPTCompletionVision -Endpoint $endpoint -AccessKey $apikey -DeploymentName $DeploymentName -Prompt $promptText -Message $content -Temperature $temperature -imageFile $imageFile -Serverless $serverless
 }
 
 $suggestion = $chat.choices[0].message.content
@@ -465,6 +543,7 @@ if (!$DonotUpdateLastConfig) {
     $lastconfig | Add-Member -MemberType NoteProperty -Name apikey -Value $apikey
     $lastconfig | Add-Member -MemberType NoteProperty -Name model_name -Value $model_name
     $lastconfig | Add-Member -MemberType NoteProperty -Name model_version -Value $model_version
+    $lastconfig | Add-Member -MemberType NoteProperty -Name serverless -Value $serverless
     $lastconfigjson += $lastconfig
     $lastconfigjson | ConvertTo-Json | Out-File "$($env:USERPROFILE)\.azureai\azureai-config_last.json" -Encoding utf8
     if ($debug) { Write-UTCLog "Last used configuration saved to $($env:USERPROFILE)\.azureai\azureai-config_last.json" -color "gray" }
