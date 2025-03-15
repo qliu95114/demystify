@@ -57,15 +57,20 @@ Write-UTCLog "Bearer token acquired" "Gray"
 
 # Construct the query
 $query = "resources | where type == 'microsoft.cognitiveservices/accounts' | where kind == 'OpenAI'"
-if ($subscriptionId) {
+if (-not [string]::IsNullOrEmpty($subscriptionId)) {
     $query += " | where subscriptionId =~ '$subscriptionId'"
 }
-if ($exclude_subid) {
-    $query += " | where subscriptionId !~ '$exclude_subid'"
+if (-not [string]::IsNullOrEmpty($exclude_subid)) {
+    # split $exlclude_subid with ; and for each split string 
+    # add where subscriptionId !~ 'split string' to the query
+    $exclude_subids = $exclude_subid -split ","
+    foreach ($subid in $exclude_subids) {
+        $query += " | where subscriptionId !~ '$subid'"
+    }
 }
 
 Write-UTCLog "Executing query: $query" "Gray"
-$result = Search-AzGraph -Query $query -ErrorAction SilentlyContinue
+$result = Search-AzGraph -Query $query -ErrorAction SilentlyContinue -UseTenantScope
 
 # Ensure the output directory exists
 $outputDir = "$($env:USERPROFILE)\.azureai"
