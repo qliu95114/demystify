@@ -212,7 +212,7 @@ function CSVtoKustoCluster([string]$csvfile,[string]$kustoendpoint,[string]$kust
         "| extend Destv4decode=strcat(tostring(ip_a),'.',tostring(ip_b),'.',tostring(ip_c),'.',tostring(ip_d))&"|out-file "$($workingfolder)\$($jobid)_1_ingress.kql" -Encoding ascii -Append 
         "| extend Destv4decode=iff(Destv4decode == '...',DestinationV6,Destv4decode)&"|out-file "$($workingfolder)\$($jobid)_1_ingress.kql" -Encoding ascii -Append 
         "| project-away ip_a, ip_b, ip_c, ip_d&"|out-file "$($workingfolder)\$($jobid)_1_ingress.kql" -Encoding ascii -Append 
-        "| project-reorder flowhash, TT, SourcePA, DestPA, SourceCA, DestCA, ethsrci, ethdsti, ipProtocoli, Protocol,ipidinner, ipTTLInner, tcpseq, tcpack, tcpFlags,Length, Info, tcpsrcport, tcpdstport, udpsrcport, udpdstport"|out-file "$($workingfolder)\$($jobid)_1_ingress.kql" -Encoding ascii -Append 
+        "| project-reorder flowhash, TT, SourcePA, DestPA, SourceCA, DestCA, ethsrci, ethdsti, ipProtocoli, Protocol,ipidinner, ipTTLInner, tcpseq, tcpack, tcpackrtt,tcpFlags,Length, Info, tcpsrcport, tcpdstport, udpsrcport, udpdstport,dnsid,ipFlags,tcpwindowsize,espseq,espspi,mysqlcmd"|out-file "$($workingfolder)\$($jobid)_1_ingress.kql" -Encoding ascii -Append 
         $kqlcsvblob0|out-file "$($workingfolder)\$($jobid)_1_ingress.kql" -Encoding ascii -Append  
     }
     else {
@@ -257,7 +257,7 @@ function CSVtoKustoCluster([string]$csvfile,[string]$kustoendpoint,[string]$kust
         "| extend Destv4decode=strcat(tostring(ip_a),'.',tostring(ip_b),'.',tostring(ip_c),'.',tostring(ip_d))&"|out-file "$($workingfolder)\$($jobid)_1_$($(Get-ChildItem $csvfile).BaseName)_ingress.kql" -Encoding ascii -Append 
         "| extend Destv4decode=iff(Destv4decode == '...',DestinationV6,Destv4decode)&"|out-file "$($workingfolder)\$($jobid)_1_$($(Get-ChildItem $csvfile).BaseName)_ingress.kql" -Encoding ascii -Append 
         "| project-away ip_a, ip_b, ip_c, ip_d&"|out-file "$($workingfolder)\$($jobid)_1_$($(Get-ChildItem $csvfile).BaseName)_ingress.kql" -Encoding ascii -Append 
-        "| project-reorder flowhash, TT, SourcePA, DestPA, SourceCA, DestCA, ethsrci, ethdsti, ipProtocoli, Protocol,ipidinner, ipTTLInner, tcpseq, tcpack, tcpFlags,Length, Info, tcpsrcport, tcpdstport, udpsrcport, udpdstport"|out-file "$($workingfolder)\$($jobid)_1_$($(Get-ChildItem $csvfile).BaseName)_ingress.kql" -Encoding ascii -Append 
+        "| project-reorder flowhash, TT, SourcePA, DestPA, SourceCA, DestCA, ethsrci, ethdsti, ipProtocoli, Protocol,ipidinner, ipTTLInner, tcpseq, tcpack, tcpackrtt, tcpFlags,Length, Info, tcpsrcport, tcpdstport, udpsrcport, udpdstport,dnsid,ipFlags,ipflagsmf,tcpwindowsize,espseq,espspi,mysqlcmd"|out-file "$($workingfolder)\$($jobid)_1_$($(Get-ChildItem $csvfile).BaseName)_ingress.kql" -Encoding ascii -Append 
         $kqlcsvblob0|out-file "$($workingfolder)\$($jobid)_1_$($(Get-ChildItem $csvfile).BaseName)_ingress.kql" -Encoding ascii -Append  
         if ($debug) {Write-UTCLog "  ++kql: $($kqlcsvblob)"  "cyan"}
         #execute kusto for single thread complete the command below for multiple thread 
