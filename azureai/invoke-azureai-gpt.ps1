@@ -214,27 +214,27 @@ if ($listconfig) {
 
             if ([string]::IsNullOrEmpty($modelname) -and [string]::IsNullOrEmpty($modelversion)) {
                 Write-Host "[$($model_name) , version $($model_version)]" -ForegroundColor "DarkCyan"
-                Write-Host "   -apikey ""$key"" -DeploymentName ""$($deployment)"" -endpoint ""$endpoint"" " -ForegroundColor "gray"
+                Write-Host "   -apikey ""$($key.length)"" -DeploymentName ""$($deployment)"" -endpoint ""$endpoint"" " -ForegroundColor "gray"
             }
 
             if ([string]::IsNullOrEmpty($modelname) -and ![string]::IsNullOrEmpty($modelversion)) {
                 if ($model_version -eq $modelversion) {
                     Write-Host "[$($model_name) , version $($model_version)]" -ForegroundColor "DarkCyan"
-                    Write-Host "   -apikey ""$key"" -DeploymentName ""$($deployment)"" -endpoint ""$endpoint"" " -ForegroundColor "gray"
+                    Write-Host "   -apikey ""$($key.length)"" -DeploymentName ""$($deployment)"" -endpoint ""$endpoint"" " -ForegroundColor "gray"
                 }
             }
 
             if (![string]::IsNullOrEmpty($modelname) -and [string]::IsNullOrEmpty($modelversion)) {
                 if ($model_name -eq $modelname) {
                     Write-Host "[$($model_name) , version $($model_version)]" -ForegroundColor "DarkCyan"
-                    Write-Host "   -apikey ""$key"" -DeploymentName ""$($deployment)"" -endpoint ""$endpoint"" " -ForegroundColor "gray"
+                    Write-Host "   -apikey ""$($key.length)"" -DeploymentName ""$($deployment)"" -endpoint ""$endpoint"" " -ForegroundColor "gray"
                 }
             }
 
             if (![string]::IsNullOrEmpty($modelname) -and ![string]::IsNullOrEmpty($modelversion)) {
                 if ($model_name -eq $modelname -and $model_version -eq $modelversion) {
                     Write-Host "[$($model_name) , version $($model_version)]" -ForegroundColor "DarkCyan"
-                    Write-Host "   -apikey ""$key"" -DeploymentName ""$($deployment)"" -endpoint ""$endpoint"" " -ForegroundColor "gray"
+                    Write-Host "   -apikey ""$($key.length)"" -DeploymentName ""$($deployment)"" -endpoint ""$endpoint"" " -ForegroundColor "gray"
                 }
             }
         }
