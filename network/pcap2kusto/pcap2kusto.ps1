@@ -217,9 +217,10 @@ function CSVtoKustoCluster([string]$csvfile,[string]$kustoendpoint,[string]$kust
     }
     else {
         #single thread mode, execute kusto for single thread complete the command 
-        $kqlcsvblob0|out-file "$($workingfolder)\$($jobid)_1_$($(Get-ChildItem $csvfile).BaseName)_ingress.kql" -Encoding ascii
-        $kqlcsvblob1|out-file "$($workingfolder)\$($jobid)_1_$($(Get-ChildItem $csvfile).BaseName)_ingress.kql" -Encoding ascii
-        $kqlcsvblob2|out-file "$($workingfolder)\$($jobid)_1_$($(Get-ChildItem $csvfile).BaseName)_ingress.kql" -Encoding ascii
+        Write-UTCLog "  +++ ksql:$($jobid)_1_ingress.kql, appending($($kustotable)) from blob [$($csvfilename)]" -color "Green"
+        $kqlcsvblob0|out-file "$($workingfolder)\$($jobid)_1_$($(Get-ChildItem $csvfile).BaseName)_ingress.kql" -Encoding ascii -Append 
+        $kqlcsvblob1|out-file "$($workingfolder)\$($jobid)_1_$($(Get-ChildItem $csvfile).BaseName)_ingress.kql" -Encoding ascii -Append 
+        $kqlcsvblob2|out-file "$($workingfolder)\$($jobid)_1_$($(Get-ChildItem $csvfile).BaseName)_ingress.kql" -Encoding ascii -Append 
         ".set-or-append $($kustotable) <|&"|out-file "$($workingfolder)\$($jobid)_1_$($(Get-ChildItem $csvfile).BaseName)_ingress.kql" -Encoding ascii -Append 
         "let IPToInt = (ip:string) {&"|out-file "$($workingfolder)\$($jobid)_1_$($(Get-ChildItem $csvfile).BaseName)_ingress.kql" -Encoding ascii -Append 
         "    toint(split(ip, '.')[0]) * 256 * 256 * 256 +&"|out-file "$($workingfolder)\$($jobid)_1_$($(Get-ChildItem $csvfile).BaseName)_ingress.kql" -Encoding ascii -Append 
@@ -257,7 +258,7 @@ function CSVtoKustoCluster([string]$csvfile,[string]$kustoendpoint,[string]$kust
         "| extend Destv4decode=strcat(tostring(ip_a),'.',tostring(ip_b),'.',tostring(ip_c),'.',tostring(ip_d))&"|out-file "$($workingfolder)\$($jobid)_1_$($(Get-ChildItem $csvfile).BaseName)_ingress.kql" -Encoding ascii -Append 
         "| extend Destv4decode=iff(Destv4decode == '...',DestinationV6,Destv4decode)&"|out-file "$($workingfolder)\$($jobid)_1_$($(Get-ChildItem $csvfile).BaseName)_ingress.kql" -Encoding ascii -Append 
         "| project-away ip_a, ip_b, ip_c, ip_d&"|out-file "$($workingfolder)\$($jobid)_1_$($(Get-ChildItem $csvfile).BaseName)_ingress.kql" -Encoding ascii -Append 
-        "| project-reorder flowhash, TT, SourcePA, DestPA, SourceCA, DestCA, ethsrci, ethdsti, ipProtocoli, Protocol,ipidinner, ipTTLInner, tcpseq, tcpack, tcpackrtt, tcpFlags,Length, Info, tcpsrcport, tcpdstport, udpsrcport, udpdstport,dnsid,ipFlags,ipflagsmf,tcpwindowsize,espseq,espspi,mysqlcmd"|out-file "$($workingfolder)\$($jobid)_1_$($(Get-ChildItem $csvfile).BaseName)_ingress.kql" -Encoding ascii -Append 
+        "| project-reorder flowhash, TT, SourcePA, DestPA, SourceCA, DestCA, ethsrci, ethdsti, ipProtocoli, Protocol,ipidinner, ipTTLInner, tcpseq, tcpack, tcpackrtt, tcpFlags,Length, Info, tcpsrcport, tcpdstport, udpsrcport, udpdstport,dnsid,ipFlags,tcpwindowsize,espseq,espspi,mysqlcmd"|out-file "$($workingfolder)\$($jobid)_1_$($(Get-ChildItem $csvfile).BaseName)_ingress.kql" -Encoding ascii -Append 
         $kqlcsvblob0|out-file "$($workingfolder)\$($jobid)_1_$($(Get-ChildItem $csvfile).BaseName)_ingress.kql" -Encoding ascii -Append  
         if ($debug) {Write-UTCLog "  ++kql: $($kqlcsvblob)"  "cyan"}
         #execute kusto for single thread complete the command below for multiple thread 
@@ -306,7 +307,7 @@ function CSVtoKustoEmulator([string]$csvfile,[string]$kustoendpoint,[string]$kus
 
 function pcap2kustocore([string]$pcapfile,[string]$csvfile,[string]$kustoendpoint,[string]$kustotable,[string]$sastoken,[switch]$multithread=$false,[string]$jobid) # this handle one file only
 {
-    if ($debug) {Write-UTCLog  " +function:pcap2kustocore '$($pcapfile)'  multithread: $($multithread)" "cyan"}
+    if ($debug) {Write-UTCLog  " +function:pcap2kustocore '$($pcapfile)'  multithread: $($multithread) jobid : $($jobid)" "cyan" }
     
     #config capinfos 
     set-alias capinfos "c:\Program Files\Wireshark\capinfos.exe"
@@ -751,7 +752,7 @@ if (Test-Path $tracefolder)  #validate
             $csvfilename="$($pcapfile.basename).csv"
             Write-UTCLog " Pcap File : 1, File Size : $($pcapfile.Length)bytes ($("{0:F2}" -f $($pcapfile.Length/1024/1024)) MBs), Required Disk Space (Estimate): $("{0:F2}" -f $($pcapfile.Length/1024/1024*2.40)) MBs " "Yellow"
             Write-UTCLog "$($pcapfile),$($pcapfile.Length)"
-            pcap2kustocore -pcapfile "$($tracefolder)\$($tracefile)" -csvfile "$($csvfolder)\$($csvfilename)" -kustoendpoint $kustoendpoint -kustotable $kustotable -sastoken $sastoken
+            pcap2kustocore -pcapfile "$($tracefolder)\$($tracefile)" -csvfile "$($csvfolder)\$($csvfilename)" -kustoendpoint $kustoendpoint -kustotable $kustotable -sastoken $sastoken -jobid $jobid
 
             # calcuate how much time the program spent
             $t1=Get-Date
