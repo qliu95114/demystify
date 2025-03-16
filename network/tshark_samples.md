@@ -493,4 +493,23 @@ This process helps you create a clean capture file for analysis.
    C:\Program Files\Wireshark\editcap -d -I 26 test.pcap test_dedup.pcap
    ```
 
+## Sample 14 - To address the issue of handling device capture with time shifts for a single TCP stream.
 
+**Problem Statement:**
+When performing infrastructure captures using methods like port mirroring or ERSPAN, the network traces collected from multiple locations may have time stamps that are misaligned across the different trace files. This misalignment creates challenges for tools like Wireshark, which struggle to accurately analyze retransmissions and duplicate acknowledgments due to the inconsistent timing. As a result, it becomes difficult to obtain a coherent view of the network activity.
+
+**Proposed Solution:**
+To achieve better alignment and analysis of the captured network traces, the idea is to reorder the packets based on a combination of sequence numbers and acknowledgment numbers. By focusing on these TCP attributes, you can realign the packets in a way that provides a clearer packet-to-packet view, independent of the time stamps. This method can improve the accuracy of analyzing retransmissions and duplicate acknowledgments, leading to a more comprehensive understanding of the network activity.
+
+It is important to note that this proposal is only applicable to a single TCP stream and requires further testing to determine its reliability for other scenarios.
+
+
+```kql
+
+| where flowhash == '-111319814355929876'  // required to limited to one flow hash. 
+| extend seq=tolong(tcpseq) + tolong(tcpack)
+| extend cal_ack=tolong(tcpseq)+tolong(Length)-100
+| order by seq asc
+| project-reorder flowhash, seq, SourceCA, DestCA, ipidinner, tcpsrcport, tcpdstport, tcpseq, tcpack,cal_ack, Length,  Info
+| extend delta = todatetime(TT) - prev(todatetime(TT))
+```
