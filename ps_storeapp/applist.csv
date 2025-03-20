@@ -3,11 +3,12 @@ OutlookForWindows,olk.exe,C:\Program Files\WindowsApps\Microsoft.OutlookForWindo
 Terminal,WindowsTerminal.exe,C:\Program Files\WindowsApps\Microsoft.WindowsTerminal_*_x64__8wekyb3d8bbwe
 TerminalCanary,WindowsTerminal.exe,C:\Program Files\WindowsApps\Microsoft.WindowsTerminalCanary_*_x64__8wekyb3d8bbwe
 Teams,ms-teams.exe,C:\Program Files\WindowsApps\MSTeams_*_x64__8wekyb3d8bbwe
-RemoteDesktop,msrdcw.exe,C:\Program Files\WindowsApps\MicrosoftCorporationII.AzureVirtualDesktopHostApp_*_x64__8wekyb3d8bbwe
-Copilot,CopilotNative.exe,C:\Program Files\WindowsApps\Microsoft.Copilot_*_x64__8wekyb3d8bbwe
+AVDHostApp,msrdcw.exe,C:\Program Files\WindowsApps\MicrosoftCorporationII.AzureVirtualDesktopHostApp_*_x64__8wekyb3d8bbwe
+RemoteDesktop,RdClient.Windows.exe,C:\Program Files\WindowsApps\Microsoft.RemoteDesktop_*_x64__8wekyb3d8bbwe
+Copilot,CopilotNative.exe,C:\Program Files\WindowsApps\Microsoft.Copilot_*_x64__8wekyb3d8bbwe   
 mspaint,PaintApp\mspaint.exe,C:\Program Files\WindowsApps\Microsoft.Paint_*_x64__8wekyb3d8bbwe
 Whiteboard,MicrosoftWhiteboard\MicrosoftWhiteboard.exe,C:\Program Files\WindowsApps\Microsoft.Whiteboard_*_x64__8wekyb3d8bbwe
-WindowsStore,WinStore.App.exe,C:\Program Files\WindowsApps\Microsoft.WindowsStore_*_x64__8wekyb3d8bbwe
+WindowsStore,WinStore.App.exe,C:\Program Files\WindowsApps\Microsoft.WindowsStorwe_*_x64__8wekyb3d8bbwe
 M365Copilot,WebViewHost.exe,C:\Program Files\WindowsApps\Microsoft.MicrosoftOfficeHub_*_x64__8wekyb3d8bbwe
 ClipChamp,Clipchamp\Clipchamp.exe,C:\Program Files\WindowsApps\Clipchamp.Clipchamp_*_x64__yxz26nhyzhsrt
 drawio,app\draw.io.exe,C:\Program Files\WindowsApps\draw.io.draw.ioDiagrams_*_x64__1zh33159kp73c
