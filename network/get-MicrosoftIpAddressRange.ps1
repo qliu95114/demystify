@@ -129,6 +129,9 @@ If ((Test-Path $env:temp"\blackforestips.xml") -eq $false)
 # "https:\/\/download.microsoft.com\/download\/[a-f0-9]{8}-([a-f0-9]{4}-){3}[a-f0-9]{12}\/BYOIP-geoloc.csv"
 # "https:\/\/download.microsoft.com\/download\/[a-f0-9]{8}-([a-f0-9]{4}-){3}[a-f0-9]{12}\/geoloc-Microsoft.csv"
 
+#https://download.microsoft.com/download/0b9dc6ca-68f9-43b2-b094-da4f6d509bc3/BYOIP-geoloc.csv
+#https://download.microsoft.com/download/0b9dc6ca-68f9-43b2-b094-da4f6d509bc3/geoloc-Microsoft.csv
+
 # Get the raw content of the download page and search for URLs using regex
 $webContent = Invoke-WebRequest -Uri "https://www.microsoft.com/en-us/download/details.aspx?id=53601" -UseBasicParsing
 $rawContent = $webContent.RawContent
