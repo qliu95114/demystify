@@ -23,7 +23,7 @@ Param (
 	[string]$dnsname
 )
 
-Function Write-console ([string]$message,[string]$color)
+Function Write-UTCLog ([string]$message,[string]$color)
 {
     	$logdate = ((get-date).ToUniversalTime()).ToString("yyyy-MM-dd HH:mm:ss")
     	$logstamp = "["+$logdate + "]," + $message
@@ -51,69 +51,106 @@ function checkSubnet ([string]$cidr, [string]$ip)
 	$unetwork -eq ($mask -band $uip)
 }
 
-#get Azure IP Ranges (XML) file from internet
-If ((Test-Path "$($env:temp)\publicips.xml") -eq $false)
+#get Azure IP Ranges (XML) file from internet this is completedly offline per 2024.12 remove it
+if ((Test-Path $env:temp"\publicips.xml") -eq $false)
 {
-    $FirstPage=Invoke-WebRequest -Uri "https://www.microsoft.com/en-us/download/confirmation.aspx?id=41653" -Method Get -UseBasicParsing
-	Invoke-WebRequest -Uri ($FirstPage.Links | where-Object {$_.outerhtml -like "*Click here*"}).href[0] -OutFile "$($env:temp)\publicips.xml"
-	$msg="Download "+($FirstPage.Links | where-Object {$_.outerhtml -like "*Click here*"}).href[0]
-	Write-Console $msg "Green"
+    $FirstPage=Invoke-WebRequest -Uri 'https://www.microsoft.com/en-us/download/details.aspx?id=41653' -Method Get -UseBasicParsing
+	$msg="Download "+($FirstPage.Links | where-object {$_.outerhtml -like "*PublicIPs*"})[0].href
+	Write-UTCLog $msg "Green"
+	Invoke-WebRequest -Uri ($FirstPage.Links | where-object {$_.outerhtml -like "*PublicIPs*"})[0].href -OutFile $env:temp"\publicips.xml"
 }
-If ((Test-Path "$($env:temp)\mooncakeips.xml") -eq $false)
+If ((Test-Path $env:temp"\mooncakeips.xml") -eq $false)
 {
-    $FirstPage=Invoke-WebRequest -Uri "https://www.microsoft.com/en-us/download/confirmation.aspx?id=42064" -Method Get -UseBasicParsing
-	Invoke-WebRequest -Uri ($FirstPage.Links |where-object {$_.outerhtml -like "*Click here*"}).href[0] -OutFile "$($env:temp)\mooncakeips.xml"
-	$msg="Download "+($FirstPage.Links |where-object {$_.outerhtml -like "*Click here*"}).href[0]
-	Write-Console $msg "Green"
-}
-
-If ((Test-Path "$($env:temp)\blackforestips.xml") -eq $false)
-{
-    $FirstPage=Invoke-WebRequest -Uri "https://www.microsoft.com/en-us/download/confirmation.aspx?id=54770" -Method Get -UseBasicParsing
-	Invoke-WebRequest -Uri ($FirstPage.Links |where-object {$_.outerhtml -like "*Click here*"}).href[0] -OutFile "$($env:temp)\blackforestips.xml"
-	$msg="Download "+($FirstPage.Links |where-object {$_.outerhtml -like "*Click here*"}).href[0]
-	Write-Console $msg "Green"
+    $FirstPage=Invoke-WebRequest -Uri 'https://www.microsoft.com/en-us/download/details.aspx?id=42064' -Method Get -UseBasicParsing
+	$msg="Download "+($FirstPage.Links |where-object {$_.outerhtml -like "*PublicIPs_MC*"})[0].href
+	Write-UTCLog $msg "Green"
+	Invoke-WebRequest -Uri ($FirstPage.Links |where-object {$_.outerhtml -like "*PublicIPs_MC*"})[0].href -OutFile $env:temp"\mooncakeips.xml"
 }
 
-#get Azure IP Ranges and Service Tags (JSON) from Internet
-If ((Test-Path "$($env:temp)\publicips.json") -eq $false)
+If ((Test-Path $env:temp"\blackforestips.xml") -eq $false)
 {
-    $FirstPage=Invoke-WebRequest -Uri "https://www.microsoft.com/en-us/download/confirmation.aspx?id=56519" -Method Get -UseBasicParsing
-	Invoke-WebRequest -Uri ($FirstPage.Links |where-object {$_.outerhtml -like "*Click here*"}).href[0] -OutFile "$($env:temp)\publicips.json"
-	$msg="Download "+($FirstPage.Links |where-object {$_.outerhtml -like "*Click here*"}).href[0]
-	Write-Console $msg "Green"
+    $FirstPage=Invoke-WebRequest -Uri 'https://www.microsoft.com/en-us/download/details.aspx?id=54770' -Method Get -UseBasicParsing
+	$msg="Download "+($FirstPage.Links |where-object {$_.outerhtml -like "*PublicIPs_BF*"})[0].href
+	Write-UTCLog $msg "Green"
+	Invoke-WebRequest -Uri ($FirstPage.Links |where-object {$_.outerhtml -like "*PublicIPs_BF*"})[0].href -OutFile $env:temp"\blackforestips.xml"
 }
 
-If ((Test-Path "$($env:temp)\mooncakeips.json") -eq $false)
-{
-    $FirstPage=Invoke-WebRequest -Uri "https://www.microsoft.com/en-us/download/confirmation.aspx?id=57062" -Method Get -UseBasicParsing
-	Invoke-WebRequest -Uri ($FirstPage.Links |where-object {$_.outerhtml -like "*Click here*"}).href[0] -OutFile "$($env:temp)\mooncakeips.json"
-	$msg="Download "+($FirstPage.Links |where-object {$_.outerhtml -like "*Click here*"}).href[0]
-	Write-Console $msg "Green"
-}
+#get Azure IP Ranges and Service Tags (JSON) from Internet and use original file name
+    $FirstPage=Invoke-WebRequest -Uri 'https://www.microsoft.com/en-us/download/details.aspx?id=56519' -Method Get -UseBasicParsing
+	$FileName=($firstpage.links| where-object {$_.outerhtml -like "*ServiceTags_Public*"})[0].href.split('/')[8]
+	if (Test-Path "$($env:temp)\$($FileName)") {}
+	else {
+		$msg="Download "+($FirstPage.Links |where-object {$_.outerhtml -like "*ServiceTags_Public*"})[0].href
+		Write-UTCLog  $msg "Green"
+		If ((Test-Path "$($env:temp)\$($FileName)") -eq $true) { Remove-Item "$($env:temp)\$($FileName)" -Force}
+		Invoke-WebRequest -Uri ($firstpage.links| where-object {$_.outerhtml -like "*ServiceTags_Public*"})[0].href -OutFile "$($env:temp)\$($FileName)"
+	}
 
-If ((Test-Path "$($env:temp)\fairfaxips.json") -eq $false)
-{
-    $FirstPage=Invoke-WebRequest -Uri "https://www.microsoft.com/en-us/download/confirmation.aspx?id=57063" -Method Get -UseBasicParsing
-	Invoke-WebRequest -Uri ($FirstPage.Links |where-object {$_.outerhtml -like "*Click here*"}).href[0] -OutFile "$($env:temp)\fairfaxips.json"
-	$msg="Download "+($FirstPage.Links |where-object {$_.outerhtml -like "*Click here*"}).href[0]
-	Write-Console $msg "Green"
-}
+	$FirstPage=Invoke-WebRequest -Uri 'https://www.microsoft.com/en-us/download/details.aspx?id=57062' -Method Get -UseBasicParsing
+	$FileName=($firstpage.links| where-object {$_.outerhtml -like "*ServiceTags_China*"})[0].href.split('/')[8]
+	if (Test-Path "$($env:temp)\$($FileName)") {}
+	else {
+		$msg="Download "+($firstpage.links| where-object {$_.outerhtml -like "*ServiceTags_China*"})[0].href
+		Write-UTCLog  $msg "Green"
+		If ((Test-Path "$($env:temp)\$($FileName)") -eq $true) { Remove-Item "$($env:temp)\$($FileName)" -Force}
+		Invoke-WebRequest -Uri ($firstpage.links| where-object {$_.outerhtml -like "*ServiceTags_China*"})[0].href -OutFile "$($env:temp)\$($FileName)"
+	}
 
-If ((Test-Path "$($env:temp)\blackforestips.json") -eq $false)
-{
-    $FirstPage=Invoke-WebRequest -Uri "https://www.microsoft.com/en-us/download/confirmation.aspx?id=57064" -Method Get -UseBasicParsing
-	Invoke-WebRequest -Uri ($FirstPage.Links |where-object {$_.outerhtml -like "*Click here*"}).href[0] -OutFile "$($env:temp)\blackforestips.json"
-	$msg="Download "+($FirstPage.Links |where-object {$_.outerhtml -like "*Click here*"}).href[0]
-	Write-Console $msg "Green"
-}
+    $FirstPage=Invoke-WebRequest -Uri 'https://www.microsoft.com/en-us/download/details.aspx?id=57063' -Method Get -UseBasicParsing
+	$FileName=($firstpage.links| where-object {$_.outerhtml -like "*ServiceTags_AzureGovernment*"})[0].href.split('/')[8]
+	if (Test-Path "$($env:temp)\$($FileName)") {}
+	else {
+		$msg="Download "+($firstpage.links| where-object {$_.outerhtml -like "*ServiceTags_AzureGovernment*"})[0].href
+		Write-UTCLog  $msg "Green"
+		If ((Test-Path "$($env:temp)\$($FileName)") -eq $true) { Remove-Item "$($env:temp)\$($FileName)" -Force}
+		Invoke-WebRequest -Uri ($firstpage.links| where-object {$_.outerhtml -like "*ServiceTags_AzureGovernment*"})[0].href -OutFile "$($env:temp)\$($FileName)"
+	}
+	
+    $FirstPage=Invoke-WebRequest -Uri 'https://www.microsoft.com/en-us/download/details.aspx?id=57064' -Method Get -UseBasicParsing
+	$FileName=($FirstPage.Links | where-object {$_.outerhtml -like "*ServiceTags_AzureGermany*"})[0].href.split('/')[8]
+	if (Test-Path "$($env:temp)\$($FileName)") {}
+	else {
+		$msg="Download "+($FirstPage.Links | where-object {$_.outerhtml -like "*ServiceTags_AzureGermany*"})[0].href
+		Write-UTCLog  $msg "Green"
+		If ((Test-Path "$($env:temp)\$($FileName)") -eq $true) { Remove-Item "$($env:temp)\$($FileName)" -Force}
+		Invoke-WebRequest -Uri ($FirstPage.Links | where-object {$_.outerhtml -like "*ServiceTags_AzureGermany*"})[0].href -OutFile "$($env:temp)\$($FileName)"
+	}
 
-If ((Test-Path "$($env:temp)\wnspublicips.xml") -eq $false)
+<#If ((Test-Path "$($env:temp)\wnspublicips.xml") -eq $false)  # this is gone
 {
     $FirstPage=Invoke-WebRequest -Uri "https://www.microsoft.com/en-us/download/confirmation.aspx?id=44238" -Method Get -UseBasicParsing
 	Invoke-WebRequest -Uri ($FirstPage.Links |where-object {$_.outerhtml -like "*Click here*"}).href[0] -OutFile "$($env:temp)\wnspublicips.xml"
 	$msg="Download "+($FirstPage.Links |where-object {$_.outerhtml -like "*Click here*"}).href[0]
-	Write-Console $msg "Green"
+	Write-UTCLog $msg "Green"
+}#>
+
+# need get BYOIP-geoloc.csv and geoloc-Microsoft.csv from https://www.microsoft.com/en-us/download/details.aspx?id=53601
+# use iwr to download the file, save content to $env:temp
+# "https:\/\/download.microsoft.com\/download\/[a-f0-9]{8}-([a-f0-9]{4}-){3}[a-f0-9]{12}\/BYOIP-geoloc.csv"
+# "https:\/\/download.microsoft.com\/download\/[a-f0-9]{8}-([a-f0-9]{4}-){3}[a-f0-9]{12}\/geoloc-Microsoft.csv"
+
+# Get the raw content of the download page and search for URLs using regex
+$webContent = Invoke-WebRequest -Uri "https://www.microsoft.com/en-us/download/details.aspx?id=53601" -UseBasicParsing
+$rawContent = $webContent.RawContent
+
+# Define regex patterns
+$byoipPattern = "https:\/\/download.microsoft.com\/download\/[a-f0-9]{8}-([a-f0-9]{4}-){3}[a-f0-9]{12}\/BYOIP-geoloc.csv"
+$geolocPattern = "https:\/\/download.microsoft.com\/download\/[a-f0-9]{8}-([a-f0-9]{4}-){3}[a-f0-9]{12}\/geoloc-Microsoft.csv"
+
+# Extract URLs using regex
+$byoipUrl = [regex]::Match($rawContent, $byoipPattern).Value
+$geolocUrl = [regex]::Match($rawContent, $geolocPattern).Value
+
+If ((Test-Path "$($env:temp)\$($geolocUrl.Split('/')[-1])") -eq $false)
+{
+	Invoke-WebRequest -Uri $byoipUrl -OutFile "$($env:temp)\$($geolocUrl.Split('/')[-1])" 
+	Write-UTCLog "Downloaded $($geolocUrl)" "Green"
+}
+
+If ((Test-Path "$($env:temp)\$($byoipUrl.Split('/')[-1])") -eq $false)
+{
+	Invoke-WebRequest -Uri $byoipUrl -OutFile "$($env:temp)\$($byoipUrl.Split('/')[-1])" 
+	Write-UTCLog "Downloaded $($byoipUrl)" "Green"
 }
 
 # create array $officeurl for office 365 ip address 
@@ -130,7 +167,7 @@ foreach ($url in $officeurl)
 	{
 		Invoke-WebRequest -Uri $url -OutFile "$($env:temp)\o365_$($filename).json"
 		$msg="Download $($url) ..."
-		Write-Console $msg "Green"
+		Write-UTCLog $msg "Green"
 	}
 }
 
@@ -142,10 +179,13 @@ foreach ($url in $officeurl)
 [xml]$mooncake=get-content "$($env:temp)\mooncakeips.xml"
 [xml]$blackforest=get-content "$($env:temp)\blackforestips.xml"
 
-$public2=(get-content "$($env:temp)\publicips.json")|ConvertFrom-Json
-$mooncake2=(get-content "$($env:temp)\mooncakeips.json")|ConvertFrom-Json
-$blackforest2=(get-content "$($env:temp)\blackforestips.json")|ConvertFrom-Json
-$fairfax2=(get-content "$($env:temp)\fairfaxips.json")|ConvertFrom-Json
+$public2=get-content (Get-ChildItem -Path "$($env:temp)\ServiceTags_Public*.json" |  Sort-Object LastWriteTime -Descending | Select-Object -First 1)|ConvertFrom-Json
+$mooncake2=get-content (Get-ChildItem -Path "$($env:temp)\ServiceTags_China*.json" |  Sort-Object LastWriteTime -Descending | Select-Object -First 1)|ConvertFrom-Json
+$blackforest2=get-content (Get-ChildItem -Path "$($env:temp)\ServiceTags_AzureGovernment*.json" |  Sort-Object LastWriteTime -Descending | Select-Object -First 1)|ConvertFrom-Json
+$fairfax2=get-content (Get-ChildItem -Path "$($env:temp)\ServiceTags_AzureGermany*.json" |  Sort-Object LastWriteTime -Descending | Select-Object -First 1)|ConvertFrom-Json
+
+$byoipgeoloc=Import-csv "$env:temp\BYOIP-geoloc.csv"
+$geolocmicrosoft=Import-csv "$env:temp\geoloc-Microsoft.csv"
 
 if (($ipaddr -eq "") -xor ($dnsname -eq ""))
 {
@@ -157,7 +197,7 @@ if (($ipaddr -eq "") -xor ($dnsname -eq ""))
 	{
 		$result = (Resolve-DnsName $dnsname -ErrorAction SilentlyContinue)
 		if($null -eq $result) {
-			Write-Console "Could not resolve '$($dnsname)' to an IPv4 address" "Red"
+			Write-UTCLog "Could not resolve '$($dnsname)' to an IPv4 address" "Red"
 			return
 		}
 		$ipaddr=$result.ip4address
@@ -220,7 +260,7 @@ if (($ipaddr -eq "") -xor ($dnsname -eq ""))
 	If ($inRegion -ne "")  
 	{
 			$result=$true
-			Write-Console $dnsname" ["$ipaddr"] belongs to [xml] "$inRegion" | "$subnet  "green"
+			Write-UTCLog $dnsname" ["$ipaddr"] belongs to [xml] "$inRegion" | "$subnet  "green"
 	}
 
 	#here start with JSON search with service TAG details - public azure
@@ -235,7 +275,7 @@ if (($ipaddr -eq "") -xor ($dnsname -eq ""))
 				$inServiceTagRegion=$ServiceTag.properties.region
 				$result=$true
 				$setenv="prod"
-				Write-Console $dnsname" ["$ipaddr"] belongs to [json] "$inSeriveTagName" | "$inServiceTag" | "$inServiceTagRegion" | "$addressprefix  "green"				
+				Write-UTCLog $dnsname" ["$ipaddr"] belongs to [json] "$inSeriveTagName" | "$inServiceTag" | "$inServiceTagRegion" | "$addressprefix  "green"				
 			}
 		}
 	}
@@ -252,7 +292,7 @@ if (($ipaddr -eq "") -xor ($dnsname -eq ""))
 				$inServiceTagRegion=$ServiceTag.properties.region
 				$result=$true
 				$setenv="mc"
-				Write-Console $dnsname" ["$ipaddr"] belongs to [json] "$inSeriveTagName" | "$inServiceTag" | "$inServiceTagRegion" | "$addressprefix  "green"	
+				Write-UTCLog $dnsname" ["$ipaddr"] belongs to [json] "$inSeriveTagName" | "$inServiceTag" | "$inServiceTagRegion" | "$addressprefix  "green"	
 
 			}
 		}
@@ -270,7 +310,7 @@ if (($ipaddr -eq "") -xor ($dnsname -eq ""))
 				$inServiceTagRegion=$ServiceTag.properties.region
 				$result=$true
 				$setenv="ff"
-				Write-Console $dnsname" ["$ipaddr"] belongs to [json] "$inSeriveTagName" | "$inServiceTag" | "$inServiceTagRegion" | "$addressprefix  "green"				
+				Write-UTCLog $dnsname" ["$ipaddr"] belongs to [json] "$inSeriveTagName" | "$inServiceTag" | "$inServiceTagRegion" | "$addressprefix  "green"				
 			}
 		}
 	}	
@@ -287,10 +327,42 @@ if (($ipaddr -eq "") -xor ($dnsname -eq ""))
 				$inServiceTagRegion=$ServiceTag.properties.region
 				$result=$true
 				$setenv="bf"
-				Write-Console $dnsname" ["$ipaddr"] belongs to [json] "$inSeriveTagName" | "$inServiceTag" | "$inServiceTagRegion" | "$addressprefix  "green"				
+				Write-UTCLog $dnsname" ["$ipaddr"] belongs to [json] "$inSeriveTagName" | "$inServiceTag" | "$inServiceTagRegion" | "$addressprefix  "green"				
 			}
 		}
 	}
+
+	#here start with CSV for geolocmicrosoft
+	foreach ($geoloc in $geolocmicrosoft)
+	{
+		if (checkSubnet $geoloc."IP Range" $ipaddr) 
+		{
+			$inSeriveTagName=$geoloc."IP Range"
+			$inCountry=$geoloc.Country
+			$inRegion=$geoloc.Region
+			$inCity=$geoloc.City
+			$inPostalCode=$geoloc."Postal Code"
+			$result=$true
+			Write-UTCLog $dnsname" ["$ipaddr"] belongs to [Microsoft GEO LOC] "$inSeriveTagName" | "$inCountry" | "$inRegion" | "$inCity" | "$inPostalCode  "green"
+		}
+	}
+
+
+	#here start with CSV for byoipgeoloc
+	foreach ($byoip in $byoipgeoloc)
+	{
+		if (checkSubnet $byoip."IP Range" $ipaddr) 
+		{
+			$inSeriveTagName=$byoip."IP Range"
+			$inCountry=$byoip.Country
+			$inRegion=$byoip.Region
+			$inCity=$byoip.City
+			$inPostalCode=$byoip."Postal Code"
+			$result=$true
+			Write-UTCLog $dnsname" ["$ipaddr"] belongs to [Bring Your Own IP GEO LOC] "$inSeriveTagName" | "$inCountry" | "$inRegion" | "$inCity" | "$inPostalCode  "green"
+		}
+	}
+
 
 	#here start with JSON search with office 365 details
 	$o365jsonfiles=Get-ChildItem "$($env:temp)\o365_*.json"
@@ -310,7 +382,7 @@ if (($ipaddr -eq "") -xor ($dnsname -eq ""))
 					$category = $service.category
 					$required = $service.required
 					$result=$true
-					Write-Console "$($dnsname) [$($ipaddr)] belongs to [$($o365.name)] |ServiceArea:$($serviceArea) |DisplayName: $($DisplayName) |Port: $($tcpport) |ExR:$($expresroute) |Category:$($category)|Required:$($required)"  "green"				
+					Write-UTCLog "$($dnsname) [$($ipaddr)] belongs to [$($o365.name)] |ServiceArea:$($serviceArea) |DisplayName: $($DisplayName) |Port: $($tcpport) |ExR:$($expresroute) |Category:$($category)|Required:$($required)"  "green"				
 				}
 			}
 		}
@@ -322,11 +394,11 @@ if (($ipaddr -eq "") -xor ($dnsname -eq ""))
 
 	}
 	else {
-		Write-Console "$($dnsname) [$($ipaddr)] does not belong to Azure public/china/usgov or Office365 public/china/usgov/usgovgcc!" "yellow"
+		Write-UTCLog "$($dnsname) [$($ipaddr)] does not belong to Azure public/china/usgov or Office365 public/china/usgov/usgovgcc!" "yellow"
 	}
 
 }
 else 
 {
-		Write-Console "[HELP], parameter needed -dnsname or -ipaddr" "yellow"
+		Write-UTCLog "[HELP], parameter needed -dnsname or -ipaddr" "yellow"
 }
