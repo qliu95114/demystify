@@ -8,7 +8,7 @@ RemoteDesktop,RdClient.Windows.exe,C:\Program Files\WindowsApps\Microsoft.Remote
 Copilot,CopilotNative.exe,C:\Program Files\WindowsApps\Microsoft.Copilot_*_x64__8wekyb3d8bbwe   
 mspaint,PaintApp\mspaint.exe,C:\Program Files\WindowsApps\Microsoft.Paint_*_x64__8wekyb3d8bbwe
 Whiteboard,MicrosoftWhiteboard\MicrosoftWhiteboard.exe,C:\Program Files\WindowsApps\Microsoft.Whiteboard_*_x64__8wekyb3d8bbwe
-WindowsStore,WinStore.App.exe,C:\Program Files\WindowsApps\Microsoft.WindowsStorwe_*_x64__8wekyb3d8bbwe
+WindowsStore,WinStore.App.exe,C:\Program Files\WindowsApps\Microsoft.WindowsStore_*_x64__8wekyb3d8bbwe
 M365Copilot,WebViewHost.exe,C:\Program Files\WindowsApps\Microsoft.MicrosoftOfficeHub_*_x64__8wekyb3d8bbwe
 ClipChamp,Clipchamp\Clipchamp.exe,C:\Program Files\WindowsApps\Clipchamp.Clipchamp_*_x64__yxz26nhyzhsrt
 drawio,app\draw.io.exe,C:\Program Files\WindowsApps\draw.io.draw.ioDiagrams_*_x64__1zh33159kp73c
