@@ -508,7 +508,7 @@ It is important to note that this proposal is only applicable to a single TCP st
 
 | where flowhash == '-111319814355929876'  // required to limited to one flow hash. 
 | extend seq=tolong(tcpseq) + tolong(tcpack)
-| extend cal_ack=tolong(tcpseq)+tolong(Length)-100
+| extend cal_ack=tolong(tcpseq)+tolong(tcplen)
 | order by seq asc
 | project-reorder flowhash, seq, SourceCA, DestCA, ipidinner, tcpsrcport, tcpdstport, tcpseq, tcpack,cal_ack, Length,  Info
 | extend delta = todatetime(TT) - prev(todatetime(TT))
