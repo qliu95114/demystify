@@ -69,4 +69,24 @@ ffmpeg -i input.mp4 -vn -ss 00:43:01.000 -to 00:45:25.000 -acodec libmp3lame -q:
 - `output.mp3`: This specifies the output file name. Replace `output.mp3` with the desired name for your MP3 file.
 - `-ss -to` : This specifies the start , end timestamp of source file input.mp4
  
+## Sample - Extrat Subtitle to SRT
 
+```
+extrat one srt
+ffmpeg -i input.mp4 -map 0:s:0 output.srt
+
+for /f "delims=" %a in ('dir /b /o *.mp4') do ffmpeg -i %a -map 0:s:0 %~na.chs.srt
+```
+
+## Sample - Shift Time of Subtitle
+```
+ffmpeg -itsoffset -00:01:33 -i .\srt\xyz.srt -c copy .\fix\xyz.srt
+```
+- `00:01:33` : delay 93 seconds
+- `-00:01:33` : delay -93 seconds
+
+## Sample - Remove all subtitle from video
+```
+ffmpeg -i %a -map 0 -map -0:s -c copy .\nosub\%a
+```
+- `-map -0:s` : remove all subtitle
