@@ -331,7 +331,7 @@ function pcap2kustocore([string]$pcapfile,[string]$csvfile,[string]$kustoendpoin
             return
         }
         else {
-            if ($kustoendpoint.contains("kusto.windows.net") -or $kustoendpoint.contains("kusto.chinacloudapi.cn"))
+            if ($kustoendpoint.contains("kusto.windows.net") -or $kustoendpoint.contains("kusto.chinacloudapi.cn") -or $kustoendpoint.contains("kusto.fabric.microsoft.com"))
             {
                 if ([string]::IsNullOrEmpty($sastoken))
                 {
@@ -373,7 +373,7 @@ function pcap2kustocore([string]$pcapfile,[string]$csvfile,[string]$kustoendpoin
                 #if ($debug) {Write-UTCLog " +KustoEndpoint is not specified, only pcap2csv only" "Red"}
             }
             else {
-                if ($kustoendpoint.contains("kusto.windows.net") -or $kustoendpoint.contains("kusto.chinacloudapi.cn"))
+                if ($kustoendpoint.contains("kusto.windows.net") -or $kustoendpoint.contains("kusto.chinacloudapi.cn") -or $kustoendpoint.contains("kusto.fabric.microsoft.com"))
                 {
                     if ([string]::IsNullOrEmpty($sastoken))
                     {
@@ -596,7 +596,7 @@ if (Test-Path $tracefolder)  #validate
                     if ([string]::IsNullOrEmpty($sastoken)) 
                     {
                         #  when both $kustoendpoint and $kustotable has value and with domain suffix, we cannot processed without sastoken
-                        if ($kustoendpoint.contains("kusto.windows.net") -or $kustoendpoint.contains("kusto.chinacloudapi.cn"))
+                        if ($kustoendpoint.contains("kusto.windows.net") -or $kustoendpoint.contains("kusto.chinacloudapi.cn") -or $kustoendpoint.contains("kusto.fabric.microsoft.com"))
                         {
                             Write-UTCLog " SAS token is not specified, exit..." "Red"
                             exit
@@ -695,7 +695,7 @@ if (Test-Path $tracefolder)  #validate
                                 $csvfilename="$($pcapfile.basename).csv"
                                 #Write-UTCLog " Ingress ADX(Kusto) $($j)/$($pcapfilelist.count) (m): $($csvfilename)" "Green"
                                 # call CSVtoKusto function in multithread mode
-                                if ($kustoendpoint.contains("kusto.windows.net") -or $kustoendpoint.contains("kusto.chinacloudapi.cn"))
+                                if ($kustoendpoint.contains("kusto.windows.net") -or $kustoendpoint.contains("kusto.chinacloudapi.cn") -or $kustoendpoint.contains("kusto.fabric.microsoft.com"))
                                 {
                                     CSVtoKustoCluster -csvfile "$($csvfolder)\$($csvfilename)" -kustoendpoint $kustoendpoint -kustotable $kustotable -sastoken $sastoken -jobid $jobid -multithread
                                 }
