@@ -87,7 +87,7 @@ sudo ufw reload
 
 # Change the SSH port to 220
 # Define the new SSH port
-NEW_PORT=220
+NEW_PORT=2222
 
 # Path to the SSH configuration file
 SSH_CONFIG_FILE="/etc/ssh/sshd_config"
