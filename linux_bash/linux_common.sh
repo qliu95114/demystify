@@ -96,7 +96,7 @@ SSH_CONFIG_FILE="/etc/ssh/sshd_config"
 sudo cp $SSH_CONFIG_FILE "${SSH_CONFIG_FILE}.bak"
 
 # Update the SSH configuration file with the new port
-sudo sed -i "s/^#Port 22/Port $NEW_PORT/" $SSH_CONFIG_FILE
+sudo sed -i "s/^#Port 22/Port 22/" $SSH_CONFIG_FILE  # remove the comment
 sudo sed -i "s/^Port 22/Port $NEW_PORT/" $SSH_CONFIG_FILE
 
 # Restart the SSH service to apply changes
