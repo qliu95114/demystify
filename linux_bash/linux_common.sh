@@ -17,11 +17,9 @@ if [ -f /etc/lsb-release ]; then
     sudo apt install netfilter-persistent netcat -y
   else
     echo "This script is only for Ubuntu 18.04."
-    exit 1
   fi
 else
   echo "This script is only for Ubuntu 18.04."
-  exit 1
 fi
 sudo apt install net-tools iptables tcpdump nano vim iputils-ping cron inetutils-traceroute iotop iftop iperf3 moreutils ufw nginx samba -y
 
