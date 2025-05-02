@@ -84,3 +84,27 @@ sudo systemctl restart smbd
 # Enable the firewall to allow Samba traffic
 sudo ufw allow samba
 sudo ufw reload
+
+# Change the SSH port to 220
+# Define the new SSH port
+NEW_PORT=220
+
+# Path to the SSH configuration file
+SSH_CONFIG_FILE="/etc/ssh/sshd_config"
+
+# Backup the current SSH configuration file
+sudo cp $SSH_CONFIG_FILE "${SSH_CONFIG_FILE}.bak"
+
+# Update the SSH configuration file with the new port
+sudo sed -i "s/^#Port 22/Port $NEW_PORT/" $SSH_CONFIG_FILE
+sudo sed -i "s/^Port 22/Port $NEW_PORT/" $SSH_CONFIG_FILE
+
+# Restart the SSH service to apply changes
+sudo systemctl restart sshd
+
+# Verify the change
+if sudo ss -tuln | grep ":$NEW_PORT"; then
+  echo "SSH port successfully changed to $NEW_PORT."
+else
+  echo "Failed to change SSH port."
+fi
