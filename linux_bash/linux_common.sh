@@ -8,7 +8,22 @@ echo $learningbash
 # installation, when install tshark it will prompt diaglog for dumpcap setting, 
 sudo apt update -y
 sudo apt upgrade -y
-sudo apt install netfilter-persistent net-tools iptables tcpdump nano vim iputils-ping cron inetutils-traceroute iotop iftop iperf3 netcat moreutils ufw nginx samba -y
+
+# only install the package when this is 1804
+if [ -f /etc/lsb-release ]; then
+  . /etc/lsb-release
+  if [ "$DISTRIB_RELEASE" == "18.04" ]; then
+    echo "Ubuntu 18.04 detected. install netfilter-persistent and netcat"
+    sudo apt install netfilter-persistent netcat -y
+  else
+    echo "This script is only for Ubuntu 18.04."
+    exit 1
+  fi
+else
+  echo "This script is only for Ubuntu 18.04."
+  exit 1
+fi
+sudo apt install net-tools iptables tcpdump nano vim iputils-ping cron inetutils-traceroute iotop iftop iperf3 moreutils ufw nginx samba -y
 
 # add powershell 
 sudo snap install powershell --classic  # LEGACY, but working in Ubuntu 22
@@ -96,8 +111,8 @@ SSH_CONFIG_FILE="/etc/ssh/sshd_config"
 sudo cp $SSH_CONFIG_FILE "${SSH_CONFIG_FILE}.bak"
 
 # Update the SSH configuration file with the new port
-sudo sed -i "s/^#Port 22/Port 22/" $SSH_CONFIG_FILE  # remove the comment
-sudo sed -i "s/^Port 22/Port $NEW_PORT/" $SSH_CONFIG_FILE
+sudo sed -i "/Port 22/d" $SSH_CONFIG_FILE  # remove the comment
+sudo echo "Port $NEW_PORT" >> $SSH_CONFIG_FILE # add the new port
 
 # Restart the SSH service to apply changes
 sudo systemctl restart sshd
