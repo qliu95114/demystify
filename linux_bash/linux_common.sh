@@ -110,7 +110,7 @@ sudo cp $SSH_CONFIG_FILE "${SSH_CONFIG_FILE}.bak"
 
 # Update the SSH configuration file with the new port
 sudo sed -i "/Port 22/d" $SSH_CONFIG_FILE  # remove the comment
-sudo echo "Port $NEW_PORT" >> $SSH_CONFIG_FILE # add the new port
+echo "Port $NEW_PORT" | sudo tee -a $SSH_CONFIG_FILE # add the new port
 
 # Restart the SSH service to apply changes
 sudo systemctl restart sshd
