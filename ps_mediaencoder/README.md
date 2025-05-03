@@ -90,3 +90,12 @@ ffmpeg -itsoffset -00:01:33 -i .\srt\xyz.srt -c copy .\fix\xyz.srt
 ffmpeg -i %a -map 0 -map -0:s -c copy .\nosub\%a
 ```
 - `-map -0:s` : remove all subtitle
+
+## Sample - Merge subtitle + mp4 to a single file
+```
+rem merge one subtitle + one mp4
+for /f "delims=" %a in ('dir /b /o C:\temp\*.mp4') do ffmpeg -i I:\temp\%a -i C:\temp\%~na.chs.srt -c:v copy -c:a copy -c:s mov_text "C:\TV.asia\New\%a"
+
+rem merge multiple subtitle + one mp4
+for /f "delims=" %a in ('dir /b /o C:\temp\*.mp4') do ffmpeg -i C:\temp\%a -i C:\temp\%~na.chs.srt -i C:\temp\%~na.cht.srt -i C:\temp\%~na.eng.srt -map 0:v -map 0:a -map 1 -map 2 -map 3 -c:v copy -c:a copy -c:s mov_text "C:\TV.asia\New\
+```
