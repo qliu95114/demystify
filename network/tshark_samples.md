@@ -513,3 +513,19 @@ It is important to note that this proposal is only applicable to a single TCP st
 | project-reorder flowhash, seq, SourceCA, DestCA, ipidinner, tcpsrcport, tcpdstport, tcpseq, tcpack,cal_ack, Length,  Info
 | extend delta = todatetime(TT) - prev(todatetime(TT))
 ```
+
+## Sample 15 - Good sample of tcpdump with rolling capture and clean up
+
+Shell script that captures network traffic on all network interfaces except the loopback interface (`lo`) using `tcpdump` and each interface save to different file and send to background service
+```
+for iface in $(ls /sys/class/net | grep -v lo); do nohup tcpdump -i "$iface" -s 128 -C 200 -W 1000 -w "/path/tcpdump_$(hostname)_$iface_$(date -u +%Y%m%d_%H%M%S.%3N).pcap" &
+```
+
+killall tcpdump (Run as root user)
+```
+# ps -ef | grep tcpdump | grep tcpdump_ | grep .pcap | grep -v grep | awk '{print "kill -9 "$2}' | sh
+or
+# ps -ef | grep tcpdump_ | grep .pcap | grep -v grep | awk '{print $2}' | xargs kill -15
+or
+# ps -ef | grep tcpdump_ | grep .pcap | grep -v grep | awk '{print $2}' | xargs kill -9
+```
