@@ -1,7 +1,7 @@
 # this script scan all source folder with given file naming pattern and convert all video to target folder with same file name. 
 
 Param (
-    [string]$srcpath="K:\Downloads\Transfer",
+    [string]$srcpath=$((Get-Location).path),
     [string]$destpath="G:\DOWNLOADS\transfer\ffmpeg",
     [string]$filepattern="*.mp4",
     [string]$logfolder="G:\DOWNLOADS\ffmpeg_log",

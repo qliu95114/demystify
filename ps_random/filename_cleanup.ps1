@@ -31,7 +31,7 @@ Date: 2025-01-12, first version
 # Powershell Function Write-UTCLog , 2024-04-12
 
 Param(
-    [string]$folder=$(Get-Location),
+    [string]$folder=$((Get-Location).path),
     [string]$str2remove,
     [string]$str2prefixadd,
     [string]$str2replace_source,
