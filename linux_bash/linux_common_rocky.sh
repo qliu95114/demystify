@@ -14,7 +14,7 @@ sudo yum install net-tools iptables tcpdump nano vim iotop iperf3 nginx samba fi
 
 # sudo apt install dotnet
 sudo dnf update -y 
-sudo rpm -Uvh https://packages.microsoft.com/config/centos/8/packages-microsoft-prod.rpm
+sudo rpm -Uvh https://packages.microsoft.com/config/centos/8/packages-microsoft-prod.rpm -y
 #sudo dnf install dotnet-sdk-8.0 -y 
 #sudo dnf install dotnet-runtime-8.0 -y
 sudo dnf install dotnet-sdk-9.0 aspnetcore-runtime-9.0 -y
