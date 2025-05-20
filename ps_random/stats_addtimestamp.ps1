@@ -56,6 +56,7 @@ foreach ($file in $files) {
         # loop through each line, 
         # if line starts with ^# (\d{8}-\d{6})$, get timestamp 
         # if line is empty skip it
+        # if line is part of qdisc, merge into online, exit gate is "NIC statistics:' 
         # everything else add timestamp.increment number and write it to the output file
 
         $qdisc = false
@@ -83,7 +84,7 @@ foreach ($file in $files) {
                     $indexstr = "{0:D6}" -f $index
                     $qdiscLine = $timestamp+"."+$indexstr+" $line"
                 }
-                '^NIC statistics:' # exsit qdisc loop
+                '^NIC statistics:' # exit qdisc loop
                 {
                     # if $qdiscline is found, need flush the previous $qdisc line if exists, then set the $qdisc to false
                     if ([string]::IsNullOrEmpty($qdiscLine) -eq $false) {
@@ -102,7 +103,7 @@ foreach ($file in $files) {
                     $index++
                     # make index to be 6 digits fill with 0
                     if ($qdisc -eq $true) {
-                        # if qdisc is true, add the content to the $qdiscLine
+                        # if qdisc is true, add the content to the $qdiscLine without flush to $outputFileName
                         $qdiscLine += "$line"
                     } else {
                         $indexstr = "{0:D6}" -f $index
