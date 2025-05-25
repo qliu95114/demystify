@@ -63,7 +63,7 @@ foreach ($file in $files) {
     $newName = $file.Name -replace '\[.*\]', ''
     $newPath = Join-Path $file.DirectoryName $newName
     Rename-Item -LiteralPath $file.FullName -NewName $newPath
-    Write-UTCLog "Remove `[`] $($file.FullName) to $newPath"
+    Write-UTCLog "Remove `[any characters`] $($file.FullName) to $newPath"
 }
 
 # if $str2remove is not empty then take out [any] 
