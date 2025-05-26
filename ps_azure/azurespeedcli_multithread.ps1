@@ -31,7 +31,7 @@ Write-UTCLog "DomainName (total): $($hosts.count)"
 
 $st=Get-Date
 # Create a runspace pool for multi-threading
-$maxThreads = [math]::Min((Get-CimInstance Win32_ComputerSystem).NumberOfLogicalProcessors * 2, $hosts.count)
+$maxThreads = [math]::Min([int]((Get-CimInstance Win32_ComputerSystem).NumberOfLogicalProcessors /2) , $hosts.count)
 Write-UTCLog "Threads (total): $maxThreads"
 $runspacePool = [RunspaceFactory]::CreateRunspacePool(1, $maxThreads) # Min 1 thread, Max calculated threads
 $runspacePool.Open()
@@ -72,7 +72,8 @@ foreach ($h in $hosts) {
         # Get the IP address of the host, retry 3 times if failed
         $ip = ""
         for ($j = 0; $j -lt 10; $j++) {
-                $iplist=(Resolve-DnsName $hostname).IPAddress
+                #$iplist=(Resolve-DnsName $hostname).IPAddress
+                $iplist=(Resolve-DnsName $hostname).IP4Address
                 $ip=$iplist.split(',')[0]
                 if ("" -ne $ip) 
                 {
