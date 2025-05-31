@@ -15,7 +15,7 @@ function Write-UTCLog ([string]$message,[string]$color="Green")
 }
 
 # Get all msi files in the path
-$msifiles = Get-ChildItem -Path $path -Filter *.msi -Recurse
+$msifiles = Get-ChildItem -Path $path -Filter *.msi 
 if ($msifiles.Count -eq 0) {
     Write-UTCLog "No msi files found in the specified path: $path" -color "Red"
     exit
