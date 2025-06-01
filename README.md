@@ -138,6 +138,8 @@ Contents
    Found 1 driver package(s) to install.
    Installing 1 of 1 - K:\Download\SurfaceUpdate\13inches\SurfaceTCON.inf: The driver package was successfully installed.
    The operation completed successfully.
+
+   C:\>imagex.exe /unmount D:\VHD\wim
    ```
    
 
