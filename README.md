@@ -112,7 +112,33 @@ Contents
    rem *.pdf to *.txt 
    for %a in (*.pdf) do (gswin64c -sDEVICE=txtwrite -o "%~na.txt" "%a")
    ```
+
+1. how to slipstream drivers to install.wim
+   ```
+   rem either imagex or dism works
+   rem DISM /Mount-Wim /WimFile:"D:\temp\26100.amd64fre.enterprise_en-us_vl\sources\install.wim" /index:1 /MountDir:"D:\Temp\wim"
    
+   C:\>imagex.exe /mount D:\temp\26100.amd64fre.enterprise_en-us_vl\sources\install.wim\install.wim 1 D:\VHD\wim
+   ImageX Tool for Windows
+   Copyright (C) Microsoft Corp. All rights reserved.
+   Version: 10.0.10011.16384
+   Mounting: [D:\TEMP\26100.amd64fre.enterprise_en-us_vl\sources\install.wim, 1] -> [D:\VHD\wim]...
+   [ 100% ] Mounting progress
+   Successfully mounted image.
+   Total elapsed time: 2 min 25 sec
+   
+   C:\>for /f "delims=" %a in ('dir /b /o K:\Download\SurfaceUpdate') do DISM /Image:"D:\VHD\wim" /Add-Driver /Driver:"K:\Download\SurfaceUpdate\%a"
+   C:\>DISM /Image:"D:\VHD\wim" /Add-Driver /Driver:"K:\Download\SurfaceUpdate\13inches"
+
+   Deployment Image Servicing and Management tool
+   Version: 10.0.26100.1
+   Image Version: 10.0.26100.1
+   
+   Searching for driver packages to install...
+   Found 1 driver package(s) to install.
+   Installing 1 of 1 - K:\Download\SurfaceUpdate\13inches\SurfaceTCON.inf: The driver package was successfully installed.
+   The operation completed successfully.
+   ```
    
 
 
