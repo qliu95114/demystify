@@ -8,9 +8,10 @@ echo $learningbash
 # installation, when install tshark it will prompt diaglog for dumpcap setting, 
 sudo dnf update -y
 sudo dnf upgrade -y
-
+sudo dnf install epel-release -y
 #sudo yum install net-tools iptables tcpdump nano vim iputils-ping cron inetutils-traceroute iotop iftop iperf3 moreutils ufw nginx samba -y
-sudo dnf install net-tools iptables tcpdump nano vim iotop iperf3 nginx samba firewalld -y
+sudo dnf install net-tools iptables tcpdump nano vim iotop iperf3 iftop nginx samba firewalld -y
+
 
 # sudo apt install dotnet
 sudo dnf update -y 
