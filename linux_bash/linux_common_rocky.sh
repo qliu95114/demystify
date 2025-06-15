@@ -6,15 +6,15 @@ learningbash="This script config linux(redhat/rocky/centos) with basic software"
 echo $learningbash
 
 # installation, when install tshark it will prompt diaglog for dumpcap setting, 
-sudo yum update -y
-sudo yum upgrade -y
+sudo dnf update -y
+sudo dnf upgrade -y
 
 #sudo yum install net-tools iptables tcpdump nano vim iputils-ping cron inetutils-traceroute iotop iftop iperf3 moreutils ufw nginx samba -y
-sudo yum install net-tools iptables tcpdump nano vim iotop iperf3 nginx samba firewalld -y
+sudo dnf install net-tools iptables tcpdump nano vim iotop iperf3 nginx samba firewalld -y
 
 # sudo apt install dotnet
 sudo dnf update -y 
-sudo rpm -Uvh https://packages.microsoft.com/config/centos/8/packages-microsoft-prod.rpm -y
+sudo rpm -Uvh https://packages.microsoft.com/config/centos/8/packages-microsoft-prod.rpm
 #sudo dnf install dotnet-sdk-8.0 -y 
 #sudo dnf install dotnet-runtime-8.0 -y
 sudo dnf install dotnet-sdk-9.0 aspnetcore-runtime-9.0 -y
