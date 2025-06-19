@@ -17,11 +17,11 @@ This guide provides a detailed walkthrough on processing Azure Virtual Network (
   - Self-host Option use the [Kusto emulator](https://learn.microsoft.com/en-us/azure/data-explorer/kusto-emulator-overview).
 - **Kusto Query Language (KQL)**: Basic understanding of KQL for writing queries.
 
-## `PT1H.JSON` Header Issue**
+## `PT1H.JSON` Header Issue
 
 The `PT1H.json` file has a leading JSON header `{"records":` and a trailing `}` in a single line. No `\n\r` in the file. that causes common JSON parsers to treat it as a single JSON object. However, the actual payload is an array `[]` after the `"records"` header. This can be headache issues when deserializing the JSON object, especially for very large PT1H file (e.g., hundreds of MB). While Azure Native Log Analytics handles this seamlessly, offline processing requires manual intervention or other Non-Microsoft solution may not be able to handle that efficiency.
 
-## Steps Overview
+## Detailed Steps
 
 1. **Download PT1H.json File**: Obtain the `PT1H.json` file from your Azure Blob Storage.
 2. **Remove the JSON Header Using the Script**: a sample code snip are provided to remove the header and trailing. 
@@ -70,7 +70,7 @@ The `PT1H.json` file has a leading JSON header `{"records":` and a trailing `}` 
     ```kql
     vnetflowlog | project timestamp, flowRecords, fl=strlen(tostring(flowRecords)), macAddress, flowLogGUID
     ```
-    Real sample 
+    
     Get total json array count via powershell 
     ```powershell 
     D:\temp> $j=Get-Content .\vnet_PT1H_array.json | ConvertFrom-Json
@@ -79,7 +79,8 @@ The `PT1H.json` file has a leading JSON header `{"records":` and a trailing `}` 
     ```
     Confirm we have same result in kusto table `vnetflowlog`
     ```
-        vnetflowlog | summarize count() 
-    count_
-    15649
+    vnetflowlog | summarize count() 
     ```
+    |count_|
+    |-|
+    |15649|
