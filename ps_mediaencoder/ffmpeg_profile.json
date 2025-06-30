@@ -224,5 +224,10 @@
         "name":"v_x265_2560_bv_2500k_qsv-a_aac_128k-s_copy",
         "suffix":"x265_(2560_bv_2500k)_qsv-a(aac_128k)-s(copy)",
         "commandline":"-c:v hevc_qsv -b:v 2500k -pix_fmt nv12 -vf \"scale=2560:-2\" -map 0:v:0? -map 0:a:? -c:a aac -b:a 128k -map 0:s:? -map_chapters 0 -map_metadata 0 -f mp4 -threads 0 "
-    }
+    },
+    {
+        "name":"v_x265_source_bv_2500k_qsv-a_aac_128k-s_copy",
+        "suffix":"x265_(source_bv_2500k)_qsv-a(aac_128k)-s(copy)",
+        "commandline":"-c:v hevc_qsv -b:v 2500k -pix_fmt nv12 -vf \"scale=iw:ih\" -map 0:v:0? -map 0:a:? -c:a aac -b:a 128k -map 0:s:? -map_chapters 0 -map_metadata 0 -f mp4 -threads 0 "
+    }    
 ]
