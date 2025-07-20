@@ -83,6 +83,7 @@ function Compare-Images {
 
         }
     }
+    Write-Host "(NotFound)" -ForegroundColor Gray
     return $false,0
 }
 
@@ -202,13 +203,13 @@ else
 }
 
 # print out the summary
-if ($startdetect -and $enddetect)
-{
-    Write-UTCLog "========================================================================================" "Yellow"
-    Write-UTCLog "$((Get-Item $filename).Name) -startsecs $($startsec) -lastsecs $($duration - $endsecs) , End image detected at $($endsecs) seconds, " "Yellow"
-    Write-UTCLog "========================================================================================" "Yellow"
+Write-UTCLog "========================================================================================" "Yellow"
+
+switch ($true) {
+    { $startdetect -and $enddetect } { Write-UTCLog "$((Get-Item $filename).Name) -startsecs $($startsec) -lastsecs $($duration - $endsecs) , End image detected at $($endsecs) seconds, " "Yellow" }
+    { $startdetect -and -not $enddetect } { Write-UTCLog "$((Get-Item $filename).Name) -startsecs $($startsec) -lastsecs 0, End image No detect " "Yellow" }
+    { -not $startdetect -and $enddetect } { Write-UTCLog "$((Get-Item $filename).Name) -startsecs 0 -lastsecs $($duration - $endsecs), Start image No detect, End image detected at $($endsecs) seconds " "Yellow" }
+    { -not $startdetect -and -not $enddetect } { Write-UTCLog "$((Get-Item $filename).Name) -startsecs 0 -lastsecs 0, Start/End image: No detect " "Yellow" }
 }
-else
-{
-    Write-UTCLog "No matching images found for start or end detection" "Red"
-}
+
+Write-UTCLog "========================================================================================" "Yellow"
