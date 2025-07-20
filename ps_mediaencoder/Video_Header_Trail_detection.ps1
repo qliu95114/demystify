@@ -35,7 +35,10 @@ Param (
     [string]$image_start,
     [string]$image_end,
     [string]$videotemp="$($env:temp)",
-    [string]$logfolder="$($env:temp)"
+    [string]$logfolder="$($env:temp)",
+    [string]$start_rmse="5000", # adjust the RMSE threshold for start image comparison
+    [string]$end_rmse="5000",  # adjust the RMSE threshold for end image comparison
+    [string]$skipstart=0  # skip the first n seconds of the video for start image comparison
 )
 
 Function Write-UTCLog ([string]$message,[string]$color="green")
@@ -51,7 +54,8 @@ function Compare-Images {
         [string]$referenceImage,
         [string]$csvFile,
         [array]$imagesToCompare,
-        [int]$offset=0  # used to calculate output seconds based on the file name split with _ and remove the extension
+        [int]$offset=0,  # used to calculate output seconds based on the file name split with _ and remove the extension
+        [int]$rmse=5000  # threshold for similarity, default is 5000
     )
 
     If (!(Test-Path $csvFile)) {
@@ -68,7 +72,7 @@ function Compare-Images {
         Write-Host "." -NoNewline -ForegroundColor Gray
         $csvLine | Out-File -FilePath $csvFile -Append -Encoding UTF8
 
-        If ([int]$RMSE_value -lt 5000) {
+        If ([int]$RMSE_value -lt $rmse) {
             # calaculate output seconds based on the file name split with _ and remove the extension
             $seconds = [int]($image.BaseName -split '_')[1] + $offset
             Write-Host "." -ForegroundColor Gray
@@ -114,19 +118,19 @@ If ((Test-Path $filename) -and (Test-Path $videotemp))
     Get-ChildItem -Path $videotemp -Filter "$((Get-Item $filename).BaseName)_*.png" | Remove-Item -Force -ErrorAction SilentlyContinue
 
     $ffmpeg = "ffmpeg.exe"
-    $ffmpegArgs = "-ss 0 -to 300 -i `"$filename`" -vf fps=1 `"$outputFilePattern`" "  # extract 300 seconds of video, 1 frame per second
+    $ffmpegArgs = "-ss $skipstart -to 300 -i `"$filename`" -vf fps=1 `"$outputFilePattern`" "  # extract 300 seconds of video, 1 frame per second
     Write-UTCLog "Running ffmpeg with args: $ffmpegArgs" "Green"
     $process = Invoke-Expression "$ffmpeg $ffmpegArgs 2> `"$logfolder\$((Get-Item $filename).BaseName)_ffmpeg_start.log`""
     #$process = Start-Process -FilePath $ffmpeg -ArgumentList $ffmpegArgs -NoNewWindow -Wait -PassThru
      # valid target folder has 300 png file 
     $pCount=(Get-ChildItem -Path $videotemp -Filter "$((Get-Item $filename).BaseName)_*.png").Count
-    if ($pCount -ge 300)
+    if ($pCount -ge $(300-$skipstart))
     {
-        Write-UTCLog "Video 2 Picture (0-300) extraction completed successfully" "Green"
+        Write-UTCLog "Video 2 Picture ($skipstart-300) extraction completed successfully" "Green"
     }
     else
     {
-        Write-UTCLog "Video 2 Picture (0-300) extraction failed with exit code $($process.ExitCode), only see $pCount files" "Red"
+        Write-UTCLog "Video 2 Picture ($skipstart-300) extraction failed with exit code $($process.ExitCode), only see $pCount files" "Red"
     }
 
     If ($image_start -and (Test-Path $image_start))
@@ -136,7 +140,7 @@ If ((Test-Path $filename) -and (Test-Path $videotemp))
         $startImages = Get-ChildItem -Path $videotemp -Filter "$((Get-Item $filename).BaseName)_*.png" | 
             Sort-Object LastWriteTime | 
             Select-Object -First 300
-        $startdetect,$startsec =Compare-Images -referenceImage $image_start -csvFile $csvFile -imagesToCompare $startImages
+        $startdetect,$startsec =Compare-Images -referenceImage $image_start -csvFile $csvFile -imagesToCompare $startImages -rmse $start_rmse -offset $skipstart
     }
     Else
     {
@@ -149,20 +153,17 @@ If ((Test-Path $filename) -and (Test-Path $videotemp))
     {
     }
     else {
-        Write-UTCLog "No image_start provided, extracting end images " "Green"
+        Write-UTCLog "image_start compare complete, clean up " "Green"
         Get-ChildItem -Path $videotemp -Filter "$((Get-Item $filename).BaseName)_*.png" | Remove-Item -Force -ErrorAction SilentlyContinue
     }
 
-
-    $ffmpeg = "ffmpeg.exe"
-
     $ffmpegArgs = "-ss $($duration-300) -to $duration -i `"$filename`" -vf fps=1 `"$outputFilePattern`" "  # extract 300 seconds of video, 1 frame per second
     Write-UTCLog "Running ffmpeg with args: $ffmpegArgs" "Green"
-    $process = Invoke-Expression "$ffmpeg $ffmpegArgs 2> `"$logfolder\$([System.IO.Path]::GetFileNameWithoutExtension($filename))_ffmpeg_end.log`""
+    $process = Invoke-Expression "$ffmpeg $ffmpegArgs 2> `"$logfolder\$((Get-Item $filename).BaseName))_ffmpeg_end.log`""
     #$process = Start-Process -FilePath $ffmpeg -ArgumentList $ffmpegArgs -NoNewWindow -Wait -PassThru
     # valid target folder has 300 png file 
     $pCount=(Get-ChildItem -Path $videotemp -Filter "$((Get-Item $filename).BaseName)_*.png").Count
-    if ($pCount -ge 300)
+    if ($pCount -ge 299)
     {
         Write-UTCLog "Video 2 Picture ($($duration-300)-$duration) extraction completed successfully" "Green"
     }
@@ -178,7 +179,7 @@ If ((Test-Path $filename) -and (Test-Path $videotemp))
         $endImages = Get-ChildItem -Path $videotemp -Filter "$((Get-Item $filename).BaseName)_*.png" | 
             Sort-Object LastWriteTime | 
             Select-Object -Last 300
-        $enddetect,$endsecs =Compare-Images -referenceImage $image_end -csvFile $csvFile -imagesToCompare $endImages -offset $($duration-300)
+        $enddetect,$endsecs =Compare-Images -referenceImage $image_end -csvFile $csvFile -imagesToCompare $endImages -offset $($duration-300) -rmse $end_rmse
     }
     Else
     {
@@ -191,7 +192,7 @@ If ((Test-Path $filename) -and (Test-Path $videotemp))
     {
     }
     else {
-        Write-UTCLog "No image_end provided, extracting end images " "Green"
+        Write-UTCLog "image_end compare complete, clean up " "Green"
         Get-ChildItem -Path $videotemp -Filter "$((Get-Item $filename).BaseName)_*.png" | Remove-Item -Force -ErrorAction SilentlyContinue
     }
 }
@@ -204,7 +205,7 @@ else
 if ($startdetect -and $enddetect)
 {
     Write-UTCLog "========================================================================================" "Yellow"
-    Write-UTCLog "Start image detected at $($startsec) seconds, End image detected at $($endsecs) seconds, $($duration - $endsecs)" "Yellow"
+    Write-UTCLog "$((Get-Item $filename).Name) -startsecs $($startsec) -lastsecs $($duration - $endsecs) , End image detected at $($endsecs) seconds, " "Yellow"
     Write-UTCLog "========================================================================================" "Yellow"
 }
 else
