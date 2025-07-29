@@ -64,6 +64,13 @@ function Compare-Images {
 
     Write-Host "Comparing images with reference image: $referenceImage" -ForegroundColor Gray
     foreach ($image in $imagesToCompare) {
+        # resize image to make it same size as reference image
+        $referenceSize = magick identify -format "%wx%h" "$referenceImage"
+        $imageSize = magick identify -format "%wx%h" "$($image.FullName)"
+        if ($referenceSize -ne $imageSize) {
+            magick convert "$($image.FullName)" -resize $referenceSize "$($image.FullName)" 2>$null
+        }
+
         $RMSE_result = magick compare -metric RMSE "$referenceImage" "$($image.FullName)" null: 2>&1
         $RMSE_value = [regex]::Match($RMSE_result, '\d+(\.\d+)?').Value
         $csvLine = "$($image.Name),$offset,$RMSE_value,,"
