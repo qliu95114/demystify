@@ -103,3 +103,11 @@ rem merge multiple subtitle + one mp4
 for /f "delims=" %a in ('dir /b /o C:\temp\*.mp4') do ffmpeg -i C:\temp\%a -i C:\temp\%~na.chs.srt -i C:\temp\%~na.cht.srt -i C:\temp\%~na.eng.srt -map 0:v -map 0:a -map 1 -map 2 -map 3 -c:v copy -c:a copy -c:s mov_text "C:\TV.asia\New\
 
 ```
+
+## Sample - make video more smooth
+```
+-vf "minterpolate='mi_mode=mci:mc_mode=aobmc:vsbmc=1:fps=120:me=fss'"
+
+-vf "minterpolate='mi_mode=mci:mc_mode=aobmc:me_mode=bidir:fps=60'" 
+
+```
