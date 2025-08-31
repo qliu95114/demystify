@@ -160,7 +160,7 @@
         "commandline":"-c:v h264_nvenc -b:v 2500k -pix_fmt yuv420p -vf \"scale=1080:-2\" -map 0:v:0? -c:a copy -map 0:1 -c:a aac -b:a 128k -map 0:s? -map_chapters 0 -map_metadata 0 -f mp4 -threads 0 "
     },
     {
-        "name":"v_x264_3840_bv_9000k_nvidia-a_aac_128k-s_copy",
+        "name":"v_x264_0840_bv_9000k_nvidia-a_aac_128k-s_copy",
         "suffix":"x264_(3840_bv_9000k)_nvidia-a(aac_128k)-s(copy)",
         "commandline":"-c:v h264_nvenc -b:v 9000k -pix_fmt yuv420p -vf \"scale=3840:-2\" -map 0:v:0? -c:a copy -map 0:1 -c:a aac -b:a 128k -map 0:s? -map_chapters 0 -map_metadata 0 -f mp4 -threads 0 "
     },    
@@ -181,9 +181,9 @@
         "commandline":"-c:v h264_amf -b:v 2000k -pix_fmt yuv420p -vf \"scale=1920:-2\" -map 0:v:0? -c:a copy -map 0:1 -c:a aac -b:a 128k -map 0:s? -map_chapters 0 -map_metadata 0 -f mp4 -threads 0 "
     },   
     {
-        "name":"v_x264_1920_bv_860k_amd-a_aac_128k-s_copy",
-        "suffix":"x264_(1920_bv_860k)_amd-a(aac_128k)-s(copy)",
-        "commandline":"-c:v h264_amf -b:v 860k -pix_fmt yuv420p -vf \"scale=1920:-2\" -map 0:v:0? -c:a copy -map 0:1 -c:a aac -b:a 128k -map 0:s? -map_chapters 0 -map_metadata 0 -f mp4 -threads 0 "
+        "name":"v_x265_1920_bv_900k_amd-a_aac_128k-s_copy",
+        "suffix":"x265_(1920_bv_900k)_amd-a(aac_128k)-s(copy)",
+        "commandline":"-c:v hevc_amf -b:v 860k -pix_fmt yuv420p -vf \"scale=1920:-2\" -map 0:v:0? -c:a copy -map 0:1 -c:a aac -b:a 128k -map 0:s? -map_chapters 0 -map_metadata 0 -f mp4 -threads 0 "
     },   
     {
         "name":"v_x264_1920_bv_2500k_amd-a_aac_128k-s_copy",
