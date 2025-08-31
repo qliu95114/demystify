@@ -81,6 +81,8 @@ for /f "delims=" %a in ('dir /b /o *.mp4') do ffmpeg -i %a -map 0:s:0 %~na.chs.s
 ## Sample - Shift Time of Subtitle
 ```
 ffmpeg -itsoffset -00:01:33 -i .\srt\xyz.srt -c copy .\fix\xyz.srt
+
+for /f "delims=" %a in ('dir /b /o *.srt') do ffmpeg -itsoffset -00:01:33 -i .\%a -c copy .\%~na.chs_cut.srt
 ```
 - `00:01:33` : delay 93 seconds
 - `-00:01:33` : delay -93 seconds
