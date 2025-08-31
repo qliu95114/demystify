@@ -159,6 +159,7 @@ If ((Test-Path $filename) -and (Test-Path $videotemp))
     # only if $image_start is not empty, we will proceed to extract the end images, because I assume when user does not provide $image_start, they want to extract the end images only
     if ($image_start -eq '')
     {
+        Read-Host "Press [Enter] to continue..."
     }
     else {
         Write-UTCLog "image_start compare complete, clean up " "Green"
