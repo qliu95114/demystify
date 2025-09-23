@@ -21,7 +21,7 @@
 2. [TCP ping PE](https://tcp.ping.pe)
 
 # Aliyun BOCE
-[Netwokr Boce 网络拨测工具](https://boce.aliyun.com/detect/http)
+[Networking Boce 网络拨测工具](https://boce.aliyun.com/detect/http)
 
 # GeoTarget Browser
 [GeoTargetly](https://geotargetly.com/geo-browse)
