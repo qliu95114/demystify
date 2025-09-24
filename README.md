@@ -89,8 +89,7 @@ Contents
    [HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\TimeZoneInformation]
    "RealTimeIsUniversal"=dword:00000001
    ```
-1. Fun Apple II Video Game in 1983
-   http://loderunnerwebgame.com/game/
+1. (It's gone) Fun Apple II Video Game in 1983 hxxp://loderunnerwebgame.com/game/
 
 1. How to convert PDF(s) to JPG,PNG by GhostScript
    1. Download ImageMagick from the official website: [ImageMagick Download](https://imagemagick.org/script/download.php)
