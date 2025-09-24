@@ -141,7 +141,18 @@ Contents
 
    C:\>imagex.exe /unmount D:\VHD\wim
    ```
-   
+1. Recover Windows 11 high performance power profile
+   ```
+   C:\Windows\System32>powercfg -s 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c
+
+   C:\Windows\System32>powercfg /l
+   Existing Power Schemes (* Active)
+   -----------------------------------
+   Power Scheme GUID: 381b4222-f694-41f0-9685-ff5bb260df2e  (Balanced)
+   Power Scheme GUID: 6d5da386-1e15-4830-bcc3-f4b1d9ef7d86  (HighPerf-selfcreated)
+   Power Scheme GUID: 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c  (High performance) *
+
+   ```
 
 
 
