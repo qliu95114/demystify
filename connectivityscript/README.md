@@ -17,8 +17,14 @@
 [Run Curl Commands Online](https://reqbin.com/curl)
 
 # Websites run ping and tcp test
-[Ping Pe](https://ping.pe)
-[TCP ping PE](https://tcp.ping.pe)
+1. [Ping Pe](https://ping.pe)
+2. [TCP ping PE](https://tcp.ping.pe)
+
+# Aliyun BOCE
+[Networking Boce 网络拨测工具](https://boce.aliyun.com/detect/http)
+
+# GeoTarget Browser
+[GeoTargetly](https://geotargetly.com/geo-browse)
 
 # One Line Script (Windows & Linux)
 

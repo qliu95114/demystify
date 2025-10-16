@@ -15,7 +15,7 @@ DNS Test script and output to local log file
 The name of the file to be converted, please include full path of the file , wildchar is not supported. 
 
 .PARAMETER dnslistfile
-Starting Seconds we will cut from the beginning, Default 0
+The name of the file containing a list of DNS names to be tested, please include full path of the file , wildchar is not supported.
 
 .PARAMETER dnsserver
 Target DNS server, for example 8.8.8.8 or 168.63.129.16 
@@ -44,19 +44,20 @@ Milliseconds, delay between each batch , default 1000
 #>
 
 Param (
-       [string]$dnsname, # input value
-       [string]$dnslistfile,
-       [string]$dnsserver,
-       [int]$timeout=5,
-       [int]$count=10,
-       [int]$delay=1000,
-       [string]$logfile,
-       [guid]$aikey
+    [string]$dnsname, # input value
+    [string]$dnslistfile,
+    [string]$dnsserver,
+    [int]$timeout=5,
+    [int]$count=10,
+    [int]$delay=1000,
+    [string]$logfile,
+    [guid]$aikey,
+    [switch]$ipv6
 )
 
 Function Write-UTCLog ([string]$message,[string]$color="white")
 {
-    	$logdate = ((get-date).ToUniversalTime()).ToString("yyyy-MM-dd HH:mm:ss")
+        $logdate = ((get-date).ToUniversalTime()).ToString("yyyy-MM-dd HH:mm:ss.fff")
     	$logstamp = "["+$logdate + "]," + $message
         Write-Host $logstamp -ForegroundColor $color
 #    	Write-Output $logstamp | Out-File $logfile -Encoding ASCII -append
@@ -139,9 +140,10 @@ Function Send-AIEvent{
 }
 
 
-Function invoke_nslookup([string]$dns,[string]$dnsserver)
+Function invoke_nslookup([string]$dns,[string]$dnsserver, [switch]$ipv6)
 {
-    $cmd="nslookup -timeout=$($timeout) -retry=1 -type=A $($dns). $($dnsserver)"
+    $type = if ($ipv6) { "AAAA" } else { "A" }
+    $cmd="nslookup -timeout=$($timeout) -retry=1 -type=$type $($dns). $($dnsserver)"
     $cmd
     $duration=(measure-command {$result=iex $cmd }).TotalSeconds
     for ($i=2;$i -le $result.count;$i++)  
@@ -158,7 +160,7 @@ Function invoke_nslookup([string]$dns,[string]$dnsserver)
 
     Write-UTCLog "$($duration),$($dns),$($dnsresult)" "green"
     
-    $Message="$(((get-date).ToUniversalTime()).ToString("yyyy-MM-dd HH:mm:ss")),$($duration),$($dns),$($dnsresult)"
+    $Message="$(((get-date).ToUniversalTime()).ToString("yyyy-MM-dd HH:mm:ss.fff")),$($duration),$($dns),$($dnsresult)"
     $Message | Out-File $logfile -Append -Encoding utf8
     if ([string]::IsNullOrEmpty($aikey)) 
     {
@@ -169,7 +171,6 @@ Function invoke_nslookup([string]$dns,[string]$dnsserver)
         Write-Host "Info : aikey is specified, Send-AIEvent() is called" -ForegroundColor "Green"
         Send-AIEvent -piKey $aikey -pEventName $global:scriptname -pCustomProperties @{latency=$duration.tostring();target=$dns.tostring();Message=$dnsresult.ToString()} 
     }
-
 }
 
 #main
@@ -197,34 +198,56 @@ else {
 $header="TIMESTAMP,Duration,DNSNAME,RESULT"
 $header|Out-File $logfile -Encoding utf8
 
-if ([string]::IsNullOrEmpty($dnsname) -and [string]::IsNullOrEmpty($dnslistfile)) 
-{
-    $dnsname="www.bing.com"
+
+
+if ([string]::IsNullOrEmpty($dnsname) -and [string]::IsNullOrEmpty($dnslistfile)) {
+    $dnsname = "www.bing.com"
     Write-UTCLog "-dnsname and -dnslistfile both empty, use default 'www.bing.com' to test"
-    for ($i=1;$i -le $count;$i++)  { invoke_nslookup -dns $dnsname -dnsserver $dnsserver; start-sleep -Milliseconds $delay }
-}
-else {
-    if ([string]::IsNullOrEmpty($dnslistfile)) 
-    {
-        Write-UTCLog " Dnsname   : $($dnsname)"
-        for ($i=1;$i -le $count;$i++)  { invoke_nslookup -dns $dnsname -dnsserver $dnsserver }
+    if ($count -eq -1) {
+        while ($true) {
+            invoke_nslookup -dns $dnsname -dnsserver $dnsserver -ipv6:$ipv6
+            start-sleep -Milliseconds $delay
+        }
+    } else {
+        for ($i = 1; $i -le $count; $i++) {
+            invoke_nslookup -dns $dnsname -dnsserver $dnsserver -ipv6:$ipv6
+            start-sleep -Milliseconds $delay
+        }
     }
-    else {
-        Write-UTCLog " DnsList   : $($dnslistfile)"
-        if (Test-Path $dnslistfile)
-        {
-            $dnslist=get-content $dnslistfile
-            Write-UTCLog " DnsRecord : $($dnslist.count)"
-            for ($i=1;$i -le $count;$i++) 
-            { 
-                foreach ($dns in $dnslist)
-                {
-                    #Write-UTCLog " DNS : $($dns)"
-                    invoke_nslookup -dns $dns -dnsserver $dnsserver; start-sleep -Milliseconds $delay
-                }
+} else {
+    if ([string]::IsNullOrEmpty($dnslistfile)) {
+        Write-UTCLog " Dnsname   : $($dnsname)"
+        if ($count -eq -1) {
+            while ($true) {
+                invoke_nslookup -dns $dnsname -dnsserver $dnsserver -ipv6:$ipv6
+                start-sleep -Milliseconds $delay
+            }
+        } else {
+            for ($i = 1; $i -le $count; $i++) {
+                invoke_nslookup -dns $dnsname -dnsserver $dnsserver -ipv6:$ipv6
             }
         }
-        else {
+    } else {
+        Write-UTCLog " DnsList   : $($dnslistfile)"
+        if (Test-Path $dnslistfile) {
+            $dnslist = get-content $dnslistfile
+            Write-UTCLog " DnsRecord : $($dnslist.count)"
+            if ($count -eq -1) {
+                while ($true) {
+                    foreach ($dns in $dnslist) {
+                        invoke_nslookup -dns $dns -dnsserver $dnsserver -ipv6:$ipv6
+                        start-sleep -Milliseconds $delay
+                    }
+                }
+            } else {
+                for ($i = 1; $i -le $count; $i++) {
+                    foreach ($dns in $dnslist) {
+                        invoke_nslookup -dns $dns -dnsserver $dnsserver -ipv6:$ipv6
+                        start-sleep -Milliseconds $delay
+                    }
+                }
+            }
+        } else {
             Write-UTCLog "$($dnslistfile) does not exsit, please double-check!"
         }
     }
