@@ -150,7 +150,17 @@ Contents
    Power Scheme GUID: 381b4222-f694-41f0-9685-ff5bb260df2e  (Balanced)
    Power Scheme GUID: 6d5da386-1e15-4830-bcc3-f4b1d9ef7d86  (HighPerf-selfcreated)
    Power Scheme GUID: 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c  (High performance) *
-
+    
+   # you may want to the (Ultimate Performance) profile instead
+   C:\Users\Administrator>powercfg /DUPLICATESCHEME e9a42b02-d5df-448d-aa00-03f14749eb61
+   Power Scheme GUID: 0591eafb-62a8-449a-b767-b92a5143fd74  (Ultimate Performance)
+   
+   C:\Users\Administrator>powercfg /s 0591eafb-62a8-449a-b767-b92a5143fd74
+   C:\Users\Administrator>powercfg /l
+    
+   Existing Power Schemes (* Active)
+   -----------------------------------
+   Power Scheme GUID: 0591eafb-62a8-449a-b767-b92a5143fd74  (Ultimate Performance) *
    ```
 
 
