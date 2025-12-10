@@ -90,9 +90,13 @@ if ($UDPPort) {
 
         if ( $udpclient.Available ) {
             $content = $udpclient.Receive( [ref]$endpoint )
-            Write-UTCLog "$($endpoint.Address.IPAddressToString):$($endpoint.Port) $([Text.Encoding]::ASCII.GetString($content))" -color white
-            # respone to client
-            $udpclient.Send($content, $content.Length, $endpoint) | Out-Null
+            $hostname = $env:COMPUTERNAME
+            $firstIpAddress = [System.Net.Dns]::GetHostAddresses($env:COMPUTERNAME) | Where-Object { $_.AddressFamily -eq [System.Net.Sockets.AddressFamily]::InterNetwork } | Select-Object -First 1 | ForEach-Object { $_.IPAddressToString }
+            $responseMessage = "$($hostname):$($firstIpAddress):$([Text.Encoding]::ASCII.GetString($content))"
+            Write-UTCLog "$responseMessage" -color white
+            # respond to client
+            $responseBytes = [Text.Encoding]::ASCII.GetBytes($responseMessage)
+            $udpclient.Send($responseBytes, $responseBytes.Length, $endpoint) | Out-Null
         }
     }
 }
