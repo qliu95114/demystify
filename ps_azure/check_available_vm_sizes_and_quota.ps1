@@ -29,7 +29,8 @@ Write-Host "Using Subscription Name: $($currentContext.Subscription.Name)" -Fore
 
 # if location is not provided, use all location
 if (-not $location) {
-    $locations = (Get-AzLocation).Location
+    Write-Host "No '-location' specified, generate locations list..." -ForegroundColor Cyan
+    $locations = (Get-AzLocation |Sort-Object -Property location).Location
 } else {
     $locations = @($location)
     Write-Host "Checking only location: $location"  -ForegroundColor Cyan
@@ -38,7 +39,7 @@ if (-not $location) {
 if ($showall -or $location)    {
 }
 else {
-    Write-host "-showall not specified, only locations that support the VM size will be shown." -ForegroundColor Yellow
+    Write-host "'-showall' is not specified, only locations that support the VM size will be shown." -ForegroundColor Yellow
 }
 
 foreach ($loc in $locations) {
