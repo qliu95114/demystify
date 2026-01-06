@@ -20,7 +20,7 @@ Variable Values:​ The segments after the =sign (e.g., 2025, 12, 22, 03, 00, 60
 Target File:​ The only file to be processed is named PT1H.json, located in the final macAddress=directory. Any other files encountered should be silently skipped.
 
 4. Processing Logic
-For each PT1H.jsonfile found:
+For each PT1H.json file found:
 File Reading:​ The JSON content is read from the file.
 Data Transformation:​ The existing, predefined data processing logic (referenced as "the process logic is already defined below" in the original request) is applied to the JSON data. The specifics of this logic (e.g., filtering, aggregation, reformatting) are to be implemented as per the pre-existing code.
 Parameter Extraction:​ The parameters needed for the output filename (year, month, day, hour, minute, macAddress) are extracted from the folder path in which the file resides.
@@ -33,8 +33,8 @@ Example:​ For a file found in the path .../y=2025/m=12/d=22/h=03/m=00/macAddre
 flowlog_mac_6045BDA9E154_202512220300_PT1H_array.json
 
 6. Core Requirements & Behavior
-Recursive Traversal:​ The program must traverse the entire directory tree under root_path, including all subfolders at any depth.
-Selective Processing:​ Only files explicitly named PT1H.jsonshould be processed. The program must ignore all other files and empty directories without error.
+Recursive Traversal:​ The program must traverse the entire directory tree under root_path, including all sub folders at any depth.
+Selective Processing:​ Only files explicitly named PT1H.json should be processed. The program must ignore all other files and empty directories without error.
 Error Handling:​ The program should be robust. It must gracefully handle and log (e.g., print a warning message) situations such as:
 Invalid JSON file content.
 Missing or unreadable files.
@@ -45,6 +45,9 @@ Path Independence:​ The program should not make assumptions about the drive or
 7. Specification Summary
 This specification defines a batch processing utility that automates the application of a data transformation routine to a large set of JSON files organized in a predictable folder hierarchy, producing timestamped and labeled output files in a consolidated location.
 core processing logic is already defined below
+
+**Author**: Qing Liu
+**Version**: 1.0
 #>
 
 param (

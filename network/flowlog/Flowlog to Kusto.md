@@ -21,7 +21,7 @@ This guide provides a detailed walkthrough on processing Azure Virtual Network (
 
 The `PT1H.json` file has a leading JSON header `{"records":` and a trailing `}` in a single line. No `\n\r` in the file. that causes common JSON parsers to treat it as a single JSON object. However, the actual payload is an array `[]` after the `"records"` header. This can be headache issues when deserializing the JSON object, especially for very large PT1H file (e.g., hundreds of MB). While Azure Native Log Analytics handles this seamlessly, offline processing requires manual intervention or other Non-Microsoft solution may not be able to handle that efficiency.
 
-## Detailed Steps ( if you need process multiple files from vnetflowlog storage account, please use [flowlog_process powershell](/network/flowlog/flowlog_process.ps1))
+## Processing Single JSON Flow Log Files (Manual process)
 
 1. **Download PT1H.json File**: Obtain the `PT1H.json` file from your Azure Blob Storage.
 2. **Remove the JSON Header Using the Script**: a sample code snip are provided to remove the header and trailing. 
@@ -93,12 +93,76 @@ The `PT1H.json` file has a leading JSON header `{"records":` and a trailing `}` 
     | mv-expand flowTuples = flowGroups.flowTuples
     | project flowTuples
     ```
-9.  **(Optional) Create the flowTuplesTable_temp table to reduce query costs for deeper flow analysis.**
-     ```kql
-    .set-or-append flowTuplesTable_temp <|vnetflowlog
-    | mv-expand flows      = flowRecords.flows
-    | mv-expand flowGroups = flows.flowGroups
-    | mv-expand flowTuples = flowGroups.flowTuples
-    | project flowTuples
+9. **Expand flowTuples and tag the attribute according to [VNET Flow Log - log-format](https://learn.microsoft.com/en-us/azure/network-watcher/vnet-flow-logs-overview?tabs=Americas#log-format)**
+    ```kql
+    vnetflowlog
+    | mv-expand flows      = flowRecords.flows 
+    | mv-expand flowGroups = flows.flowGroups 
+    | mv-expand flowTuples = flowGroups.flowTuples 
+    | project timestamp, macAddress, flowTuples 
+    | extend s=tostring(flowTuples) 
+    | extend parts  = split(s, ",") 
+    | extend ts_utc = unixtime_milliseconds_todatetime(tolong(parts[0])) 
+    | project 
+        timestamp,macAddress,flowTuples, 
+        timestamp_utc_str = todatetime(format_datetime(ts_utc, 'yyyy-MM-dd HH:mm:ss.fff')), 
+        srcIP     = parts[1], 
+        dstIP     = parts[2], 
+        srcPort   = toint(parts[3]), 
+        dstPort   = toint(parts[4]), 
+        protocol  = toint(parts[5]), 
+        direction = parts[6], 
+        flow_state= parts[7], 
+        flow_encryption = parts[8], 
+        pkt_send   = tolong(parts[9]), 
+        bytes_send     = tolong(parts[10]), 
+        pkt_received   = tolong(parts[11]), 
+        byte_received  = tolong(parts[12]) 
     ```
 
+10. **(Optional) Create the flowTuplesTable_temp table to reduce query costs for deeper flow analysis.**
+     ```kql
+    .set-or-append flowTuplesTable_temp <|vnetflowlog
+    | mv-expand flows      = flowRecords.flows 
+    | mv-expand flowGroups = flows.flowGroups 
+    | mv-expand flowTuples = flowGroups.flowTuples 
+    | project timestamp, macAddress, flowTuples 
+    | extend s=tostring(flowTuples) 
+    | extend parts  = split(s, ",") 
+    | extend ts_utc = unixtime_milliseconds_todatetime(tolong(parts[0])) 
+    | project 
+        timestamp,macAddress,flowTuples, 
+        timestamp_utc_str = todatetime(format_datetime(ts_utc, 'yyyy-MM-dd HH:mm:ss.fff')), 
+        srcIP     = parts[1], 
+        dstIP     = parts[2], 
+        srcPort   = toint(parts[3]), 
+        dstPort   = toint(parts[4]), 
+        protocol  = toint(parts[5]), 
+        direction = parts[6], 
+        flow_state= parts[7], 
+        flow_encryption = parts[8], 
+        pkt_send   = tolong(parts[9]), 
+        bytes_send     = tolong(parts[10]), 
+        pkt_received   = tolong(parts[11]), 
+        byte_received  = tolong(parts[12]) 
+    ```
+    
+
+## Processing Multiple JSON Flow Log Files
+
+### 1. Remove Headers & Reorganize Files
+Script: [`flowlog_remove_header_batch.ps1`](/network/flowlog/flowlog_remove_header_batch.ps1)
+
+**Purpose:**
+- Removes headers from all JSON files
+- Consolidates P1TH files into a single folder
+- Standardizes filenames using this format:
+  ```
+  flowlog_mac_${macAddress}_${year}${month}${day}${hour}${minute}_PT1H_array.json
+  ```
+
+### 2. Ingest into Kusto Database
+Script: [`flowlog_to_kusto_batch.ps1`](/network/flowlog/flowlog_to_kusto_batch.ps1)
+
+**Purpose:**
+Automates Azure Network Flow Logs (JSON) ingestion into Kusto (Azure Data Explorer) 
