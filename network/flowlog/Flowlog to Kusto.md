@@ -161,7 +161,11 @@ Script: [`flowlog_remove_header_batch.ps1`](/network/flowlog/flowlog_remove_head
   flowlog_mac_${macAddress}_${year}${month}${day}${hour}${minute}_PT1H_array.json
   ```
 
-### 2. Ingest into Kusto Database
+### 2. Copy all converted JSON files to storage account
+
+Use [Azure Storage Explorer](https://azure.microsoft.com/en-us/products/storage/storage-explorer/) copy all coverted flowlog_*_PT1H_array to storage account and make container to be public, if you want to use sastoken, please modify [`flowlog_to_kusto_batch.ps1`](/network/flowlog/flowlog_to_kusto_batch.ps1) accordinglly 
+
+### 3. Ingest into Kusto Database
 Script: [`flowlog_to_kusto_batch.ps1`](/network/flowlog/flowlog_to_kusto_batch.ps1)
 
 **Purpose:**
