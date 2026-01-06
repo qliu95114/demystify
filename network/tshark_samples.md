@@ -122,7 +122,7 @@ For big trace analyze, use Azure Data Explorer (aka. kusto) is good way to speed
 Here is my favorite fields commonly used when analyze TCP/UDP network trace, Encap Trace file are supported. 
 
 1. (tshark) Export trace to csv , Fields selected
-``` bash 
+```bash 
 "c:\program files\wireshark\tshark" -r my.pcapng -T fields -e frame.number -e frame.time_epoch -e frame.time_delta_displayed -e ip.src -e ip.dst -e ip.id -e _ws.col.Protocol -e tcp.seq -e tcp.ack -e frame.len -e tcp.srcport -e tcp.dstport -e udp.srcport -e udp.dstport -e tcp.analysis.ack_rtt -e frame.protocols -e _ws.col.Info -e eth.src -e eth.dst -e ipv6.src -e ipv6.dst -e ip.proto -e dns.id -E header=y -E separator=, -E quote=d > my.pcapng.csv
 ```
 
@@ -131,7 +131,7 @@ ADX (Kusto) create table and ingress from CSV to table
 Import ADX might failure due to Wirehsark parser, need disable a few protocols to get clean output in Field "Info" 
 Recommended Protocol to disable, IRC , RESP (Redis)
 
-``` kql
+```kql
 .drop table trace  //
 
 .create table trace (framenumber:long,frametime:string,DeltaDisplayed:string,Source:string,Destination:string,ipid:string,Protocol:string,tcpseq:string,tcpack:string,Length:int,tcpsrcport:int,tcpdstport:int,udpsrcport:int,udpdstport:int,tcpackrtt:string,frameprotocol:string,Info:string,ethsrc:string,ethdst:string,SourceV6:string,DestinationV6:string,ipProtocol:string,dnsid:string)
@@ -145,7 +145,7 @@ Sample query
 1. covert Epoch time to UTC readable format
 1. Filter data 
 
-``` kql
+```kql
 //convert epoch time to UTC display time with Seconds, handle flowhash
 let IPToInt = (ip:string) {  // define IPToInt function
     toint(split(ip, '.')[0]) * 256 * 256 * 256 +
@@ -218,7 +218,7 @@ framenumber	TT	DeltaDisplayed	Source	Destination	ipid	Protocol	tcpseq	tcpack	Len
 
 ### Tips
 To work with list of cap files, let's create one batch file 
-``` bash
+```batch
 * following command must run Windows Command Prompt not Powershell
 cd d:\temp
 for /f "delims=" %a in ('dir /b /o *.pcap') do "c:\program files\wireshark\tshark" -r "%a" -T fields -e frame.number -e frame.time_epoch -e frame.time_delta_displayed -e ip.src -e ip.dst -e ip.id -e _ws.col.Protocol -e tcp.seq -e tcp.ack -e frame.len -e tcp.srcport -e tcp.dstport -e udp.srcport -e udp.dstport -e tcp.analysis.ack_rtt -e frame.protocols -e _ws.col.Info -e eth.src -e eth.dst -e ipv6.src -e ipv6.dst -e ip.proto -E header=y -E separator=, -E quote=d > "%~na.csv"
@@ -278,14 +278,14 @@ To detect if a TCP 3-way handshake is taking longer than 1 second, I am using a 
 
 To make the filter work for 1,000+ files, let's use a batch file
 
-``` bash
+```batch
 cd c:\tracefile
 for /f "delims=" %a in ('dir /b /o *.pcap') do "c:\program files\wireshark\tshark.exe" -r "c:\tracefile\%a" "tcp.analysis.ack_rtt >1 and tcp.flags.syn == 1 and tcp.flags.ack ==1 and tcp.srcport == 6379"
 ```
 
 Result is promising....
 
-``` bash
+```batch
 d:\tracefile>"c:\program files\wireshark\tshark.exe" -r "c:\tracefile\file_16_43_00.pcap" "tcp.analysis.ack_rtt >1 and tcp.flags.syn == 1 and tcp.flags.ack ==1 and tcp.srcport == 6379"
 
 C:\Windows\System32>"c:\program files\wireshark\tshark" -r "c:\tracefile\file_16_44_00.pcap" "tcp.analysis.ack_rtt >1 and tcp.flags.syn == 1 and tcp.flags.ack ==1 and tcp.srcport == 6379"
@@ -311,7 +311,7 @@ Today, we have received complaints that the user reported that the Apache Bench 
 
 In order to compare the AB results and see where things went wrong, I researched the source code of AB. I found that its RPS calculation is simply the total number of requests divided by the time taken for the tests (5000000 / 280 = 17857). This does not accurately convey the number of requests sent out every second, and can lead to misguiding analysis in modern or cloud environments.
 
-``` bash
+```bash
 root@mymachine:~# ab -n 5000000 -c 500 -H "connection:close" http://10.6.0.4:80/
 
 Time taken for tests:   280.039 seconds
@@ -340,7 +340,7 @@ trace
 
 For long run capture, we can use rolling capture. the following sample will take 100 capture files and each file is set to 200MB, you can also include filter to furthe reduce the scope of the trace file
 
-```bash
+```batch
 C:\temp>d:\Wireshark\tshark -D
 1. \Device\NPF_{DC4266CC-D150-485B-AF26-CE59D246BD49} (Ethernet 4)
 2. \Device\NPF_{D8591B22-E79C-4AD7-B62A-13E917469A6D} (Ethernet)
@@ -375,7 +375,7 @@ More on editcap.exe can be found here: [editcap(1) Manual Page](https://www.wire
 
 ## Sample 9 - Split large capture file with fix number of packets per file
 
-``` bash
+```batch
 editcap.exe -c <number of packets per file> C:\path-to\OriginalFile.pcapng C:\path-to\NewFile.pcapng
 
 rem split one file
@@ -395,7 +395,7 @@ YYYYMMDDHHMMSS is the timestamp of the first packet in the new file
 I found myself in a situation today where I had to review over 1002 pcap files (total 459GB) to review ICMP traffic."
 I hope that helps! Let me know if you have any other questions.
 
-``` bash
+```batch
 rem - for one file 
 "c:\Program Files\Wireshark\tshark.exe" -r tracefile001.pcap -Y "icmp" -w icmp\tracefile001.icmp.pcap
 "c:\Program Files\Wireshark\tshark.exe" -r tracefile001.pcap -2R "icmp" -w icmp\tracefile001.icmp.pcap
@@ -460,7 +460,7 @@ trace
 Handle a corrupt capture(cut-in-middle) file and extract the first [xxx] frames of a network trace using Wireshark tools, follow these steps:
 
 1. **Determine the Number of Packets**: Use `capinfos` to find out how many packets are in the corrupted file.
-   ```bash
+   ```batch
    C:\Program Files\Wireshark> capinfos C:\Downloads\mycap.bad.pcap
    <removed>
    Number of interfaces in file: 1
@@ -486,7 +486,7 @@ This process helps you create a clean capture file for analysis.
 -d  Attempts to remove duplicate packets. 
 -I  Ignore the specified number of bytes at the beginning of the frame during MD5 hash calculation
 
-   ```
+   ```batch
    C:\Program Files\Wireshark\editcap -d test.pcap test_dedup.pcap
 
    # Ignore first 26 bytes and start dedup
@@ -505,7 +505,6 @@ It is important to note that this proposal is only applicable to a single TCP st
 
 
 ```kql
-
 | where flowhash == '-111319814355929876'  // required to limited to one flow hash. 
 | extend seq=tolong(tcpseq) + tolong(tcpack)
 | extend cal_ack=tolong(tcpseq)+tolong(tcplen)
@@ -526,10 +525,10 @@ for iface in $(ls /sys/class/net | grep -v -E 'lo|azv'); do nohup tcpdump -i "$i
 ```
 
 kill all tcpdump (Run as root user)
-```
-# ps -ef | grep tcpdump | grep tcpdump_ | grep .pcap | grep -v grep | awk '{print "kill -9 "$2}' | sh
-or
-# ps -ef | grep tcpdump_ | grep .pcap | grep -v grep | awk '{print $2}' | xargs kill -15
-or
-# ps -ef | grep tcpdump_ | grep .pcap | grep -v grep | awk '{print $2}' | xargs kill -9
+```bash
+ps -ef | grep tcpdump | grep tcpdump_ | grep .pcap | grep -v grep | awk '{print "kill -9 "$2}' | sh
+
+ps -ef | grep tcpdump_ | grep .pcap | grep -v grep | awk '{print $2}' | xargs kill -15
+
+ps -ef | grep tcpdump_ | grep .pcap | grep -v grep | awk '{print $2}' | xargs kill -9
 ```
