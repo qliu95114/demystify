@@ -8,9 +8,12 @@ Contents
 
 1. **AzureSpeedStorage**: Explore a Terraform sample that demonstrates how to create storage accounts in different Azure regions.
 1. **PS_Azure(Library)**: Discover a set of PowerShell scripts that can assist you in automating common Azure tasks. This script showcases the power and flexibility of PowerShell for managing your Azure environment.
+   - `azurelb_monitor.ps1`: Monitors Azure Load Balancer backend pool health using ICMP (via pingmon.exe). Automatically removes unhealthy backends and re-adds them when healthy.
+   - `check_available_vm_sizes_and_quota.ps1`: Checks VM size availability and quota across Azure regions. Supports filtering by location and VM size.
 1. **ADX for Storage Analytics Logs**: Learn how to leverage Azure Data Explorer (ADX) to analyze Storage Analytics logs with ease. By following a few simple steps, you can gather logs from customers and other sources without the need for complex log configuration.
 1. **ADX for Network Trace PCAPs**: Explore the capabilities of ADX in analyzing network trace PCAPs. This functionality enables you to gather network traces from customers and efficiently analyze them using ADX's powerful querying capabilities.
 1. **ADX for NSGFlowLogV2**: Discover how ADX can be utilized to analyze NSGFlowLogV2, allowing you to obtain raw JSON logs from customers and other sources without the need for extensive log configuration. ADX simplifies the process of extracting valuable insights from network flow logs.
+1. **Folder network\flowlog**: Scripts and guide for offline processing of Azure VNET Flow Logs (PT1H.json) into Kusto. Includes batch header removal and automated ingestion scripts. See [Flowlog to Kusto Guide](/network/flowlog/Flowlog%20to%20Kusto.md).
 1. **Use CSV directly by Kusto**: the following show to query csv save on public url without import.  For More [Blocklist & Kusto table](https://firewalliplists.gypthecat.com/kusto-tables/)
    ```sql
    let spike_time = datetime(2025-02-15T10:00:00.000Z);
@@ -32,6 +35,7 @@ Contents
 1. **Linux_bash**: Access a post-boot script designed specifically for Azure VMs running Linux. This script provides a set of useful commands and configurations to optimize your Linux-based VMs.
 1. **Folder network\pcap2kusto**: Utilize the pcap2kusto.ps1 script to import PCAP files into Azure Data Explorer (Kusto). This enables you to perform advanced analysis on network packet captures and gain deeper visibility into your network traffic.
 1. **Folder network\mergecapfiles**: Combine multiple PCAP files into a single file using the mergecapfiles.ps1 script. This simplifies the management and analysis of network packet captures by consolidating them into a single, unified file.
+1. **File network\tshark_samples.md**: Collection of tshark and tcpdump command samples for network traffic capture and analysis. Includes scripts to capture traffic on multiple interfaces while excluding loopback and Azure CNI interfaces.
 1. **Script network\get-MicrosoftIpAddressRange.ps1**: which helps you find Microsoft Azure and Office 365 IP ranges and details using public data files. This script simplifies the process of identifying and managing IP ranges associated with Microsoft services.
 1. (ExternalLink) **Azure file storage**: [Diagnose Script on Azure File Storage](https://github.com/Azure-Samples/azure-files-samples/tree/master/AzFileDiagnostics)
 
