@@ -113,17 +113,24 @@ I was curious if these would work, and to my surprise, both Npcap and Wireshark 
 
 My laptop came with Windows 11 25H2 (build 26220), and I noticed it has the Recall preview feature enabled. Honestly, I'm not a fan of this feature. No doubt about it. If you want to disable it, just run `appwiz.cpl` and turn it off - that made it go away for me.
 
-I also installed some virtualization features for future testing:
-
-**Hyper-V:**
-- Enabled the feature
-- Not tested yet - leaving it for further testing
+I also installed some virtualization features and here are the test results:
 
 **WSL (Windows Subsystem for Linux):**
-- Enabled the feature
-- Not tested yet - leaving it for further testing
+- Status: Works perfectly!
+- Performance: Works exactly like x64
+- Compatibility: Seamless operation, no noticeable differences compared to x64 systems
+- Installation and setup went smoothly
+- All WSL features work as expected
 
-I'll need to come back and test how well these work on ARM64.
+**Hyper-V:**
+- Status: Working with limitations
+- VM Generation: Only supports Generation 2 VMs
+- Tested: Attempted to boot from Windows 11 ARM ISO
+- Issue: Setting up Windows 11 ARM as a guest OS with a local account only is difficult
+  - The setup forces you to sign in with either a personal or work & school account
+  - Even when network is disabled, the setup somehow requires network to be enabled
+  - This makes it challenging to set up a local account for the guest OS
+- While Hyper-V does work, the account requirement during Windows 11 ARM setup is a significant inconvenience
 
 ---
 
