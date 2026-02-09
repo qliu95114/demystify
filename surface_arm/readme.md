@@ -40,6 +40,17 @@ The first thing that caught my attention was looking at Task Manager. Instead of
 
 ## Hardware Support - What Works and What Doesn't
 
+### Docking Station Support Overview
+
+Here's a quick summary of how all the docks I tested perform with the Surface 7 ARM:
+
+| Dock Model | Display | USB | Ethernet | Driver Required | Overall Status |
+|------------|---------|-----|----------|-----------------|----------------|
+| ThinkPad USB-C Dock Gen 2 (40AS) | ❌ Doesn't work | ❌ Doesn't work | ❌ Doesn't work | N/A | ❌ Not compatible |
+| ThinkPad Thunderbolt 3 Dock Gen 2 (40AN) | ✅ Works | ✅ Works | 🔄 Not tested yet | ✅ No | ✅ Works well |
+| HP Thunderbolt G4 Dock (120W) | ✅ Works | ✅ Works | ❌ Doesn't work (no ARM64 driver) | ✅ No | ⚠️ Partial |
+| Humanscale Docker | ✅ 2x 4K via DP | ✅ Works | ✅ Works | ✅ No | ✅ Perfect plug-n-play |
+
 ### My Docking Station Adventures
 
 I tried out a few different docks to see what would work:
@@ -60,6 +71,14 @@ I tried out a few different docks to see what would work:
   - It's using an Intel I225-LMvP Ethernet controller
   - After doing some research, I discovered there's no ARM Windows 11 driver available
   - Seems like this adapter just doesn't have ARM64 driver support
+
+**Humanscale Docker:**
+- Status: Works perfectly! Plug-n-play experience
+- Ethernet: Works without issues
+- USB peripherals: Works great (mouse, keyboard, etc.)
+- External monitors: Excellent support for 2x 4K monitors via DisplayPort
+- Driver installation: Not required - truly plug-and-play
+- Overall experience: This dock has been fantastic with Surface 7 ARM - everything just works out of the box
 
 ### External Display Experience
 
