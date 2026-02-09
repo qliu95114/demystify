@@ -155,26 +155,18 @@ I also installed some virtualization features and here are the test results:
 
 ## Gaming Performance
 
-I tested some Blizzard games to see how they would perform:
+I tested several games to see how they would perform on Surface 7 ARM. Here are the results:
 
-**StarCraft 2:**
-- Works perfectly!
+| Game | Status | Notes |
+|------|--------|-------|
+| StarCraft 2 | Working fine | N/A |
+| Diablo Immortal | Working fine | N/A |
+| Age of Empires I & II Definitive Edition | Working fine | N/A |
+| Age of Mythology: Retold | Working fine | N/A |
+| World of Warcraft | Working fine | N/A |
+| Halo Spartan | Working fine | N/A |
 
-**Diablo Immortal:**
-- Works perfectly!
-
-Both games run smoothly, which is great - it really shows that the ARM architecture can handle demanding applications effectively.
-
-### Games to Test (Status: Pending)
-
-I have more games lined up for testing, but haven't tried them yet:
-
-- **Age of Empires I & II Definitive Edition**
-- **Age of Mythology: Retold**
-  - Status: Not tested yet
-  - Need to install and see how it performs on ARM64
-
-Will update this section once I get around to testing these!
+All tested games run smoothly, which is great - it really shows that the ARM architecture can handle demanding applications effectively.
 
 ---
 
