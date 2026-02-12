@@ -50,6 +50,7 @@ Here's a quick summary of how all the docks I tested perform with the Surface 7 
 | ThinkPad Thunderbolt 3 Dock Gen 2 (40AN) | ✅ Works | ✅ Works | ✅ Works | ✅ No | ✅ Works well |
 | HP Thunderbolt G4 Dock (120W) | ✅ Works | ✅ Works | ❌ Doesn't work (no ARM64 driver) | ✅ No | ⚠️ Partial |
 | Humanscale Docker | ✅ 2x 4K via DP | ✅ Works | ✅ Works | ✅ No | ✅ Perfect plug-n-play |
+| Dell WD19 K20A001 | ✅ Works | ✅ Works | ✅ Works | ✅ No | ✅ Everything works |
 
 ### My Docking Station Adventures
 
@@ -81,6 +82,14 @@ I tried out a few different docks to see what would work:
 - External monitors: Excellent support for 2x 4K monitors via DisplayPort
 - Driver installation: Not required - truly plug-and-play
 - Overall experience: This dock has been fantastic with Surface 7 ARM - everything just works out of the box
+
+**Dell WD19 K20A001:**
+- Status: Everything works! Including Docker
+- Display support: Works
+- USB peripherals: Works
+- Ethernet: Works
+- Docker: Works without issues
+- Driver installation: Not required
 
 ### External Display Experience
 
