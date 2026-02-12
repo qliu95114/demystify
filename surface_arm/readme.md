@@ -46,8 +46,8 @@ Here's a quick summary of how all the docks I tested perform with the Surface 7 
 
 | Dock Model | Display | USB | Ethernet | Driver Required | Overall Status |
 |------------|---------|-----|----------|-----------------|----------------|
-| ThinkPad USB-C Dock Gen 2 (40AS) | ❌ Doesn't work | ❌ Doesn't work | ❌ Doesn't work | N/A | ❌ Not compatible |
-| ThinkPad Thunderbolt 3 Dock Gen 2 (40AN) | ✅ Works | ✅ Works | 🔄 Not tested yet | ✅ No | ✅ Works well |
+| ThinkPad USB-C Dock Gen 2 (40AS) | ✅ Works | ✅ Works | ✅ Works | ✅ No | ✅ Works (not tested yet) |
+| ThinkPad Thunderbolt 3 Dock Gen 2 (40AN) | ✅ Works | ✅ Works | ✅ Works | ✅ No | ✅ Works well |
 | HP Thunderbolt G4 Dock (120W) | ✅ Works | ✅ Works | ❌ Doesn't work (no ARM64 driver) | ✅ No | ⚠️ Partial |
 | Humanscale Docker | ✅ 2x 4K via DP | ✅ Works | ✅ Works | ✅ No | ✅ Perfect plug-n-play |
 
@@ -56,13 +56,15 @@ Here's a quick summary of how all the docks I tested perform with the Surface 7 
 I tried out a few different docks to see what would work:
 
 **ThinkPad USB-C Dock Gen 2 (40AS)**
-- Status: Doesn't work with Surface 7 ARM
-- That was disappointing - had to try something else
+- Display support: Works
+- USB peripherals: Works
+- Ethernet: Works (not tested yet)
+- Status: Working for display, USB, and ethernet
 
 **ThinkPad Thunderbolt 3 Dock Gen 2 (40AN)**
 - Display support: Works perfectly!
 - USB peripherals: Works great
-- Built-in Ethernet: Haven't tested this yet - need to come back and check this
+- Built-in Ethernet: Works
 
 **HP Thunderbolt G4 Dock (120W)**
 - Display support: Works
@@ -153,6 +155,21 @@ I also installed some virtualization features and here are the test results:
 
 ---
 
+## Network (VPN) Support
+
+### PaloAlto VPN
+
+**Microsoft Store App ARM64:**
+- Status: Not reliable
+- Issue: The ARM64 version available in the Microsoft Store has reliability issues
+- Recommendation: Avoid using the Microsoft Store version for production use
+
+**Global Protect Software:**
+- Status: Need to get ARM64 Global Protect software
+- Test results will be added after obtaining and testing the proper ARM64 version
+
+---
+
 ## Gaming Performance
 
 I tested several games to see how they would perform on Surface 7 ARM. Here are the results:
@@ -186,7 +203,7 @@ The transition to ARM64 architecture is largely transparent for most users. Ther
 ## Things I Still Need to Test
 
 I'm keeping a running list of items that require future testing and verification:
-- ThinkPad Thunderbolt 3 Dock Gen 2 (40AN) built-in Ethernet adapter functionality and driver support
+- Additional hardware compatibility testing for future reference
 
 ---
 
