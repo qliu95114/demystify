@@ -18,11 +18,17 @@ Using the Surface 7 ARM in handheld mode has been mostly great, but there's a co
 
 The device is incredibly thin and light - it's a joy to hold. And the screen? Absolutely beautiful. The display quality is stunning, with vibrant colors and sharp details that make everything look great.
 
-### One Thing to Watch Out For
+### Things to Watch Out For
+
+**Sharp Edges**
 
 There's one small issue I've discovered: the edge of the laptop is a bit sharp. Here's the scenario - you're walking into a room or meeting, holding the device with your left palm, and trying to open it with your right hand. That sharp edge can actually catch and cut your finger skin a bit. 
 
 Pro tip: This doesn't happen at all when it's resting on a desk - it's specifically a "walking while opening" situation. So if you're about to make a grand entrance and pop open your Surface mid-stride, maybe pause and find a table first! Your fingers will thank you.
+
+**Screen Reflection in Bright Environments**
+
+The screen looks great indoors, but outdoor usage is a different story. In bright environments like outdoor settings, the screen reflection makes reading extremely difficult - especially in dark mode. Switching to light theme helps for normal applications, but here's the real problem: CLI-heavy users (like those who spend a lot of time in Command Prompt, PowerShell, or Windows Terminal) won't benefit much from this workaround. These terminal applications don't follow the system theme by default, so you're stuck with dark backgrounds that become nearly unreadable with all the reflections. If you work outdoors or in brightly lit areas frequently, this is something to consider.
 
 ---
 
@@ -44,52 +50,17 @@ The first thing that caught my attention was looking at Task Manager. Instead of
 
 Here's a quick summary of how all the docks I tested perform with the Surface 7 ARM:
 
-| Dock Model | Display | USB | Ethernet | Driver Required | Overall Status |
-|------------|---------|-----|----------|-----------------|----------------|
-| ThinkPad USB-C Dock Gen 2 (40AS) | ✅ Works | ✅ Works | ✅ Works | ✅ No | ✅ Works (not tested yet) |
-| ThinkPad Thunderbolt 3 Dock Gen 2 (40AN) | ✅ Works | ✅ Works | ✅ Works | ✅ No | ✅ Works well |
-| HP Thunderbolt G4 Dock (120W) | ✅ Works | ✅ Works | ❌ Doesn't work (no ARM64 driver) | ✅ No | ⚠️ Partial |
-| Humanscale Docker | ✅ 2x 4K via DP | ✅ Works | ✅ Works | ✅ No | ✅ Perfect plug-n-play |
-| Dell WD19 K20A001 | ✅ Works | ✅ Works | ✅ Works | ✅ No | ✅ Everything works |
+| Dock Model | Display | USB | Ethernet | Driver Required |
+|------------|---------|-----|----------|-----------------|
+| ThinkPad USB-C Dock Gen 2 (40AS) | ✅ Works | ✅ Works | ✅ Works | ✅ No |
+| ThinkPad Thunderbolt 3 Dock Gen 2 (40AN) | ✅ Works | ✅ Works | ✅ Works | ✅ No |
+| HP Thunderbolt G4 Dock (120W) | ✅ Works | ✅ Works | ❌ Doesn't work (no ARM64 driver) | ✅ No |
+| Humanscale Docker | ✅ 2x 4K via DP | ✅ Works | ✅ Works | ✅ No |
+| Dell WD19 K20A001 | ✅ Works | ✅ Works | ✅ Works | ✅ No |
 
-### My Docking Station Adventures
-
-I tried out a few different docks to see what would work:
-
-**ThinkPad USB-C Dock Gen 2 (40AS)**
-- Display support: Works
-- USB peripherals: Works
-- Ethernet: Works (not tested yet)
-- Status: Working for display, USB, and ethernet
-
-**ThinkPad Thunderbolt 3 Dock Gen 2 (40AN)**
-- Display support: Works perfectly!
-- USB peripherals: Works great
-- Built-in Ethernet: Works
-
-**HP Thunderbolt G4 Dock (120W)**
-- Display support: Works
-- USB mouse and keyboard: Works without issues
-- Built-in Ethernet: Unfortunately, doesn't work
-  - It's using an Intel I225-LMvP Ethernet controller
-  - After doing some research, I discovered there's no ARM Windows 11 driver available
-  - Seems like this adapter just doesn't have ARM64 driver support
-
-**Humanscale Docker:**
-- Status: Works perfectly! Plug-n-play experience
-- Ethernet: Works without issues
-- USB peripherals: Works great (mouse, keyboard, etc.)
-- External monitors: Excellent support for 2x 4K monitors via DisplayPort
-- Driver installation: Not required - truly plug-and-play
-- Overall experience: This dock has been fantastic with Surface 7 ARM - everything just works out of the box
-
-**Dell WD19 K20A001:**
-- Status: Everything works! Including Docker
-- Display support: Works
-- USB peripherals: Works
-- Ethernet: Works
-- Docker: Works without issues
-- Driver installation: Not required
+> **⚠️ Important Notice - HP Thunderbolt G4 Dock (120W):**
+> - Display and USB peripherals work fine
+> - Built-in Ethernet does NOT work - it uses an Intel I225-LMvP Ethernet controller which has no ARM Windows 11 driver available
 
 ### External Display Experience
 
@@ -162,20 +133,20 @@ I also installed some virtualization features and here are the test results:
   - This makes it challenging to set up a local account for the guest OS
 - While Hyper-V does work, the account requirement during Windows 11 ARM setup is a significant inconvenience
 
+**Microsoft Global Secure Access:**
+- Status: Not available on ARM64
+- This is actually a welcome absence - on x64 machines, I had to manually remove it every few minutes which was quite annoying
+
 ---
 
 ## Network (VPN) Support
 
 ### PaloAlto VPN
 
-**Microsoft Store App ARM64:**
-- Status: Not reliable
-- Issue: The ARM64 version available in the Microsoft Store has reliability issues
-- Recommendation: Avoid using the Microsoft Store version for production use
-
-**Global Protect Software:**
-- Status: Need to get ARM64 Global Protect software
-- Test results will be added after obtaining and testing the proper ARM64 version
+**Global Protect ARM64 MSI:**
+- Status: Working fine
+- Installation: Installed via ARM64 MSI package
+- Everything works as expected - reliable VPN connectivity
 
 ---
 
@@ -191,6 +162,13 @@ I tested several games to see how they would perform on Surface 7 ARM. Here are 
 | Age of Mythology: Retold | Working fine | N/A |
 | World of Warcraft | Working fine | N/A |
 | Halo Spartan | Working fine | N/A |
+
+### Game Controllers
+
+| Controller | Status | Notes |
+|------------|--------|-------|
+| Xbox Game Controller (USB Dongle) | Working fine | N/A |
+| Nintendo Pro Controller | Working fine | N/A |
 
 All tested games run smoothly, which is great - it really shows that the ARM architecture can handle demanding applications effectively.
 
