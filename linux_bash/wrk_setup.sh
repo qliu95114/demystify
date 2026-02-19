@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash   
 #
 # wrk Installation Script
 # This script installs wrk HTTP benchmarking tool from source

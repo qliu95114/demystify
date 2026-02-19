@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash  
 #
 # sockperf Installation Script
 # This script installs Mellanox sockperf network performance tool from source

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#author: qliu
+#author: qliu   
 
 learningbash="This script config linux(redhat/rocky/centos) with basic software"
 echo $learningbash

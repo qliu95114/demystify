@@ -1,5 +1,5 @@
 #!/bin/bash
-# author  qliu
+# author  qliu  
 
 learningbash="this script config NVA with two nics, GatewayLoadBalancer"
 echo $learningbash
