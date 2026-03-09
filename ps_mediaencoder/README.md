@@ -106,6 +106,26 @@ for /f "delims=" %a in ('dir /b /o C:\temp\*.mp4') do ffmpeg -i C:\temp\%a -i C:
 
 ```
 
+## Sample - Speed up video (re-encode)
+
+Speed up a video by 3x, downscale to 1920x1080, keep same codec (h264) and bitrate:
+```
+ffmpeg -i input.mp4 -vf "setpts=PTS/3,scale=1920:1080" -codec:v libx264 -b:v 545837 -pix_fmt yuv444p -r 30 output_3x_1080p.mp4 -y
+```
+
+- `-vf "setpts=PTS/3"`: Speed up video 3x by compressing presentation timestamps (divide by speed factor)
+- `scale=1920:1080`: Downscale resolution to 1920×1080
+- `-codec:v libx264`: Re-encode with H.264 codec
+- `-b:v 545837`: Target video bitrate in bps (match source bitrate via `ffprobe`)
+- `-pix_fmt yuv444p`: Preserve source pixel format (use `yuv420p` for standard compatibility)
+- `-r 30`: Output frame rate
+- No `-atempo` needed when there is no audio stream
+
+Get source bitrate/codec info before encoding:
+```
+ffprobe -v quiet -print_format json -show_streams input.mp4
+```
+
 ## Sample - make video more smooth
 ```
 -vf "minterpolate='mi_mode=mci:mc_mode=aobmc:vsbmc=1:fps=120:me=fss'"
