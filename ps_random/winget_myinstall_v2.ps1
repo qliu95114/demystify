@@ -15,6 +15,7 @@ $Catalog = [ordered]@{
         @{ Id = "Microsoft.AzureCLI";              Name = "Azure CLI" }
         @{ Id = "Microsoft.Bicep";                 Name = "Bicep" }
         @{ Id = "Microsoft.Azure.StorageExplorer"; Name = "Azure Storage Explorer" }
+        @{ Id = "Microsoft.AzureVPNClient";        Name = "Azure VPN Client" }
     )
     "Development Tools" = @(
         @{ Id = "Microsoft.PowerShell";       Name = "PowerShell 7" }
