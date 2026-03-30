@@ -5,7 +5,8 @@
 # Parameter help description
 Param(
     [string]$csvfile="$PSScriptRoot\azurespeed_armlocation.csv",
-    [int]$pingcount=10
+    [int]$pingcount=10,
+    [ValidateSet("icmp","tcp","ssl")][string]$protocol="icmp"
 )
 
 Function Write-UTCLog ([string]$message,[string]$color="Green")
@@ -27,17 +28,26 @@ if (Test-Path $csvfile) {
 }
 $hosts = Import-Csv -Path $csvfile
 Write-UTCLog "PingTest Count : $($pingcount)" 
+Write-UTCLog "Protocol : $($protocol.ToUpper())" 
 Write-UTCLog "DomainName (total): $($hosts.count)" 
+
+# Check curl.exe availability for TCP/SSL mode
+if ($protocol -in "tcp","ssl") {
+    if (-not (Get-Command curl.exe -ErrorAction SilentlyContinue)) {
+        Write-UTCLog "curl.exe not found in PATH. Please install curl for TCP/SSL mode." "Red"
+        exit 1
+    }
+}
 
 $st=Get-Date
 # Create a runspace pool for multi-threading
-$maxThreads = [math]::Min([int]((Get-CimInstance Win32_ComputerSystem).NumberOfLogicalProcessors /2) , $hosts.count)
+$maxThreads = [math]::Min([math]::Max(1, [int]([Environment]::ProcessorCount / 2)), $hosts.count)
 Write-UTCLog "Threads (total): $maxThreads"
 $runspacePool = [RunspaceFactory]::CreateRunspacePool(1, $maxThreads) # Min 1 thread, Max calculated threads
 $runspacePool.Open()
 
 # Create a list to hold the runspaces
-$runspaces = @()
+$runspaces = [System.Collections.Generic.List[PSCustomObject]]::new()
 
 # Loop through each hostname in the CSV
 foreach ($h in $hosts) {
@@ -50,94 +60,123 @@ foreach ($h in $hosts) {
 
     # Add script to the runspace
     [void]$runspace.AddScript({
-        param($hostname,$cloud,$pingcount)
+        param($hostname,$cloud,$pingcount,$protocol)
 
-        # Create a Ping object
-        $ping = New-Object System.Net.NetworkInformation.Ping
+        $latencies = [System.Collections.Generic.List[double]]::new()
+        $ip = ""
 
-        # Array to store ping results
-        $latencies = @()
-
-        for ($i = 0; $i -lt $pingcount; $i++) {  # ping 10 times and cacluate the average for the success result. 
-            try {
-                $reply = $ping.Send($hostname, 1000) # Timeout of 1000ms
-                if ($reply.Status -eq "Success") {
-                    $latencies += $reply.RoundtripTime
+        if ($protocol -in "tcp","ssl") {
+            # TCP/SSL mode: use curl.exe to measure latency
+            # TCP uses time_connect; SSL uses time_starttransfer (TTFB)
+            $url = "https://$hostname"
+            $metric = if ($protocol -eq "ssl") { "time_starttransfer" } else { "time_connect" }
+            for ($i = 0; $i -lt $pingcount; $i++) {
+                try {
+                    $output = & curl.exe -s -k -o NUL --connect-timeout 1.0 -w "%{remote_ip}|%{$metric}" $url 2>$null
+                    if ($output -and $output -match '^(.*)\|(.+)$') {
+                        $remoteIp = $Matches[1]
+                        $tcpTime = [double]$Matches[2]
+                        if ($remoteIp -and $remoteIp -ne '0.0.0.0') { $ip = $remoteIp }
+                        if ($tcpTime -gt 0) {
+                            $latencies.Add([math]::Round($tcpTime * 1000, 2))  # seconds to ms
+                        }
+                    }
+                } catch {
+                    Write-Warning "curl failed for ${hostname}: $_"
                 }
-            } catch {
-                # Handle errors (e.g., host unreachable)
+            }
+        } else {
+            # ICMP mode: use ping
+            $ping = New-Object System.Net.NetworkInformation.Ping
+            try {
+                for ($i = 0; $i -lt $pingcount; $i++) {
+                    try {
+                        $reply = $ping.Send($hostname, 1000)
+                        if ($reply.Status -eq "Success") {
+                            $latencies.Add([double]$reply.RoundtripTime)
+                        }
+                    } catch {
+                        Write-Warning "Ping failed for ${hostname}: $_"
+                    }
+                }
+            } finally {
+                $ping.Dispose()
+            }
+            # Get the IP address of the host, retry up to 10 times if failed
+            for ($j = 0; $j -lt 10; $j++) {
+                $dnsResult = Resolve-DnsName $hostname -ErrorAction SilentlyContinue
+                if ($dnsResult) {
+                    $ip = ($dnsResult | Where-Object { $_.IP4Address } | Select-Object -First 1).IP4Address
+                }
+                if ("" -ne $ip) { break }
+                else { Start-Sleep -Milliseconds 50 }
             }
         }
 
-        # Get the IP address of the host, retry 3 times if failed
-        $ip = ""
-        for ($j = 0; $j -lt 10; $j++) {
-                #$iplist=(Resolve-DnsName $hostname).IPAddress
-                $iplist=(Resolve-DnsName $hostname).IP4Address
-                $ip=$iplist.split(',')[0]
-                if ("" -ne $ip) 
-                {
-                    break
-                }
-                else {
-                    start-sleep -Milliseconds 50
-                }
-        }
-        
         # Calculate the latency statistics for the host
         if ($latencies.Count -gt 0) {
-            # Average latency need be in x.xx format two decimal places
-            $avgLatency = [math]::Round(($latencies | Measure-Object -Average).Average, 2)
-            $maxLatency = ($latencies | Measure-Object -Maximum).Maximum
-            $minLatency = ($latencies | Measure-Object -Minimum).Minimum 
+            $stats = $latencies | Measure-Object -Average -Maximum -Minimum
+            $avgLatency = [math]::Round($stats.Average, 2)
+            $maxLatency = [math]::Round($stats.Maximum, 2)
+            $minLatency = [math]::Round($stats.Minimum, 2)
+            $sorted = $latencies | Sort-Object
+            $p90Index = [math]::Ceiling(0.9 * $sorted.Count) - 1
+            $p90Latency = [math]::Round($sorted[$p90Index], 2)
         } else {
             $avgLatency = "N/A"
             $maxLatency = "N/A"
             $minLatency = "N/A"
+            $p90Latency = "N/A"
         }
 
-        # Return the result as a custom object
         [PSCustomObject]@{
             Cloud = $cloud
             Hostname = $hostname
             IPAddress = $ip
             Latency_min = $minLatency
             Latency_max = $maxLatency
-            Latency_avg  = $avgLatency
+            Latency_avg = $avgLatency
+            Latency_p90 = $p90Latency
         }
-    }).AddArgument($hostname).AddArgument($cloud).AddArgument($pingcount)
+    }).AddArgument($hostname).AddArgument($cloud).AddArgument($pingcount).AddArgument($protocol)
 
     # Start the runspace and add it to the list
-    $runspaces += [PSCustomObject]@{
+    $runspaces.Add([PSCustomObject]@{
         Runspace = $runspace.BeginInvoke()
         PowerShell = $runspace
-    }
+    })
 }
 
 # Wait for all runspaces to complete and collect results
-$results = @()
+$results = [System.Collections.Generic.List[PSCustomObject]]::new()
+$total = $runspaces.Count
+$completed = 0
+Write-Host "`r  [$protocol] Progress: 0 / $total hosts completed (0%)" -ForegroundColor Cyan -NoNewline
 foreach ($rs in $runspaces) {
-    $results += $rs.PowerShell.EndInvoke($rs.Runspace)
+    $results.Add($rs.PowerShell.EndInvoke($rs.Runspace))
+    $rs.PowerShell.Dispose()
+    $completed++
+    $pct = [math]::Round($completed / $total * 100)
+    Write-Host "`r  [$protocol] Progress: $completed / $total hosts completed ($pct%)          " -ForegroundColor Cyan -NoNewline
 }
+Write-Host ""  # newline after progress
 
 # Close the runspace pool
 $runspacePool.Close()
 
 # Display the results in a nicely formatted table
-$results | Sort-Object Latency_min | Format-Table -AutoSize 
+$results | Sort-Object { if ($_.Latency_min -eq "N/A") { [double]::MaxValue } else { [double]$_.Latency_min } } | Format-Table -AutoSize 
 
 $et=Get-Date
 $duration = ($et - $st).TotalSeconds
 Write-UTCLog "Finished in $($duration) Seconds" 
 # generate new file name append "_result" in the same directory as the input file.
-$csvresultfile=$csvfile.split('\')[-1].split('.')[0]+"_result.csv"
+$csvresultfile=[System.IO.Path]::GetFileNameWithoutExtension($csvfile)+"_result.csv"
 $resultfile="$env:temp\$csvresultfile"
 if (Test-path $resultfile) {
     Write-UTCLog "File $($resultfile) exists. Remove it." "Yellow"
     Remove-Item $resultfile
 }
 
-$results | Sort-Object Latency_min | Export-Csv -Path $resultfile -NoTypeInformation    <# Action when all if and elseif conditions are false #>
+$results | Sort-Object { if ($_.Latency_min -eq "N/A") { [double]::MaxValue } else { [double]$_.Latency_min } } | Export-Csv -Path $resultfile -NoTypeInformation
 Write-UTCLog "Export result to $($resultfile)" "Green"
-
-#notepad++.exe $env:temp\azurespeed_armlocation_result.csv
