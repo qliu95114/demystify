@@ -130,6 +130,133 @@ ffprobe -v quiet -print_format json -show_streams input.mp4
 ```
 -vf "minterpolate='mi_mode=mci:mc_mode=aobmc:vsbmc=1:fps=120:me=fss'"
 
--vf "minterpolate='mi_mode=mci:mc_mode=aobmc:me_mode=bidir:fps=60'" 
+-vf "minterpolate='mi_mode=mci:mc_mode=aobmc:me_mode=bidir:fps=60'"
 
 ```
+
+---
+
+# Transcode-Video.ps1 - Universal Batch Transcoding Script
+
+Batch convert video files with automatic stream detection, trimming, and subtitle support.
+
+## Features
+
+- Batch transcoding (MKV/MP4 → MP4)
+- Hardware encoding (Intel QSV HEVC)
+- Auto-detect audio and subtitle streams
+- Cut intro/outro sections
+- Subtitle time-shifting
+- Skip already processed files
+
+## Basic Usage
+
+```powershell
+# Simple auto-detection (recommended)
+.\Transcode-Video.ps1 -SourceDir "D:\Input" -TargetDir "D:\Output"
+```
+
+The script automatically detects the best audio and subtitle streams.
+
+## Common Use Cases
+
+```powershell
+# Trim intro/outro with auto-detection (Chinese subtitle, AAC stereo)
+.\Transcode-Video.ps1 `
+    -SourceDir "D:\Input" `
+    -TargetDir "D:\Output" `
+    -HeaderCutSeconds 90 `
+    -TrailCutSeconds 150 `
+    -SubtitleLanguage "chi" `
+    -AudioCodec "aac" `
+    -AudioChannels 2
+
+# Auto-detect English subtitle with 5.1 audio
+.\Transcode-Video.ps1 `
+    -SourceDir "D:\Input" `
+    -TargetDir "D:\Output" `
+    -SubtitleLanguage "eng" `
+    -AudioCodec "aac" `
+    -AudioChannels 6
+
+# Manual stream selection (when auto-detection fails)
+.\Transcode-Video.ps1 `
+    -SourceDir "D:\Input" `
+    -TargetDir "D:\Output" `
+    -AudioStreamIndex 2 `
+    -SubtitleStreamIndex 7
+
+# Custom quality settings
+.\Transcode-Video.ps1 `
+    -SourceDir "D:\Input" `
+    -TargetDir "D:\Output" `
+    -VideoBitrate 3000 `
+    -VideoWidth 1920 `
+    -VideoHeight 1080
+```
+
+## Parameters
+
+| Parameter | Required | Default | Description |
+|-----------|----------|---------|-------------|
+| `SourceDir` | Yes | - | Input folder with video files |
+| `TargetDir` | Yes | - | Output folder |
+| `HeaderCutSeconds` | No | 0 | Remove seconds from start |
+| `TrailCutSeconds` | No | 0 | Remove seconds from end |
+| `AudioStreamIndex` | No | -1 | Audio stream index (-1 = auto-detect) |
+| `SubtitleStreamIndex` | No | -1 | Subtitle stream index (-1 = auto-detect) |
+| `AudioLanguage` | No | "" | Preferred audio language for auto-detect |
+| `AudioCodec` | No | aac | Preferred audio codec for auto-detect |
+| `AudioChannels` | No | 2 | Preferred audio channels for auto-detect |
+| `SubtitleLanguage` | No | chi | Preferred subtitle language for auto-detect |
+| `VideoBitrate` | No | 2300 | Video bitrate in kbps |
+| `AudioBitrate` | No | 128 | Audio bitrate in kbps |
+| `VideoWidth` | No | 1920 | Output video width |
+| `VideoHeight` | No | 804 | Output video height |
+| `VideoCodec` | No | hevc_qsv | Video codec (hevc_qsv, libx264, libx265) |
+| `OutputFormat` | No | mp4 | Output container format |
+
+## Auto-Detection
+
+When `AudioStreamIndex=-1` or `SubtitleStreamIndex=-1`, the script auto-detects streams using these preferences:
+
+**Audio Auto-Detection Parameters:**
+- `AudioCodec` (default: "aac") - Prefers this codec
+- `AudioChannels` (default: 2) - Prefers this channel count (2=stereo, 6=5.1)
+- `AudioLanguage` (default: "") - Prefers this language if specified
+
+**Subtitle Auto-Detection Parameters:**
+- `SubtitleLanguage` (default: "chi") - Prefers Chinese variants (chi/chs/zh/简体)
+
+**Example:** For English subtitles with 5.1 audio:
+```powershell
+.\Transcode-Video.ps1 `
+    -SourceDir "D:\Input" `
+    -TargetDir "D:\Output" `
+    -SubtitleLanguage "eng" `
+    -AudioChannels 6
+```
+
+To disable auto-detection, use manual stream indices (see below).
+
+## Find Stream Numbers (Manual Selection Only)
+
+When auto-detection doesn't work, use ffprobe to find stream indices:
+
+```powershell
+ffprobe -hide_banner "video.mkv" 2>&1 | Select-String "Stream"
+```
+
+Output example:
+```
+Stream #0:0: Video: hevc
+Stream #0:2: Audio: aac (LC), stereo         ← Use -AudioStreamIndex 2
+Stream #0:7: Subtitle: subrip (srt)          ← Use -SubtitleStreamIndex 7
+```
+
+## Output
+
+- **Format**: MP4
+- **Video**: HEVC (H.265)
+- **Audio**: AAC stereo
+- **Subtitle**: Embedded mov_text
