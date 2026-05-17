@@ -33,6 +33,9 @@ param(
     [int]$AudioChannels = 2,
 
     [Parameter(Mandatory=$false)]
+    [string]$AudioMixFilter = "",
+
+    [Parameter(Mandatory=$false)]
     [string]$SubtitleLanguage = "chi",
 
     [Parameter(Mandatory=$false)]
@@ -309,6 +312,7 @@ foreach ($File in $Files) {
     $TempVideoFile = Join-Path -Path $TempDir -ChildPath ($File.BaseName + "_temp.$OutputFormat")
     $TempSubtitleFile = Join-Path -Path $TempDir -ChildPath ($File.BaseName + "_temp.srt")
     $TempSubtitleShifted = Join-Path -Path $TempDir -ChildPath ($File.BaseName + "_shifted.srt")
+    $CurrentAudioMixFilter = $AudioMixFilter
 
     # Log files
     $LogExtractSub = Join-Path -Path $LogDir -ChildPath ($File.BaseName + ".extract_subtitle.log")
@@ -358,6 +362,12 @@ foreach ($File in $Files) {
             if ($audioStream.tags.language) { $audioInfo += ", lang=$($audioStream.tags.language)" }
             if ($audioStream.bit_rate) { $audioInfo += ", $([math]::Round([int]$audioStream.bit_rate / 1000))kbps" }
             Write-Host "        Audio: $audioInfo" -ForegroundColor DarkGray
+
+            $codecName = if ($audioStream.codec_name) { $audioStream.codec_name.ToLower() } else { "" }
+            if ($audioStream.channels -ge 6 -or $codecName -in @("dts", "dca")) {
+                $CurrentAudioMixFilter = "pan=stereo|FL=FL+0.707FC+0.5SL+0.5BL|FR=FR+0.707FC+0.5SR+0.5BR"
+                Write-Host "        Audio downmix: $CurrentAudioMixFilter" -ForegroundColor DarkGray
+            }
         }
 
         # Determine subtitle stream index
@@ -480,7 +490,14 @@ foreach ($File in $Files) {
             "-vf", "scale=$($VideoWidth):$($VideoHeight)",
             "-map", "0:$CurrentAudioIndex",
             "-c:a", "aac",
-            "-b:a", "$($AudioBitrate)k",
+            "-b:a", "$($AudioBitrate)k"
+        )
+
+        if ($CurrentAudioMixFilter) {
+            $ffmpegArgs += @("-af", $CurrentAudioMixFilter)
+        }
+
+        $ffmpegArgs += @(
             "-ac", "2",
             "-y",
             $TempVideoFile
