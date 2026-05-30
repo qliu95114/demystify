@@ -87,6 +87,20 @@ function Convert-SecondsToTimeCode {
     return ("{0:00}:{1:00}:{2:00}" -f $hours, $minutes, $secs)
 }
 
+function ConvertTo-NativeArgumentString {
+    param(
+        [string[]]$Arguments
+    )
+
+    return (($Arguments | ForEach-Object {
+        if ($_ -match '[\s"]') {
+            '"' + ($_ -replace '"', '\"') + '"'
+        } else {
+            $_
+        }
+    }) -join " ")
+}
+
 function Invoke-FFmpegWithLogging {
     param(
         [string[]]$Arguments,
@@ -95,13 +109,14 @@ function Invoke-FFmpegWithLogging {
     )
 
     # Display the command
-    $commandLine = "ffmpeg " + ($Arguments -join " ")
+    $argumentString = ConvertTo-NativeArgumentString -Arguments $Arguments
+    $commandLine = "ffmpeg " + $argumentString
     Write-Host "        Command: $commandLine" -ForegroundColor DarkGray
     Write-Host "        Log: $LogFile" -ForegroundColor DarkGray
 
-    # Execute with output redirection to log file
+    # Start-Process flattens argument arrays; pass an explicitly quoted string.
     $proc = Start-Process -FilePath "ffmpeg" `
-        -ArgumentList $Arguments `
+        -ArgumentList $argumentString `
         -NoNewWindow `
         -Wait `
         -PassThru `
@@ -118,6 +133,7 @@ function Get-StreamInfo {
     # Use ffprobe to get stream information in JSON format
     # Save to temp file first to avoid encoding issues with Chinese characters
     $tempJsonFile = Join-Path -Path $env:TEMP -ChildPath "ffprobe_$(Get-Random).json"
+    $tempErrFile = Join-Path -Path $env:TEMP -ChildPath "ffprobe_$(Get-Random).err"
 
     try {
         $ffprobeArgs = @(
@@ -129,14 +145,26 @@ function Get-StreamInfo {
 
         # Execute ffprobe with output redirected to file (avoids PowerShell encoding issues)
         $process = Start-Process -FilePath "ffprobe" `
-            -ArgumentList $ffprobeArgs `
+            -ArgumentList (ConvertTo-NativeArgumentString -Arguments $ffprobeArgs) `
             -NoNewWindow `
             -Wait `
             -PassThru `
-            -RedirectStandardOutput $tempJsonFile
+            -RedirectStandardOutput $tempJsonFile `
+            -RedirectStandardError $tempErrFile
+        $exitCode = $process.ExitCode
 
-        if ($process.ExitCode -ne 0) {
-            throw "ffprobe failed with exit code $($process.ExitCode)"
+        if ($exitCode -ne 0) {
+            $errorDetails = ""
+            if (Test-Path $tempErrFile) {
+                $errorDetails = Get-Content -Path $tempErrFile -Raw -Encoding UTF8
+                if ($null -ne $errorDetails) {
+                    $errorDetails = $errorDetails.Trim()
+                }
+            }
+            if ($errorDetails) {
+                throw "ffprobe failed with exit code $exitCode`: $errorDetails"
+            }
+            throw "ffprobe failed with exit code $exitCode"
         }
 
         # Read and parse JSON from file with UTF-8 encoding
@@ -148,6 +176,9 @@ function Get-StreamInfo {
         # Clean up temp file
         if (Test-Path $tempJsonFile) {
             Remove-Item $tempJsonFile -Force -ErrorAction SilentlyContinue
+        }
+        if (Test-Path $tempErrFile) {
+            Remove-Item $tempErrFile -Force -ErrorAction SilentlyContinue
         }
     }
 }
