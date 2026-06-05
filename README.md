@@ -1,15 +1,39 @@
-# Demystify Things and Share Ideas I am Working with Everyday
+# Demystify Things and Share Ideas I Work with Every Day
 
-A collection of scripts, tools, and documentation for Azure infrastructure automation, network diagnostics, media processing, and system administration.
+This repository is a personal toolbox of scripts, notebooks, prompts, and notes for Azure infrastructure automation, network diagnostics, Azure AI experiments, media processing, and Windows/Linux system administration.
+
+Most content is organized by scenario. Start with the folder that matches the task you are working on, then read the folder-level README or script header before running commands.
 
 ## Table of Contents
 
+- [Getting Started](#getting-started)
+- [Common Prerequisites](#common-prerequisites)
 - [Azure Platform Tools](#azure-platform-tools)
 - [Azure AI Integration](#azure-ai-integration)
 - [Network & Connectivity](#network--connectivity)
 - [Media Processing](#media-processing)
 - [System Utilities](#system-utilities)
 - [Tips & Tricks](#tips--tricks)
+
+---
+
+## Getting Started
+
+1. Clone the repository and open a PowerShell terminal at the repo root.
+2. Review the relevant folder README before running a script; many scripts assume local tools, cloud credentials, or environment-specific paths.
+3. Run PowerShell scripts from their own folder unless the script documents a different working directory.
+4. For Azure scripts, sign in first with `az login` or `Connect-AzAccount`, depending on whether the script uses Azure CLI or Az PowerShell.
+
+## Common Prerequisites
+
+| Area | Typical tools |
+|------|---------------|
+| Azure automation | Azure CLI, Az PowerShell, Terraform |
+| Network diagnostics | PowerShell, curl, psping, tshark/tcpdump, Python |
+| Media processing | FFmpeg, FFprobe, faster-whisper |
+| Kusto / ADX analysis | Kusto Explorer, Azure Data Explorer access |
+
+> **Note:** Some scripts can change Azure resources, routing, files, installed packages, or system configuration. Review parameters and test in a non-production environment first.
 
 ---
 
@@ -86,7 +110,7 @@ CIDRRanges | take 200
 | [network/tshark_samples.md](./network/tshark_samples.md) | tshark and tcpdump command samples |
 | [network/get-MicrosoftIpAddressRange.ps1](./network/get-MicrosoftIpAddressRange.ps1) | Fetch Microsoft Azure/Office 365 IP ranges |
 | [network/convert-nsgflowlog2csv.ps1](./network/convert-nsgflowlog2csv.ps1) | Convert NSG Flow Logs to CSV |
-| [network/mergecapfiles.ps1](./network/mergecapfiles.ps1) | Merge multiple PCAP files into one |
+| [network/pcap2kusto/mergecapfiles.ps1](./network/pcap2kusto/mergecapfiles.ps1) | Merge multiple PCAP files into one |
 
 ---
 
@@ -242,4 +266,3 @@ powercfg /l
 
 - [Azure Files Diagnostics](https://github.com/Azure-Samples/azure-files-samples/tree/master/AzFileDiagnostics)
 - [Blocklist & Kusto Tables](https://firewalliplists.gypthecat.com/kusto-tables/)
-
