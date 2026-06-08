@@ -266,3 +266,5 @@ powercfg /l
 
 - [Azure Files Diagnostics](https://github.com/Azure-Samples/azure-files-samples/tree/master/AzFileDiagnostics)
 - [Blocklist & Kusto Tables](https://firewalliplists.gypthecat.com/kusto-tables/)
+
+-Qing Liu
