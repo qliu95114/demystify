@@ -64,7 +64,6 @@ sudo firewall-cmd --zone=public --add-port=80/tcp --permanent
 
 # Enable the firewall to allow Samba traffic
 sudo firewall-cmd --zone=public --add-port=445/tcp --permanent
-sudo firewall-cmd --zone=public --add-port=2222/tcp --permanent
 sudo firewall-cmd --zone=public --add-port=22/tcp --permanent
 
 # install a web server
@@ -93,28 +92,3 @@ EOF
 
 # Restart the Samba service
 sudo systemctl restart smbd
-
-
-## Change the SSH port to 220
-## Define the new SSH port
-#NEW_PORT=2222
-#
-## Path to the SSH configuration file 
-#SSH_CONFIG_FILE="/etc/ssh/sshd_config"
-#
-## Backup the current SSH configuration file
-#sudo cp $SSH_CONFIG_FILE "${SSH_CONFIG_FILE}.bak"
-#
-## Update the SSH configuration file with the new port
-#sudo sed -i "/Port 22/d" $SSH_CONFIG_FILE  # remove the comment
-#echo "Port $NEW_PORT" | sudo tee -a $SSH_CONFIG_FILE # add the new port
-#
-## Restart the SSH service to apply changes
-#sudo systemctl restart sshd
-#
-## Verify the change
-#if sudo ss -tuln | grep ":$NEW_PORT"; then
-#  echo "SSH port successfully changed to $NEW_PORT."
-#else
-#  echo "Failed to change SSH port."
-#fi
