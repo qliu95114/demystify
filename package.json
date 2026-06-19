@@ -1,0 +1,9 @@
+{
+  "name": "demystify-skills",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Collection of agent skills by demystify",
+  "scripts": {},
+  "keywords": ["skills", "agent-skills", "pdf", "translation"],
+  "license": "MIT"
+}
