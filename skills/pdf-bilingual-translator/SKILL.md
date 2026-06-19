@@ -1,11 +1,6 @@
 ---
 name: pdf-bilingual-translator
 description: Transform any-language PDF into a bilingual side-by-side HTML reader. Extracts text, OCRs image-embedded pages, translates content using AI, preserves tables and formatting, and generates a navigable HTML with original PNG on the left and translation on the right. Use when a user needs a PDF document translated to another language with full layout preservation.
-compatibility: Requires Python 3.10+, PyMuPDF (fitz), and pandoc. Windows: Git Bash recommended.
-metadata:
-  author: CodeBuddy
-  version: "1.0"
-  languages: any-to-any
 ---
 
 # PDF to Bilingual HTML Translator
