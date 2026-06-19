@@ -4,17 +4,20 @@ Transform any PDF document into a bilingual side-by-side HTML reader with naviga
 
 ## Installation
 
-Silent one-liner (no prompts, tested):
+**Project-local** (installs to `.codebuddy/skills/`):
 
-**With npx:**
 ```bash
 SKILL_BASE_URL="https://github.com/qliu95114/demystify/tree/main" npx skill skills/pdf-bilingual-translator
 ```
 
-**Or install globally first:**
+**Global** (available to all projects and agents):
+
 ```bash
-npm install -g skill
-SKILL_BASE_URL="https://github.com/qliu95114/demystify/tree/main" skill skills/pdf-bilingual-translator
+# Clone to the global CodeBuddy skills directory
+git clone --depth 1 --filter=blob:none --sparse \
+  https://github.com/qliu95114/demystify.git /tmp/demystify
+cp -r /tmp/demystify/skills/pdf-bilingual-translator ~/.codebuddy/skills/
+rm -rf /tmp/demystify
 ```
 
 ## Prerequisites
