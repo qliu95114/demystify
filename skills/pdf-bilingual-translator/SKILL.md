@@ -144,6 +144,41 @@ Example custom CSS pattern:
 .page14 td.c { text-align:center; }
 ```
 
+### Phase 7: Reproduce diagrams and flowcharts as inline SVG
+
+When a page contains a **diagram, flowchart, org chart, or schema** (boxes connected by arrows), do **not** flatten it into a text list — reproduce it visually with an **inline SVG** so the translated page mirrors the original structure.
+
+- **Translate the text inside the nodes**, but keep the visual layout (box positions, arrow directions, hierarchy) faithful to the source.
+- Use a `viewBox` with `width='100%'` so the diagram scales to the panel.
+- Define one arrowhead `marker` and reference it with `marker-end` on each connector `<line>`.
+- Use **single-quoted** SVG attributes so the fragment embeds cleanly in JSON/HTML without escaping.
+- Generate the SVG programmatically (a small Python helper for boxes/arrows) rather than hand-writing every `<tspan>`.
+
+```python
+def box(x, y, w, h, lines):  # lines = list of (text, is_bold)
+    cx = x + w / 2
+    out = [f"<rect x='{x}' y='{y}' width='{w}' height='{h}' rx='3' fill='#fff' stroke='#333' stroke-width='1.5'/>"]
+    ty = y + 22
+    for txt, bold in lines:
+        out.append(f"<text x='{cx:.0f}' y='{ty:.0f}' text-anchor='middle' font-size='12' "
+                   f"font-weight='{'bold' if bold else 'normal'}'>{txt}</text>")
+        ty += 17
+    return "".join(out)
+
+def arrow(x1, y1, x2, y2):
+    return f"<line x1='{x1}' y1='{y1}' x2='{x2}' y2='{y2}' stroke='#333' stroke-width='1.4' marker-end='url(#ah)'/>"
+
+svg = ("<svg viewBox='0 0 740 820' width='100%' xmlns='http://www.w3.org/2000/svg'>"
+       "<defs><marker id='ah' markerWidth='10' markerHeight='10' refX='8' refY='3' orient='auto' "
+       "markerUnits='strokeWidth'><path d='M0,0 L8,3 L0,6 z' fill='#333'/></marker></defs>"
+       + box(270, 20, 200, 150, [("N1", True), ("...", False)])
+       + arrow(360, 170, 150, 300)
+       + "</svg>")
+```
+
+Verify the result: SVG tags balanced, and box/arrow counts match the original diagram.
+
+
 ## Critical Rules
 
 ### 1. Position-based replacement only
@@ -207,6 +242,52 @@ The dropdown value is `"page14"` (string). The `showPage` function expects `14` 
 <select id="pageSelect" onchange="showPage(this.value)">
 ```
 
+### 7. Preserve URLs unchanged
+
+**Never** translate, localize, or alter URLs, email addresses, or domain names found in the source. Keep them byte-for-byte identical in the translated output (a translated URL is a broken link). Only the surrounding descriptive text may be translated.
+
+```python
+# Verify every source URL still appears verbatim in the translation
+import re
+url_re = re.compile(r'https?://[^\s)>"\']+')
+src_urls = set(url_re.findall(source_text))
+out_urls = set(url_re.findall(translated_html))
+missing = src_urls - out_urls
+assert not missing, f"URLs altered or dropped: {missing}"
+```
+
+Render URLs as clickable links so they remain usable: `<a href="https://example.com/x">https://example.com/x</a>`.
+
+### 8. Preserve indentation and nesting depth
+
+When the source uses an **indented / nested structure** (multi-level bullet lists, outline hierarchies, sub-items), the translation must reproduce the **exact same nesting depth and order**. Do not flatten a 4-level list into one level, and do not collapse sub-items into their parent.
+
+- Mirror each level with a nested `<ul>`/`<li>` (or matching indentation), one level per source indent.
+- Keep items in the original sequence; a child item stays a child of the same parent.
+
+```html
+<!-- Source: BLOC A > "13 Exercices ... 3 crédits" > "Exercices d'analyse linguistique 1" -->
+<ul>
+  <li>BLOC A
+    <ul>
+      <li>13 语言分析练习 1 <span class="credits">3 学分</span>
+        <ul><li>语言分析练习 1</li></ul>
+      </li>
+    </ul>
+  </li>
+</ul>
+```
+
+### 9. Preserve source text color
+
+Keep the **colors used in the source** as much as possible. If a token is colored in the original (e.g. blue credit labels, red warnings, colored headings), apply the closest color in the translation via a CSS class or inline `style="color:#..."`. Color carries meaning — losing it loses information.
+
+```css
+.credits { color:#1f6fb2; }   /* match the source's blue "N crédits" */
+```
+
+> Note: this refines Rule #4 — remove *italic* leakage from pandoc, but **do not** strip meaningful color. When the source intentionally colors text, preserve the color.
+
 ## Common Pitfalls
 
 | Problem | Cause | Fix |
@@ -217,6 +298,10 @@ The dropdown value is `"page14"` (string). The `showPage` function expects `14` 
 | Page counter shows wrong total | Duplicate `page-container` div | Ensure exactly one container; remove duplicates |
 | Dropdown doesn't work | String passed to `showPage` instead of number | Add `+` prefix: `+this.value.replace('page','')` |
 | CSS styles conflict between pages | Generic class name reused across pages | Use unique class per page: `.page13`, `.page14` |
+| Links broken in translation | URL was translated/localized | Keep URLs, emails, domains byte-for-byte identical to the source |
+| Diagram flattened into a list | Flowchart/schema rendered as bullet text | Reproduce it as an inline SVG (boxes + arrowed lines) — see Phase 7 |
+| Nested list flattened | Multi-level source outline rendered at one level | Mirror the source nesting with nested `<ul>` — see Rule 8 |
+| Colored text rendered black | Source color dropped during conversion | Reapply the source color via CSS class / inline style — see Rule 9 |
 
 ## File structure
 
