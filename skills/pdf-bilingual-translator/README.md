@@ -10,15 +10,17 @@ Transform any PDF document into a bilingual side-by-side HTML reader with naviga
 SKILL_BASE_URL="https://github.com/qliu95114/demystify/tree/main" npx skill skills/pdf-bilingual-translator
 ```
 
-**Global** (available to all projects and agents):
+**Global** (available to all projects and agents, e.g. CodeBuddy, Claude Code, etc.):
 
 ```bash
-# Clone to the global CodeBuddy skills directory
-git clone --depth 1 --filter=blob:none --sparse \
-  https://github.com/qliu95114/demystify.git /tmp/demystify
-cp -r /tmp/demystify/skills/pdf-bilingual-translator ~/.codebuddy/skills/
-rm -rf /tmp/demystify
+# For CodeBuddy: copy to global skills directory
+cp -r skills/pdf-bilingual-translator ~/.codebuddy/skills/
+
+# For other agents: copy to their skills directory
+cp -r skills/pdf-bilingual-translator ~/.agent/skills/
 ```
+
+> **Note:** `npx skill` currently hardcodes `LOCAL_SKILLS_DIR = ".codebuddy/skills"` with no `--target` flag or env override. For `.agent` or other directories, copy manually.
 
 ## Prerequisites
 
