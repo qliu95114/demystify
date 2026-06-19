@@ -4,23 +4,26 @@ Transform any PDF document into a bilingual side-by-side HTML reader with naviga
 
 ## Installation
 
-**Project-local** (installs to `.codebuddy/skills/`):
+**CodeBuddy** — project or global:
 
 ```bash
+# Project-local (installs to .codebuddy/skills/)
 SKILL_BASE_URL="https://github.com/qliu95114/demystify/tree/main" npx skill skills/pdf-bilingual-translator
+
+# Global (all projects)
+cp -r skills/pdf-bilingual-translator ~/.codebuddy/skills/
 ```
 
-**Global** (available to all projects and agents, e.g. CodeBuddy, Claude Code, etc.):
+**All agents** (CodeBuddy, Claude Code, Copilot, Cursor, etc.):
 
 ```bash
-# For CodeBuddy: copy to global skills directory
-cp -r skills/pdf-bilingual-translator ~/.codebuddy/skills/
-
-# For other agents: copy to their skills directory
+# Copy to the agent's global skills directory
 cp -r skills/pdf-bilingual-translator ~/.agent/skills/
+# or
+cp -r skills/pdf-bilingual-translator ~/.claude/skills/
 ```
 
-> **Note:** `npx skill` currently hardcodes `LOCAL_SKILLS_DIR = ".codebuddy/skills"` with no `--target` flag or env override. For `.agent` or other directories, copy manually.
+> **Note:** `npx skills add qliu95114/demystify` is not yet supported — the `skills` CLI requires specific repo metadata. Use the manual copy method for now.
 
 ## Prerequisites
 
