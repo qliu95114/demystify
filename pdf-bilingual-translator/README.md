@@ -4,17 +4,27 @@ Transform any PDF document into a bilingual side-by-side HTML reader with naviga
 
 ## Installation
 
-Install the skill from this GitHub repository:
-
 ```bash
-npx skill -y install https://github.com/qliu95114/demystify.git --path skills/pdf-bilingual-translator
+npx skills add qliu95114/demystify -s pdf-bilingual-translator -g --copy -y
 ```
 
-Or clone and install locally:
+| Flag | Meaning |
+|---|---|
+| `-s pdf-bilingual-translator` | Select this skill from the repo |
+| `-g` | Install globally (user-level, all projects/agents) |
+| `--copy` | Copy files instead of symlinking |
+| `-y` | Auto-confirm all prompts |
 
+**Per-agent target (optional):**
 ```bash
-git clone https://github.com/qliu95114/demystify.git
-npx skill -y install ./demystify/skills/pdf-bilingual-translator
+# CodeBuddy
+npx skills add qliu95114/demystify -s pdf-bilingual-translator -a codebuddy --copy -y
+
+# Claude Code
+npx skills add qliu95114/demystify -s pdf-bilingual-translator -a claude-code --copy -y
+
+# All agents
+npx skills add qliu95114/demystify -s pdf-bilingual-translator -a '*' --copy -y
 ```
 
 ## Prerequisites
