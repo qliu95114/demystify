@@ -4,16 +4,17 @@ Transform any PDF document into a bilingual side-by-side HTML reader with naviga
 
 ## Installation
 
-Install the skill using the Agent Skills CLI:
+Install the skill from this GitHub repository:
 
 ```bash
-npx skill -y install D:/Source_Git/demystify/skills/pdf-bilingual-translator
+npx skill -y install https://github.com/qliu95114/demystify.git --path skills/pdf-bilingual-translator
 ```
 
-Or from a GitHub repository:
+Or clone and install locally:
 
 ```bash
-npx skill -y install https://github.com/your-org/pdf-bilingual-translator
+git clone https://github.com/qliu95114/demystify.git
+npx skill -y install ./demystify/skills/pdf-bilingual-translator
 ```
 
 ## Prerequisites
