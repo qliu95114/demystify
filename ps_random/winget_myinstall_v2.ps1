@@ -52,7 +52,8 @@ $Catalog = [ordered]@{
         @{ Id = "PuTTY.PuTTY";                    Name = "PuTTY" }
         @{ Id = "WinSCP.WinSCP";                  Name = "WinSCP" }
         @{ Id = "Microsoft.Sysinternals.Suite";    Name = "Sysinternals Suite" }
-    )
+        @{ Id = "Microsoft.WindowsApp";            Name = "Windows App" }
+    )    
     "Network & Debugging Tools" = @(
         @{ Id = "WiresharkFoundation.Wireshark"; Name = "Wireshark" }
         @{ Id = "Telerik.Fiddler.Classic";    Name = "Fiddler Classic" }
