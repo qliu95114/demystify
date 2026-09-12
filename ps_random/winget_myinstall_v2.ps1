@@ -21,16 +21,17 @@ $Catalog = [ordered]@{
         @{ Id = "Microsoft.PowerShell";       Name = "PowerShell 7" }
         @{ Id = "Git.Git";                    Name = "Git" }
         @{ Id = "Microsoft.VisualStudioCode"; Name = "VS Code" }
-        @{ Id = "Python.Python.3.12";         Name = "Python 3.12" }
+        @{ Id = "Python.Python.3.14";         Name = "Python 3.14" }
         @{ Id = "GoLang.Go";                  Name = "Go" }
         @{ Id = "Hashicorp.Terraform";        Name = "Terraform" }
         @{ Id = "Microsoft.NuGet";            Name = "NuGet" }
     )
     "AI Coding Assistants" = @(
-        @{ Id = "Tencent.CodeBuddy";          Name = "Tencent CodeBuddy" }
-        @{ Id = "Anthropic.ClaudeCode";       Name = "Claude Code" }
-        @{ Id = "github.copilot";             Name = "GitHub Copilot" }
-    )
+        @{ Id = "Tencent.WorkBuddy";          Name = "Tencent WorkBuddy" }
+        #@{ Id = "Anthropic.ClaudeCode";       Name = "Claude Code" }
+        @{ Id = "GitHub.Copilot";             Name = "GitHub Copilot" }
+        @{ Id = "GitHub.CopilotApp";          Name = "GitHub Copilot App" }
+        
     ".NET Runtimes" = @(
         @{ Id = "Microsoft.DotNet.DesktopRuntime.8"; Name = ".NET Desktop Runtime 8" }
         @{ Id = "Microsoft.DotNet.Runtime.8";        Name = ".NET Runtime 8" }
@@ -51,8 +52,8 @@ $Catalog = [ordered]@{
         @{ Id = "Microsoft.Sysinternals.Suite";    Name = "Sysinternals Suite" }
     )
     "Network & Debugging Tools" = @(
-        @{ Id = "Telerik.Fiddler.Classic";    Name = "Fiddler Classic" }
         @{ Id = "WiresharkFoundation.Wireshark"; Name = "Wireshark" }
+        @{ Id = "Telerik.Fiddler.Classic";    Name = "Fiddler Classic" }
         @{ Id = "Insomnia.Insomnia";          Name = "Insomnia" }
     )
     "Database Tools" = @(
