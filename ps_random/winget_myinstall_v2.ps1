@@ -25,6 +25,7 @@ $Catalog = [ordered]@{
         @{ Id = "GoLang.Go";                  Name = "Go" }
         @{ Id = "Hashicorp.Terraform";        Name = "Terraform" }
         @{ Id = "Microsoft.NuGet";            Name = "NuGet" }
+        @{ Id = "OpenJS.NodeJS";              Name = "Node.js" }
     )
     "AI Coding Assistants" = @(
         @{ Id = "Tencent.WorkBuddy";          Name = "Tencent WorkBuddy" }
