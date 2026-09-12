@@ -1,6 +1,14 @@
-# Winget Interactive Installer - TUI Checkbox Menu
+# Winget Interactive Installer - TUI Checkbox Menu  (v2.1)
 # Navigate: Arrow Keys | Toggle: Space | Select All: A | None: N | Install: Enter | Quit: Esc
 # On a category row, Space toggles all packages in that group.
+#
+# v2.1 changes:
+#   a. Self-elevation: re-launches itself as Administrator if not already elevated.
+#   b. Enables winget setting "InstallerHashOverride" at startup.
+#   c. New "Microsoft Store Apps" category - installed with the msstore parameter
+#      set: --source msstore --accept-package-agreements --accept-source-agreements
+#   d. All non-msstore installs now append --ignore-security-hash.
+#   e. PowerShell Modules are selectable in the menu (installed via Install-Module).
 
 # ============================================================================
 # Package Catalog
@@ -53,6 +61,7 @@ $Catalog = [ordered]@{
         @{ Id = "WinSCP.WinSCP";                  Name = "WinSCP" }
         @{ Id = "Microsoft.Sysinternals.Suite";    Name = "Sysinternals Suite" }
         @{ Id = "Microsoft.WindowsApp";            Name = "Windows App" }
+        @{ Id = "Microsoft.Office";                Name = "Microsoft Office" }
     )    
     "Network & Debugging Tools" = @(
         @{ Id = "WiresharkFoundation.Wireshark"; Name = "Wireshark" }
@@ -73,6 +82,17 @@ $Catalog = [ordered]@{
     )
 }
 
+# ----------------------------------------------------------------------------
+# Microsoft Store Catalog
+# Installed with a DIFFERENT winget parameter set (Store product IDs, not repo IDs):
+#   winget install --id <StoreId> --source msstore --accept-package-agreements --accept-source-agreements
+# ----------------------------------------------------------------------------
+$MsStoreCatalog = [ordered]@{
+    "Microsoft Store Apps" = @(
+        @{ Id = "9MSPC6MP8FM4";  Name = "Microsoft Whiteboard" }
+    )
+}
+
 $PSModules = @(
     @{ Name = "AzureAd";         Desc = "Azure Active Directory" }
     @{ Name = "Microsoft.Graph"; Desc = "Microsoft Graph" }
@@ -87,20 +107,52 @@ $PSModules = @(
 function Build-MenuItems {
     $items = [System.Collections.ArrayList]::new()
     $first = $true
-    foreach ($cat in $script:Catalog.Keys) {
-        if (-not $first) { [void]$items.Add(@{ Type = 'Blank' }) }
-        $first = $false
-        [void]$items.Add(@{ Type = 'Category'; Name = $cat })
-        foreach ($pkg in $script:Catalog[$cat]) {
+
+    # Two sources: the regular winget repo, and the Microsoft Store (different CLI args)
+    $sources = @(
+        @{ Data = $script:Catalog;        Source = 'winget'  }
+        @{ Data = $script:MsStoreCatalog; Source = 'msstore' }
+    )
+
+    foreach ($entry in $sources) {
+        $catData = $entry.Data
+        $src     = $entry.Source
+        foreach ($cat in $catData.Keys) {
+            if (-not $first) { [void]$items.Add(@{ Type = 'Blank' }) }
+            $first = $false
+            [void]$items.Add(@{ Type = 'Category'; Name = $cat; Source = $src })
+            foreach ($pkg in $catData[$cat]) {
+                [void]$items.Add(@{
+                    Type     = 'Package'
+                    Name     = $pkg.Name
+                    Id       = $pkg.Id
+                    Category = $cat
+                    Source   = $src
+                    Selected = $false
+                })
+            }
+        }
+    }
+
+    # PowerShell modules: selectable too, but installed with Install-Module (not winget)
+    if ($script:PSModules.Count -gt 0) {
+        $modCat = "PowerShell Modules"
+        [void]$items.Add(@{ Type = 'Blank' })
+        [void]$items.Add(@{ Type = 'Category'; Name = $modCat; Source = 'psmodule' })
+        foreach ($mod in $script:PSModules) {
             [void]$items.Add(@{
                 Type     = 'Package'
-                Name     = $pkg.Name
-                Id       = $pkg.Id
-                Category = $cat
+                Name     = $mod.Name
+                Id       = $mod.Name
+                Desc     = $mod.Desc
+                Repo     = $mod.Repo
+                Category = $modCat
+                Source   = 'psmodule'
                 Selected = $false
             })
         }
     }
+
     return $items
 }
 
@@ -175,8 +227,13 @@ function Render-Menu {
             'Package' {
                 $chk = if ($item.Selected) { "[X]" } else { "[ ]" }
                 $ptr = if ($cur) { "   > " } else { "     " }
-                $lbl = "$ptr$chk $($item.Name)"
-                $id  = $item.Id
+                $tag = switch ($item.Source) {
+                    'msstore'  { " [Store]" }
+                    'psmodule' { " [Module]" }
+                    default    { "" }
+                }
+                $lbl = "$ptr$chk $($item.Name)$tag"
+                $id  = if ($item.Source -eq 'psmodule') { $item.Desc } else { $item.Id }
                 $gap = [Math]::Max(1, $Width - $lbl.Length - $id.Length)
                 $line = "$lbl$(' ' * $gap)$id"
                 if ($cur) {
@@ -319,6 +376,20 @@ function Show-CheckboxMenu {
 # ============================================================================
 # Install selected packages
 # ============================================================================
+function Install-PSModuleItem {
+    param([hashtable]$Module)
+    $p = @{ Name = $Module.Name; Force = $true; ErrorAction = 'Stop' }
+    if ($Module.Repo) { $p.Repository = $Module.Repo }
+    try {
+        Install-Module @p | Out-Null
+        return $true
+    }
+    catch {
+        Write-Host $($_.Exception.Message) -ForegroundColor DarkRed
+        return $false
+    }
+}
+
 function Install-WingetPackages {
     param([array]$Packages)
     if ($Packages.Count -eq 0) {
@@ -354,8 +425,29 @@ function Install-WingetPackages {
         $i = $ok + $fail + 1
         Write-Host "  [$i/$($Packages.Count)] " -NoNewline -ForegroundColor DarkGray
         Write-Host "$($pkg.Name) " -NoNewline -ForegroundColor Cyan
-        winget install --id $pkg.Id -e --accept-package-agreements --accept-source-agreements --silent 2>$null
-        if ($LASTEXITCODE -eq 0) {
+
+        $code = 0
+        switch ($pkg.Source) {
+            'msstore' {
+                # Microsoft Store apps: different parameter set, no --ignore-security-hash
+                Write-Host "[msstore] " -NoNewline -ForegroundColor Magenta
+                winget install --id $pkg.Id -e --source msstore --accept-package-agreements --accept-source-agreements 2>$null
+                $code = $LASTEXITCODE
+            }
+            'psmodule' {
+                # PowerShell modules: Install-Module, not winget
+                Write-Host "[module] " -NoNewline -ForegroundColor Magenta
+                if (Install-PSModuleItem -Module $pkg) { $code = 0 } else { $code = 1 }
+            }
+            default {
+                # Regular winget repo: always allow a stale CDN installer hash
+                Write-Host "[winget] " -NoNewline -ForegroundColor DarkGray
+                winget install --id $pkg.Id -e --accept-package-agreements --accept-source-agreements --silent --ignore-security-hash 2>$null
+                $code = $LASTEXITCODE
+            }
+        }
+
+        if ($code -eq 0) {
             Write-Host "OK" -ForegroundColor Green
             $ok++
         } else {
@@ -393,27 +485,91 @@ function Show-PostInstall {
         Write-Host "`n  Installing PowerShell Modules..." -ForegroundColor Cyan
         foreach ($mod in $script:PSModules) {
             Write-Host "    $($mod.Name)... " -NoNewline -ForegroundColor Gray
-            $p = @{ Name = $mod.Name; Force = $true }
-            if ($mod.Repo) { $p.Repository = $mod.Repo }
-            try {
-                Install-Module @p -ErrorAction Stop
+            if (Install-PSModuleItem -Module $mod) {
                 Write-Host "OK" -ForegroundColor Green
-            } catch {
+            } else {
                 Write-Host "FAILED" -ForegroundColor Red
             }
         }
     }
     if ($ch -match '[34]') {
         Write-Host "`n  Upgrading all winget packages..." -ForegroundColor Cyan
-        winget upgrade --all --accept-package-agreements --accept-source-agreements --silent
+        winget upgrade --all --accept-package-agreements --accept-source-agreements --silent --ignore-security-hash
+    }
+}
+
+# ============================================================================
+# Prerequisites (a) Administrator  (b) InstallerHashOverride
+# ============================================================================
+function Assert-RunAsAdmin {
+    $principal = [Security.Principal.WindowsPrincipal]::new(
+        [Security.Principal.WindowsIdentity]::GetCurrent())
+
+    if ($principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
+        Write-Host "  [OK] Running with Administrator privileges." -ForegroundColor Green
+        return
+    }
+
+    Write-Host "  [!] Administrator privileges required - requesting elevation..." -ForegroundColor Yellow
+
+    if ([string]::IsNullOrWhiteSpace($PSCommandPath)) {
+        Write-Host "  [X] Cannot self-elevate: script path unknown." -ForegroundColor Red
+        Write-Host "      Please re-run this script from an elevated (Administrator) shell." -ForegroundColor Red
+        exit 1
+    }
+
+    $exe  = (Get-Process -Id $PID).Path
+    $argl = "-NoProfile -ExecutionPolicy Bypass -NoExit -File `"$PSCommandPath`""
+    try {
+        Start-Process -FilePath $exe -ArgumentList $argl -Verb RunAs `
+                      -WorkingDirectory $PWD.Path -ErrorAction Stop
+    }
+    catch {
+        Write-Host "  [X] Elevation cancelled or failed: $($_.Exception.Message)" -ForegroundColor Red
+        exit 1
+    }
+
+    # Non-elevated instance hands over to the elevated one
+    exit 0
+}
+
+function Enable-InstallerHashOverride {
+    if (-not (Get-Command winget -ErrorAction SilentlyContinue)) {
+        Write-Host "  [X] winget not found. Install 'App Installer' from the Microsoft Store." -ForegroundColor Red
+        exit 1
+    }
+    Write-Host "  Enabling winget setting 'InstallerHashOverride'... " -NoNewline -ForegroundColor Gray
+    $out = & winget settings --enable InstallerHashOverride 2>&1
+    if ($LASTEXITCODE -eq 0) {
+        Write-Host "OK" -ForegroundColor Green
+    }
+    else {
+        Write-Host "FAILED" -ForegroundColor Yellow
+        Write-Host "       (older winget builds lack this setting; --ignore-security-hash is still passed)" -ForegroundColor DarkGray
+        if ($out) { Write-Host "       $out" -ForegroundColor DarkGray }
     }
 }
 
 # ============================================================================
 # Entry Point
 # ============================================================================
+Assert-RunAsAdmin
+Enable-InstallerHashOverride
+
 $selected = Show-CheckboxMenu
 Install-WingetPackages -Packages $selected
 if ($selected.Count -gt 0) {
     Show-PostInstall
 }
+
+# ============================================================================
+# Reference
+# ============================================================================
+# Store-only app (not in the winget repo):
+#   winget install --id 9MSPC6MP8FM4 --source msstore --accept-package-agreements --accept-source-agreements
+#
+# Repo app whose installer hash on the vendor CDN is stale:
+#   winget install --id Microsoft.Office -e --ignore-security-hash
+#
+# Find a Store product ID:
+#   winget search "<name>" --source msstore --accept-source-agreements
