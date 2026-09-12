@@ -31,7 +31,8 @@ $Catalog = [ordered]@{
         #@{ Id = "Anthropic.ClaudeCode";       Name = "Claude Code" }
         @{ Id = "GitHub.Copilot";             Name = "GitHub Copilot" }
         @{ Id = "GitHub.CopilotApp";          Name = "GitHub Copilot App" }
-        
+        @{ Id = "GitHub.cli";                 Name = "GitHub CLI" }
+    )
     ".NET Runtimes" = @(
         @{ Id = "Microsoft.DotNet.DesktopRuntime.8"; Name = ".NET Desktop Runtime 8" }
         @{ Id = "Microsoft.DotNet.Runtime.8";        Name = ".NET Runtime 8" }
