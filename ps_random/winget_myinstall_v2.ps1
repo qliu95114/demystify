@@ -1,6 +1,12 @@
-# Winget Interactive Installer - TUI Checkbox Menu  (v2.1)
+# Winget Interactive Installer - TUI Checkbox Menu  (v2.2)
 # Navigate: Arrow Keys | Toggle: Space | Select All: A | None: N | Install: Enter | Quit: Esc
 # On a category row, Space toggles all packages in that group.
+#
+# v2.2 changes:
+#   a. No more whole-script self-elevation. The script runs with normal user rights;
+#      only the winget machine-wide configuration is run through a short-lived
+#      elevated child process (one UAC prompt, then it hands control straight back).
+#   b. PowerShell modules install to CurrentUser scope (no admin needed).
 #
 # v2.1 changes:
 #   a. Self-elevation: re-launches itself as Administrator if not already elevated.
@@ -378,7 +384,8 @@ function Show-CheckboxMenu {
 # ============================================================================
 function Install-PSModuleItem {
     param([hashtable]$Module)
-    $p = @{ Name = $Module.Name; Force = $true; ErrorAction = 'Stop' }
+    # CurrentUser scope: works without Administrator rights.
+    $p = @{ Name = $Module.Name; Force = $true; Scope = 'CurrentUser'; ErrorAction = 'Stop' }
     if ($Module.Repo) { $p.Repository = $Module.Repo }
     try {
         Install-Module @p | Out-Null
@@ -468,7 +475,7 @@ function Show-PostInstall {
     Write-Host "  Post-Install Options" -ForegroundColor Cyan
     Write-Host "  ============================================" -ForegroundColor DarkGray
     Write-Host ""
-    Write-Host "  [1] Enable .NET Framework 3.5"
+    Write-Host "  [1] Enable .NET Framework 3.5 (needs an elevated shell)"
     Write-Host "  [2] Install PowerShell Modules (Az, Graph, AzureAD, MSAL)"
     Write-Host "  [3] Upgrade all winget packages"
     Write-Host "  [4] All of the above"
@@ -499,61 +506,81 @@ function Show-PostInstall {
 }
 
 # ============================================================================
-# Prerequisites (a) Administrator  (b) InstallerHashOverride
+# Scoped elevation helper
+#
+# The script itself never elevates. This runs ONE command in a short-lived
+# elevated child process (UAC prompt), waits for it, then returns to the
+# non-elevated script. Only used for winget's machine-wide configuration.
 # ============================================================================
-function Assert-RunAsAdmin {
+function Test-IsAdmin {
     $principal = [Security.Principal.WindowsPrincipal]::new(
         [Security.Principal.WindowsIdentity]::GetCurrent())
-
-    if ($principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
-        Write-Host "  [OK] Running with Administrator privileges." -ForegroundColor Green
-        return
-    }
-
-    Write-Host "  [!] Administrator privileges required - requesting elevation..." -ForegroundColor Yellow
-
-    if ([string]::IsNullOrWhiteSpace($PSCommandPath)) {
-        Write-Host "  [X] Cannot self-elevate: script path unknown." -ForegroundColor Red
-        Write-Host "      Please re-run this script from an elevated (Administrator) shell." -ForegroundColor Red
-        exit 1
-    }
-
-    $exe  = (Get-Process -Id $PID).Path
-    $argl = "-NoProfile -ExecutionPolicy Bypass -NoExit -File `"$PSCommandPath`""
-    try {
-        Start-Process -FilePath $exe -ArgumentList $argl -Verb RunAs `
-                      -WorkingDirectory $PWD.Path -ErrorAction Stop
-    }
-    catch {
-        Write-Host "  [X] Elevation cancelled or failed: $($_.Exception.Message)" -ForegroundColor Red
-        exit 1
-    }
-
-    # Non-elevated instance hands over to the elevated one
-    exit 0
+    return $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
 }
 
+function Invoke-AsAdmin {
+    param([scriptblock]$ScriptBlock)
+
+    # Already elevated (user launched the shell as Administrator): run in place.
+    if (Test-IsAdmin) {
+        $out = & $ScriptBlock 2>&1
+        return @{ ExitCode = $LASTEXITCODE; Output = @($out) }
+    }
+
+    $log = Join-Path $env:TEMP ("wgi-elevated-{0}.log" -f [guid]::NewGuid().ToString('N'))
+    $child = @"
+`$ErrorActionPreference = 'Continue'
+& { $($ScriptBlock.ToString()) } *>&1 | Out-File -LiteralPath '$log' -Encoding utf8
+exit `$LASTEXITCODE
+"@
+    $enc   = [Convert]::ToBase64String([System.Text.Encoding]::Unicode.GetBytes($child))
+    $psExe = (Get-Process -Id $PID).Path
+
+    try {
+        $p = Start-Process -FilePath $psExe -WindowStyle Minimized -Verb RunAs -Wait -PassThru `
+                           -ArgumentList "-NoProfile -NoLogo -ExecutionPolicy Bypass -EncodedCommand $enc" `
+                           -ErrorAction Stop
+        $code = $p.ExitCode
+    }
+    catch {
+        Write-Host "FAILED" -ForegroundColor Yellow
+        Write-Host "       (elevation cancelled or denied: $($_.Exception.Message))" -ForegroundColor DarkGray
+        return @{ ExitCode = 1; Output = $null }
+    }
+
+    $out = $null
+    if (Test-Path -LiteralPath $log) {
+        $out = @(Get-Content -LiteralPath $log)
+        Remove-Item -LiteralPath $log -Force -ErrorAction SilentlyContinue
+    }
+    return @{ ExitCode = $code; Output = $out }
+}
+
+# ============================================================================
+# winget global configuration (the only part that needs Administrator)
+# ============================================================================
 function Enable-InstallerHashOverride {
     if (-not (Get-Command winget -ErrorAction SilentlyContinue)) {
         Write-Host "  [X] winget not found. Install 'App Installer' from the Microsoft Store." -ForegroundColor Red
         exit 1
     }
-    Write-Host "  Enabling winget setting 'InstallerHashOverride'... " -NoNewline -ForegroundColor Gray
-    $out = & winget settings --enable InstallerHashOverride 2>&1
-    if ($LASTEXITCODE -eq 0) {
+    Write-Host "  Enabling winget setting 'InstallerHashOverride' (elevated)... " -NoNewline -ForegroundColor Gray
+    $r = Invoke-AsAdmin { winget settings --enable InstallerHashOverride }
+    if ($r.ExitCode -eq 0) {
         Write-Host "OK" -ForegroundColor Green
     }
     else {
         Write-Host "FAILED" -ForegroundColor Yellow
         Write-Host "       (older winget builds lack this setting; --ignore-security-hash is still passed)" -ForegroundColor DarkGray
-        if ($out) { Write-Host "       $out" -ForegroundColor DarkGray }
+        foreach ($line in $r.Output) { Write-Host "       $line" -ForegroundColor DarkGray }
     }
 }
 
 # ============================================================================
-# Entry Point
+# Entry Point - runs with normal user rights
 # ============================================================================
-Assert-RunAsAdmin
+Write-Host "  Running as $([Security.Principal.WindowsIdentity]::GetCurrent().Name) " -NoNewline -ForegroundColor DarkGray
+Write-Host "(no elevation)" -ForegroundColor DarkGray
 Enable-InstallerHashOverride
 
 $selected = Show-CheckboxMenu
