@@ -568,6 +568,7 @@ foreach ($File in $Files) {
                 "-c:s", $SubtitleCodec,
                 "-metadata:s:s:0", "language=chi",
                 "-metadata:s:s:0", "title=简体中文",
+                "-disposition:s:0", "default",
                 "-y",
                 $OutputFile
             ) -LogFile $LogMerge -Description "Merge Subtitle"

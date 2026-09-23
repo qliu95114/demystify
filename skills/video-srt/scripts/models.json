@@ -1,0 +1,46 @@
+{
+  "models": [
+    {
+      "name": "sensevoice-int8",
+      "backends": ["sensevoice"],
+      "url": "https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-sense-voice-zh-en-ja-ko-yue-int8-2024-07-17.tar.bz2",
+      "archive": true,
+      "optional_music": false,
+      "files": {
+        "sherpa-onnx-sense-voice-zh-en-ja-ko-yue-int8-2024-07-17/model.int8.onnx": "c71f0ce00bec95b07744e116345e33d8cbbe08cef896382cf907bf4b51a2cd51",
+        "sherpa-onnx-sense-voice-zh-en-ja-ko-yue-int8-2024-07-17/tokens.txt": "f449eb28dc567533d7fa59be34e2abca8784f771850c78a47fb731a31429a1dc"
+      }
+    },
+    {
+      "name": "whisper-small-int8",
+      "backends": ["whisper"],
+      "url": "https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-whisper-small.tar.bz2",
+      "archive": true,
+      "optional_music": false,
+      "files": {
+        "sherpa-onnx-whisper-small/small-encoder.int8.onnx": "4cbe7b22fa9026b843b60a68640c747de05bafb1a11b57edc0e66c232d9f33a9",
+        "sherpa-onnx-whisper-small/small-decoder.int8.onnx": "acad50b5c782696e91b55914cc5ab4f756f1532f76e22aa6fc615f39fb69a8ee",
+        "sherpa-onnx-whisper-small/small-tokens.txt": "b34b360dbb493e781e479794586d661700670d65564001f23024971d1f2fa126"
+      }
+    },
+    {
+      "name": "silero-vad",
+      "url": "https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/silero_vad.onnx",
+      "archive": false,
+      "optional_music": false,
+      "files": {
+        "silero_vad.onnx": "9e2449e1087496d8d4caba907f23e0bd3f78d91fa552479bb9c23ac09cbb1fd6"
+      }
+    },
+    {
+      "name": "zipformer-audio-tagging",
+      "url": "https://github.com/k2-fsa/sherpa-onnx/releases/download/audio-tagging-models/sherpa-onnx-zipformer-small-audio-tagging-2024-04-15.tar.bz2",
+      "archive": true,
+      "optional_music": true,
+      "files": {
+        "sherpa-onnx-zipformer-small-audio-tagging-2024-04-15/model.int8.onnx": "69304b8a1b96bbe6b7d16c24079f0732c65faf3568a14cb82a8238c709afe76c",
+        "sherpa-onnx-zipformer-small-audio-tagging-2024-04-15/class_labels_indices.csv": "cdd1049833c4b86127c2773ac0d14a2754b6a6d0d1798002ed5c66e699708429"
+      }
+    }
+  ]
+}
