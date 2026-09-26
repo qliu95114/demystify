@@ -8,9 +8,38 @@
 ## Scripts
 1. ffmpeg.powershell.ps1 : batch file encoding from source folder to destination folder with selected profile (defined in ffmpeg_profile.json)
 1. ffmpeg_wav2mp3.ps1 : convert *.wav to *.mp3 from source folder. 
-1. video_header_trail_remove.ps1 : remove vidoe head/trail x seconds to save disk space, to avoid blank screen problem. It will re-encoding the file. 
+1. Video_Header_Trail_remove.ps1 : re-encode video while removing its header/trailer (or middle with `-revert`), retaining and synchronizing a selected embedded text subtitle track.
 1. screencapture_sample.txt : sample command of archiving "Playing Video" to local MP4 video file
 1. getExtendedFileProperties.ps1 : Function Get-ExtendedProperties to read file meta data
+
+## Sample - Cut video and subtitles
+
+```powershell
+.\Video_Header_Trail_remove.ps1 -filename "D:\Input\video.mkv" `
+    -outputfolder "D:\Output" -logfolder "D:\Logs" `
+    -startsecs 00:01:30 -lastsecs 00:02:00 -SubtitleLanguage "chi"
+```
+
+Subtitles are automatically selected using the same language, SRT, forced, and default preferences as `Batch-Transcode-Videos.ps1`. Use `-SubtitleStreamIndex 3` to select an **absolute ffprobe stream index**, or `-SkipSubtitles` for video/audio only. The default preferred language is `chi`.
+
+Keep `help_class.ps1` alongside both scripts. This single shared helper file provides UTF-8 stream probing, audio/subtitle selection, and FFmpeg process launching. Both scripts support Windows PowerShell 5.1 and PowerShell Core (7+) on Windows. Save scripts containing Chinese text as UTF-8 with BOM so Windows PowerShell 5.1 reads them correctly.
+
+Audio selection works for both normal and `-revert` cuts:
+
+```powershell
+# Append to your existing cutting command:
+-AudioStreamIndex 2
+# Or automatically select using source codec, channel count, and language preferences:
+-AudioCodec aac -AudioChannels 2 -AudioLanguage chi
+# Enable automatic selection with default preferences (AAC, 2 channels, any language):
+-AudioStreamIndex -1
+```
+
+Indexes are **absolute ffprobe stream indexes**, not audio-track ordinals. A nonnegative `-AudioStreamIndex` overrides preferences; invalid indexes fail before encoding. With no audio-selection options, the first audio track is used as before. Automatic selection shares the transcoder's scoring: codec match +100, channel count +50, language tag match +30, and bitrate up to +10. These are preferences, not strict filters, so a codec/channel match can outweigh the requested language. Videos without audio remain supported. Bitrate estimation and retained audio metadata follow the selected stream. `-AudioCodec` and `-AudioChannels` select the **input** track only; output remains AAC with the existing bitrate cap and no new downmix behavior.
+
+Cues are clipped to the retained segments, shifted to the output timeline, and merged as selectable MP4 subtitles (`mov_text`). With `-revert`, header and tail cues follow the joined video. Cues crossing cut boundaries are clipped; cues entirely inside removed sections are discarded. Language/title metadata is retained. Text formats such as SRT, ASS/SSA, WebVTT, and MP4 text subtitles are supported, but advanced styling is not preserved by the SRT conversion. External subtitle files and bitmap subtitles (PGS/DVD, which require OCR) are not supported. Videos without supported subtitles are still processed.
+
+Subtitle extraction/merge diagnostics are written beside the encoding log as `*.cut.log.subtitle.log` and `*.cut.log.subtitle.log.merge.log`. Failures include the FFmpeg exit code and log details rather than silently using unshifted subtitles. FFmpeg runs without keyboard input, and output with no video is rejected even if FFmpeg returns success. Process-level logging avoids treating FFmpeg's normal stderr output as PowerShell errors on Windows PowerShell 5.1.
 
 ## Sample - Screen capture
 
@@ -136,9 +165,18 @@ ffprobe -v quiet -print_format json -show_streams input.mp4
 
 ---
 
-# Transcode-Video.ps1 - Universal Batch Transcoding Script
+# Batch-Transcode-Videos.ps1 - Batch Transcoding Script
 
 Batch convert video files with automatic stream detection, trimming, and subtitle support.
+
+Renamed from `Transcode-Video.ps1` to reflect that it processes a folder of videos. Update existing commands to the new name; parameters are unchanged.
+
+Both `Batch-Transcode-Videos.ps1` and `Video_Header_Trail_remove.ps1` run under **Windows PowerShell 5.1** (`powershell.exe`) and **PowerShell 7+** (`pwsh.exe`) on Windows. Keep `help_class.ps1` in the same folder.
+
+```powershell
+powershell.exe -NoProfile -File .\Batch-Transcode-Videos.ps1 -SourceDir "D:\Input" -TargetDir "D:\Output"
+pwsh.exe -NoProfile -File .\Batch-Transcode-Videos.ps1 -SourceDir "D:\Input" -TargetDir "D:\Output"
+```
 
 ## Features
 
@@ -153,7 +191,7 @@ Batch convert video files with automatic stream detection, trimming, and subtitl
 
 ```powershell
 # Simple auto-detection (recommended)
-.\Transcode-Video.ps1 -SourceDir "D:\Input" -TargetDir "D:\Output"
+.\Batch-Transcode-Videos.ps1 -SourceDir "D:\Input" -TargetDir "D:\Output"
 ```
 
 The script automatically detects the best audio and subtitle streams.
@@ -162,7 +200,7 @@ The script automatically detects the best audio and subtitle streams.
 
 ```powershell
 # Trim intro/outro with auto-detection (Chinese subtitle, AAC stereo)
-.\Transcode-Video.ps1 `
+.\Batch-Transcode-Videos.ps1 `
     -SourceDir "D:\Input" `
     -TargetDir "D:\Output" `
     -HeaderCutSeconds 90 `
@@ -172,7 +210,7 @@ The script automatically detects the best audio and subtitle streams.
     -AudioChannels 2
 
 # Auto-detect English subtitle with 5.1 audio
-.\Transcode-Video.ps1 `
+.\Batch-Transcode-Videos.ps1 `
     -SourceDir "D:\Input" `
     -TargetDir "D:\Output" `
     -SubtitleLanguage "eng" `
@@ -180,14 +218,14 @@ The script automatically detects the best audio and subtitle streams.
     -AudioChannels 6
 
 # Manual stream selection (when auto-detection fails)
-.\Transcode-Video.ps1 `
+.\Batch-Transcode-Videos.ps1 `
     -SourceDir "D:\Input" `
     -TargetDir "D:\Output" `
     -AudioStreamIndex 2 `
     -SubtitleStreamIndex 7
 
 # Custom quality settings
-.\Transcode-Video.ps1 `
+.\Batch-Transcode-Videos.ps1 `
     -SourceDir "D:\Input" `
     -TargetDir "D:\Output" `
     -VideoBitrate 3000 `
@@ -230,7 +268,7 @@ When `AudioStreamIndex=-1` or `SubtitleStreamIndex=-1`, the script auto-detects 
 
 **Example:** For English subtitles with 5.1 audio:
 ```powershell
-.\Transcode-Video.ps1 `
+.\Batch-Transcode-Videos.ps1 `
     -SourceDir "D:\Input" `
     -TargetDir "D:\Output" `
     -SubtitleLanguage "eng" `
