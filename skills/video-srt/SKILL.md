@@ -1,6 +1,6 @@
 ---
 name: video-srt
-description: Generate same-named SRT subtitles from videos using local CPU SenseVoice or multilingual Whisper. Supports Chinese, Cantonese, English, Japanese, Korean, French, German, Spanish, Portuguese and Italian. Checks and optionally installs Windows prerequisites, extracts M4A, and uses VAD/music detection without cloud uploads or repeated LLM calls. Use for video to SRT, local ASR, batch subtitles, 视频转字幕, or 语音转文字.
+description: Generate same-named SRT subtitles from videos using local SenseVoice (CPU, Intel NPU, Intel GPU, or AMD GPU) or multilingual Whisper (CPU). Supports Chinese, Cantonese, English, Japanese, Korean, French, German, Spanish, Portuguese and Italian. Checks and optionally installs Windows prerequisites, extracts M4A, and uses VAD/music detection without cloud uploads or repeated LLM calls. Use for video to SRT, local ASR, batch subtitles, 视频转字幕, or 语音转文字.
 ---
 
 # Video SRT
@@ -26,6 +26,12 @@ changing the original video and run local models to create subtitles.
 3. Let the script run through all files. Do not ask an LLM to process each chunk.
    It extracts M4A, runs CPU SenseVoice or Whisper + Silero VAD, detects music/speech with
    Zipformer, recovers likely missed vocal regions, and writes video-aligned SRT.
+   CPU remains the default. SenseVoice supports explicit `-Device npu`,
+   `intel-gpu`, or `amd-gpu`. Intel targets use OpenVINO; AMD uses DirectML.
+   Audio features, CTC, VAD and music detection remain on CPU. Accelerator paths
+   verify their exact target and never silently assign model nodes to CPU.
+   Whisper acceleration and other NPU vendors are unsupported. Compilation can
+   take time and an accelerator is not necessarily faster than CPU.
 4. For a long batch, run one persistent process and retain its log. Do not run
    concurrent copies against the same output files. Rerun the same command after
    interruption to reuse matching checkpoints; never claim completion just
@@ -33,6 +39,9 @@ changing the original video and run local models to create subtitles.
 5. Check the exit code, per-file manifests, nonempty SRT for speech-containing
    videos, and reported `no_speech`/warnings. Summarize actual outputs and any
    uncertain timing. Never claim the recognized words are manually verified.
+   For performance comparisons, use fresh output directories, the same audio
+   track/settings, and report cold compilation separately from warm model-cache
+   runs. Completed-output/checkpoint reuse is not an inference benchmark.
 
 ## Run
 
@@ -55,6 +64,23 @@ French (automatically uses Whisper):
 ```powershell
 pwsh -NoProfile -File .\scripts\Invoke-VideoSrt.ps1 `
   -InputPath 'D:\Videos\french.mkv' -Language fr -InstallMissing
+```
+
+Intel NPU (SenseVoice only, optional dependencies installed with consent):
+
+```powershell
+pwsh -NoProfile -File .\scripts\Invoke-VideoSrt.ps1 `
+  -InputPath 'D:\Videos\episode.mkv' -Language zh -Device npu -InstallMissing
+```
+
+Intel or AMD GPU:
+
+```powershell
+pwsh -NoProfile -File .\scripts\Invoke-VideoSrt.ps1 `
+  -InputPath 'D:\Videos\episode.mkv' -Language zh -Device intel-gpu -InstallMissing
+
+pwsh -NoProfile -File .\scripts\Invoke-VideoSrt.ps1 `
+  -InputPath 'D:\Videos\episode.mkv' -Language zh -Device amd-gpu -InstallMissing
 ```
 
 An existing model cache can be imported with `-ModelSourceDir 'D:\Models'`.

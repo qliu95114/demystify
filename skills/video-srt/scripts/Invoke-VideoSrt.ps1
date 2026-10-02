@@ -8,6 +8,10 @@ param(
     [string]$Language = 'auto',
     [ValidateSet('auto', 'sensevoice', 'whisper')]
     [string]$Backend = 'auto',
+    [ValidateSet('cpu', 'npu', 'intel-gpu', 'amd-gpu')]
+    [string]$Device = 'cpu',
+    [ValidateRange(-1, 16)]
+    [int]$GpuDeviceId = -1,
     [ValidateRange(1, 32)]
     [int]$Threads = 4,
     [ValidateRange(0, 100)]
@@ -30,6 +34,7 @@ $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 $Language = $Language.ToLowerInvariant()
 $Backend = $Backend.ToLowerInvariant()
+$Device = $Device.ToLowerInvariant()
 if (-not $RuntimeDir) {
     $RuntimeDir = Join-Path (Split-Path $PSScriptRoot -Parent) '.runtime'
 }
@@ -44,6 +49,8 @@ $setupArguments = @{
     SkipMusic = $SkipMusic
     Backend = $Backend
     Language = $Language
+    Device = $Device
+    GpuDeviceId = $GpuDeviceId
 }
 if ($PythonPath) { $setupArguments.PythonPath = $PythonPath }
 if ($ModelSourceDir) { $setupArguments.ModelSourceDir = $ModelSourceDir }
@@ -57,6 +64,9 @@ $workerArguments = @(
     '--ffprobe', $tools.FFprobe,
     '--language', $Language,
     '--backend', $tools.Backend,
+    '--device', $Device,
+    '--gpu-device-id', "$($tools.AcceleratorId)",
+    '--accelerator-name', "$($tools.AcceleratorName)",
     '--threads', "$Threads",
     '--audio-stream', "$AudioStream",
     '--chunk-seconds', "$ChunkSeconds"

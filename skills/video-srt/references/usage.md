@@ -8,6 +8,7 @@
 | `scripts\Setup-VideoSrt.ps1` | Check/install tools, create isolated environment, prepare models |
 | `scripts\setup_models.py` | Verify runtime/model hashes; import cache or download models safely |
 | `scripts\asr_backends.py` | Shared backend/language routing and validation |
+| `scripts\accelerated_sensevoice.py` | Explicit OpenVINO/DirectML SenseVoice acceleration, fixed-shape masking and CTC |
 | `scripts\models.json` | Public model release URLs and pinned SHA-256 file hashes |
 | `scripts\requirements.txt` | Local CPU Python dependencies |
 | `scripts\transcribe.py` | Media extraction, chunked ASR, music scores, checkpoints and SRT |
@@ -23,6 +24,13 @@ Do not commit models, private transcripts, source media or the virtual environme
 Windows x64; PowerShell 5.1 or 7; CPython 3.11-3.14 x64; FFmpeg and FFprobe.
 Both ASR backends run on CPU, so CUDA, PyTorch and a GPU are not required. Allow several
 GB of RAM and disk for dependencies, models, audio and intermediate results.
+
+SenseVoice additionally supports explicit `-Device npu`, `intel-gpu`, or
+`amd-gpu`. Intel targets use OpenVINO; AMD uses ONNX Runtime DirectML. Optional
+pinned dependencies are installed only when an accelerator is requested with
+`-InstallMissing`. The bundled sherpa-onnx runtime is not redirected; a separate
+adapter executes the same hash-pinned SenseVoice ONNX weights. Whisper and other
+NPU vendors are not supported by this adapter.
 
 ```powershell
 # Install only missing tools/packages/models; no media processing yet.
@@ -64,6 +72,8 @@ do not need the network.
 | `-OutputDirectory` | `.runtime\output` | M4A/SRT/JSON destination, separate from original media |
 | `-Language` | `auto` | `auto`, `zh`, `en`, `ja`, `ko`, `yue`, `fr`, `de`, `es`, `pt`, `it` |
 | `-Backend` | `auto` | Routes `fr/de/es/pt/it` to Whisper, others including `auto` to SenseVoice; can explicitly select `sensevoice` or `whisper` |
+| `-Device` | `cpu` | `cpu`, Intel `npu`, `intel-gpu`, or `amd-gpu`; accelerators are SenseVoice-only and fail explicitly when unavailable |
+| `-GpuDeviceId` | `-1` | Auto-select matching Intel/AMD GPU; override OpenVINO/DirectML adapter index on multi-GPU systems |
 | `-AudioStream` | `0` | Zero-based index among audio streams, not absolute stream index |
 | `-Threads` | `4` | CPU inference threads; lower on a shared/busy machine |
 | `-ChunkSeconds` | `300` | Decode in bounded chunks, with boundary handling/checkpoints |
@@ -118,6 +128,62 @@ Run the same command again to reuse matching completed results/checkpoints.
 Changed input, settings or models must not reuse stale transcription. Duplicate
 source basenames mapping to the same destination are rejected rather than silently
 overwritten. Recursive batches preserve relative directories.
+
+Manifests include `performance` (this invocation's extraction, model load,
+audio decode, analysis and elapsed seconds, plus cached/computed chunk counts)
+and `execution` (actual ASR runtime/device and supporting CPU stages). NPU
+execution also records compilation time, inference time/calls, frame buckets,
+and OpenVINO version. NPU adapter counters cover the loaded model instance;
+in folder runs they accumulate across files. Cached-only runs may have no
+execution record. They are not new device benchmarks.
+
+### Accelerator behavior and benchmarking
+
+```powershell
+pwsh -NoProfile -File .\scripts\Invoke-VideoSrt.ps1 `
+  -InputPath 'D:\Videos\episode.mkv' -Language zh -Device npu `
+  -OutputDirectory 'D:\Benchmarks\npu-cold' -InstallMissing
+```
+
+Only the SenseVoice neural network executes on the selected accelerator. Filterbanks, LFR/CMVN,
+greedy CTC decoding, Silero VAD, Zipformer music detection and FFmpeg stay on CPU.
+`-Threads` still controls the supporting sherpa CPU models, not NPU cores.
+OpenVINO compilation targets the exact NPU or Intel GPU ID and checks
+`EXECUTION_DEVICES`; no AUTO/HETERO or device substitution is allowed. Intel GPU
+uses an FP32 inference hint because the tested default FP16 path returned
+non-finite logits. Each inference is still checked for finite output.
+
+AMD GPU uses DirectML with native `IDXGIFactory1::EnumAdapters1` order. Setup
+matches PCI vendor `0x1002`, records the exact index/name/LUID, and accepts
+`-GpuDeviceId` for an explicit override that is also vendor-checked. Do not use
+`dxdiag` display order as a DirectML index; it can differ. DirectML uses static ONNX derivatives under the runtime
+cache; the original model is not modified. A profiled warm-up must show every
+model node assigned to `DmlExecutionProvider`; any CPU-assigned node is an error.
+
+The dynamic export cannot be passed straight to this NPU compiler. The adapter
+uses batch-one static buckets of 128 and 432 feature frames, zero-padding after
+normalization while retaining each utterance's real length in its attention
+mask and CTC output. Only the mask's Range bound changes to the padded width;
+real lengths are **not** frozen. Oversized utterances fail instead of truncating.
+The existing pipeline's at-most-25-second regions fit these buckets. The
+original ONNX model file is never modified. NPU arithmetic and changed batching
+can change recognition; do not describe it as bit-identical to CPU.
+
+Derived/compiled models are cached under `<RuntimeDir>\openvino-cache`. First
+compilation can take minutes. The adapter selects Intel's reduced compiler
+optimization mode (`optimization-level=0`), because the long attention bucket's
+default optimization can be disproportionately expensive on Meteor Lake.
+This setting is recorded in execution metadata. Compare a cold run and a second invocation using
+the model cache but a **fresh output directory**. Do not use completion reuse or
+`-Force` as a benchmark: matching results are reused even with `-Force`.
+Keep model, language, audio track, threads and music settings identical. RTF is
+wall seconds / media seconds; throughput is its inverse. Compilation, setup,
+preprocessing and CPU supporting models must not be mislabeled NPU inference.
+Wall-clock measurements alone do not demonstrate reduced power consumption.
+
+Older drivers may reject a model or abort inside the native compiler. Update
+the driver manually if appropriate; this skill does not install drivers.
+A failed process must not be reported as successful NPU inference.
 
 M4A is an extracted audio artifact; SRT uses **video playback time**, not
 concatenated speech time. Track delay and container timestamp origins matter.

@@ -1,7 +1,7 @@
 # video-srt scripts
 
 Convert a video or folder of videos into same-named SRT subtitles using local CPU
-speech recognition. The workflow checks prerequisites, extracts M4A audio, runs
+speech recognition, with opt-in Intel NPU, Intel GPU, and AMD GPU support for SenseVoice. The workflow checks prerequisites, extracts M4A audio, runs
 SenseVoice or multilingual Whisper with voice activity and music detection, and writes subtitles aligned
 to the original video's playback timeline.
 
@@ -172,6 +172,45 @@ pwsh -NoProfile -File .\Invoke-VideoSrt.ps1 `
 This permits lossy AAC encoding at 192 kbps for the extracted audio. It does not
 re-encode or change the original video.
 
+### Intel NPU (optional SenseVoice acceleration)
+
+```powershell
+pwsh -NoProfile -File .\Invoke-VideoSrt.ps1 `
+  -InputPath 'D:\Videos\episode.mkv' -Language zh -Device npu `
+  -OutputDirectory 'D:\Benchmarks\npu-cold' -InstallMissing
+```
+
+Requires an Intel NPU visible to OpenVINO and a compatible installed driver.
+Setup installs only the applicable pinned accelerator requirements when authorized.
+The SenseVoice network runs through OpenVINO directly; audio features, CTC
+decoding, VAD and music detection remain on CPU. There is **no silent CPU
+fallback**, and Whisper NPU or other vendors' NPUs are not supported.
+CPU remains the default and does not require OpenVINO.
+
+The adapter uses the same verified ONNX weights with static frame buckets and
+real-length padding masks; it does not rewrite the source model or truncate
+speech. NPU arithmetic can produce different recognition from CPU.
+First model compilation can take minutes. Compiled models are reused from
+`<RuntimeDir>\openvino-cache`; use a **new output directory** for a warm
+inference benchmark, not cached subtitles/checkpoints. Keep audio track, models,
+language, threads and music settings identical for comparisons. NPU is not
+guaranteed faster. See [benchmarking details](../references/usage.md#accelerator-behavior-and-benchmarking).
+
+Intel and AMD GPU targets use the same command shape:
+
+```powershell
+pwsh -NoProfile -File .\Invoke-VideoSrt.ps1 `
+  -InputPath 'D:\Videos\episode.mkv' -Language zh -Device intel-gpu -InstallMissing
+
+pwsh -NoProfile -File .\Invoke-VideoSrt.ps1 `
+  -InputPath 'D:\Videos\episode.mkv' -Language zh -Device amd-gpu -InstallMissing
+```
+
+Intel GPU uses OpenVINO with FP32 inference. AMD GPU uses DirectML and is
+auto-selected from DXGI adapter order; use `-GpuDeviceId` to override the index.
+Both paths verify the execution target and fail instead of silently assigning
+SenseVoice model nodes to CPU. Supporting VAD/music stages remain on CPU.
+
 ### Reuse downloaded models
 
 ```powershell
@@ -197,6 +236,8 @@ pwsh -NoProfile -File 'D:\source_git\demystify\skills\video-srt\scripts\Invoke-V
 | `-OutputDirectory` | `<RuntimeDir>\output` | Destination for generated files |
 | `-Language` | `auto` | `auto`, `zh`, `en`, `ja`, `ko`, `yue`, `fr`, `de`, `es`, `pt`, or `it` |
 | `-Backend` | `auto` | `auto`, `sensevoice`, or `whisper`; `auto` routes the five added codes to Whisper and retains SenseVoice otherwise |
+| `-Device` | `cpu` | `cpu`, `npu`, `intel-gpu`, or `amd-gpu`; accelerator targets are SenseVoice-only |
+| `-GpuDeviceId` | `-1` | Auto-select the matching GPU, or explicitly choose its OpenVINO/DirectML index |
 | `-AudioStream` | `0` | Zero-based audio track index, range 0-100 |
 | `-Threads` | `4` | CPU inference threads, range 1-32 |
 | `-ChunkSeconds` | `300` | Processing chunk duration, range 30-1800 seconds |
@@ -210,7 +251,7 @@ pwsh -NoProfile -File 'D:\source_git\demystify\skills\video-srt\scripts\Invoke-V
 | `-RuntimeDir` | `<skill directory>\.runtime` | Isolated environment and model storage |
 
 `Setup-VideoSrt.ps1` accepts `-InstallMissing`, `-PythonPath`, `-ModelSourceDir`,
-`-RuntimeDir`, `-SkipMusic`, `-Backend`, and `-Language`.
+`-RuntimeDir`, `-SkipMusic`, `-Backend`, `-Language`, `-Device`, and `-GpuDeviceId`.
 
 ## Output files
 
@@ -231,6 +272,10 @@ their boundaries are estimates, not manually verified word alignments.
 Whisper does not provide SenseVoice emotion/event tags; those values are `null`.
 Its token timestamp list can be empty with the current export configuration.
 Separate music detection remains available with either ASR backend.
+Manifests also include invocation `performance` measurements and actual
+`execution` device details; cached chunks are counted separately. NPU model
+compilation/inference counters are cumulative per loaded model, including across
+files in folder runs. They are not wall-clock measurements for every file.
 
 A genuinely silent file can produce an empty SRT with an explicit `no_speech`
 status and warning. Do not interpret that as a verified speech transcript.
@@ -281,6 +326,8 @@ evidence without semantic LLM review.
 - `transcribe.py`: local media/inference engine, normally invoked by PowerShell.
 - `setup_models.py`, `models.json`, `requirements.txt`: runtime/model setup.
 - `asr_backends.py`: shared language routing and backend validation.
+- `accelerated_sensevoice.py`: explicit Intel NPU/GPU and AMD GPU inference.
+- `requirements-accelerator-base.txt`, `requirements-openvino.txt`, `requirements-directml.txt`: optional pinned accelerator dependencies.
 
 Additional implementation and model details are in
 [the usage reference](../references/usage.md).

@@ -14,7 +14,7 @@ import time
 import urllib.error
 import urllib.request
 
-from asr_backends import BACKENDS, LANGUAGES, resolve_backend
+from asr_backends import BACKENDS, DEVICES, LANGUAGES, resolve_backend, validate_device
 
 MANIFEST = Path(__file__).with_name("models.json")
 
@@ -55,6 +55,30 @@ def check_runtime():
         print(f"Runtime version mismatch: sherpa-onnx={sherpa}, numpy={numpy}")
         return False
     print(f"Local runtime ready: sherpa-onnx={sherpa}, numpy={numpy}")
+    return True
+
+
+def check_accelerator_runtime(device):
+    required = {"onnx": "1.23.1", "kaldi-native-fbank": "1.22.3"}
+    if device in ("npu", "intel-gpu"):
+        required["openvino"] = "2026.4.1"
+    if device == "amd-gpu":
+        required["onnxruntime-directml"] = "1.24.4"
+    for package, version in required.items():
+        try:
+            module = "onnxruntime" if package == "onnxruntime-directml" else package.replace("-", "_")
+            imported = importlib.import_module(module)
+            actual = importlib.metadata.version(package)
+        except (ImportError, OSError) as error:
+            print(f"Missing or unusable accelerator dependency {package}: {error}")
+            return False
+        if actual != version:
+            print(f"Accelerator dependency mismatch: {package}={actual}, expected {version}")
+            return False
+        if package == "onnxruntime-directml" and "DmlExecutionProvider" not in imported.get_available_providers():
+            print("onnxruntime-directml loaded without DmlExecutionProvider")
+            return False
+    print("Optional accelerator runtime ready: " + ", ".join(f"{k}={v}" for k, v in required.items()))
     return True
 
 
@@ -149,6 +173,10 @@ def provision(destination, allow_download=False, source=None, skip_music=False,
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--check-runtime", action="store_true")
+    parser.add_argument("--check-accelerator-runtime", action="store_true")
+    parser.add_argument("--check-accelerator-device", action="store_true")
+    parser.add_argument("--gpu-device-id", type=int, default=-1)
+    parser.add_argument("--device", choices=DEVICES, default="cpu")
     parser.add_argument("--model-dir", type=Path)
     parser.add_argument("--import-from", type=Path)
     parser.add_argument("--download", action="store_true")
@@ -159,7 +187,17 @@ def main():
     args = parser.parse_args()
     if args.check_runtime:
         return 0 if check_runtime() else 1
+    if args.check_accelerator_runtime:
+        return 0 if check_accelerator_runtime(args.device) else 1
+    if args.check_accelerator_device:
+        import openvino as ov
+        from accelerated_sensevoice import select_openvino_device
+        target, name = select_openvino_device(ov.Core(), args.device, args.gpu_device_id)
+        device_id = -1 if target == "NPU" else int(target.split(".")[1])
+        print(json.dumps({"target": target, "id": device_id, "name": name}))
+        return 0
     backend = resolve_backend(args.backend, args.language)
+    validate_device(args.device, backend)
     if args.resolve_backend:
         print(backend)
         return 0

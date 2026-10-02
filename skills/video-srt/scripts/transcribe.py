@@ -20,7 +20,10 @@ import time
 import unicodedata
 import uuid
 
-from asr_backends import BACKENDS, LANGUAGES, WHISPER_DIRECTORY, WHISPER_FILES, resolve_backend
+from asr_backends import (
+    BACKENDS, DEVICES, LANGUAGES, WHISPER_DIRECTORY, WHISPER_FILES,
+    resolve_backend, validate_device,
+)
 
 RATE = 16000
 TOOL = "video-srt"
@@ -352,23 +355,39 @@ def required_models(model_dir, skip_music, backend="sensevoice"):
 
 def runtime_signature(args):
     backend = resolve_backend(args.backend, args.language)
+    validate_device(args.device, backend)
     models = required_models(Path(args.model_dir), args.skip_music, backend)
     for path in models:
         if not path.is_file() or path.stat().st_size == 0:
             raise EngineError(f"Missing local model file: {path}. Run the skill setup/model-fetch step first.")
     versions = {}
-    for package in ("sherpa-onnx", "numpy"):
+    packages = ["sherpa-onnx", "numpy"]
+    if args.device != "cpu":
+        packages += ["onnx", "kaldi-native-fbank"]
+    if args.device in ("npu", "intel-gpu"):
+        packages += ["openvino"]
+    if args.device == "amd-gpu":
+        packages += ["onnxruntime-directml"]
+    for package in packages:
         try:
             versions[package] = importlib.metadata.version(package)
         except importlib.metadata.PackageNotFoundError as error:
             raise EngineError(f"Missing Python dependency {package}; run the skill setup first") from error
     if versions["sherpa-onnx"] != "1.13.8":
         raise EngineError(f"Expected sherpa-onnx 1.13.8, found {versions['sherpa-onnx']}; run setup")
+    acceleration = {"device": args.device}
+    if args.device != "cpu":
+        acceleration.update(
+            device_name=args.accelerator_name,
+            device_id=args.gpu_device_id,
+            adapter_sha256=file_hash(Path(__file__).with_name("accelerated_sensevoice.py")),
+        )
     return {
         "packages": versions, "python": sys.version,
         "engine_sha256": file_hash(Path(__file__)),
         "routing_sha256": file_hash(Path(__file__).with_name("asr_backends.py")),
         "backend": backend,
+        "acceleration": acceleration,
         "models": [source_signature(path) for path in models],
         "ffmpeg": run([args.ffmpeg, "-version"]).splitlines()[0],
         "ffprobe": run([args.ffprobe, "-version"]).splitlines()[0],
@@ -377,6 +396,16 @@ def runtime_signature(args):
 
 def create_recognizer(so, args, backend):
     root = Path(args.model_dir)
+    device = getattr(args, "device", "cpu")
+    validate_device(device, backend)
+    if device != "cpu":
+        from accelerated_sensevoice import AcceleratedSenseVoice
+        return AcceleratedSenseVoice(
+            root / ASR_DIRECTORY / "model.int8.onnx",
+            root / ASR_DIRECTORY / "tokens.txt", args.language,
+            root.parent / "openvino-cache",
+            device, args.gpu_device_id, args.accelerator_name,
+        )
     language = "" if args.language == "auto" else args.language
     if backend == "sensevoice":
         return so.OfflineRecognizer.from_sense_voice(
@@ -516,6 +545,15 @@ class LocalModels:
         gaps = recovery_regions(rows, windows, len(audio) / RATE)
         rows += self.recognize(audio, gaps, "acoustic_gap_recovery", progress)
         return sorted(rows, key=lambda row: (row["start"], row["end"])), windows
+
+    def execution_details(self):
+        return {
+            **getattr(self.recognizer, "execution", {
+                "asr_device": "CPU", "asr_runtime": "sherpa-onnx",
+            }),
+            "vad_device": "CPU",
+            "music_device": None if self.args.skip_music else "CPU",
+        }
 
 
 def recovery_regions(segments, windows, duration):
@@ -805,6 +843,10 @@ def reconcile_pending(state, outputs, state_path):
 
 def process_file(source, outputs, args, runtime, get_models):
     started = time.monotonic()
+    performance = {"cached_chunks": 0, "computed_chunks": 0,
+                   "model_load_seconds": 0.0, "decode_seconds": 0.0,
+                   "analysis_seconds": 0.0}
+    models = None
     cache = outputs["m4a"].parent / ".video-srt" / digest(canonical(outputs["m4a"]))[:24]
     cache.mkdir(parents=True, exist_ok=True)
     with file_lock(cache / "output.lock"):
@@ -823,6 +865,7 @@ def process_file(source, outputs, args, runtime, get_models):
             "source": signature, "runtime": runtime, "policy": POLICY,
             "audio_stream": args.audio_stream, "language": args.language,
             "backend": resolve_backend(args.backend, args.language),
+            "device": args.device,
             "threads": args.threads, "chunk_seconds": args.chunk_seconds,
             "skip_music": args.skip_music, "allow_aac_encode": args.allow_aac_encode,
             "source_mapping": mapping,
@@ -865,6 +908,7 @@ def process_file(source, outputs, args, runtime, get_models):
                   f"{done}/{total}, {value['elapsed_seconds']}s", flush=True)
 
         progress("extracting", 0, 1)
+        extraction_started = time.monotonic()
         if not outputs["m4a"].exists() or state.get("audio_key") != key:
             staged = cache / "audio.partial.m4a"
             run(extraction_command(source, staged, mapping, args))
@@ -876,6 +920,7 @@ def process_file(source, outputs, args, runtime, get_models):
         else:
             mapping = verify_audio(outputs["m4a"], mapping, args)
         audio_duration = mapping["m4a_duration"]
+        performance["extraction_seconds"] = time.monotonic() - extraction_started
         chunk_count = math.ceil(audio_duration / args.chunk_seconds)
         segments, windows = [], []
         for index in range(chunk_count):
@@ -890,13 +935,21 @@ def process_file(source, outputs, args, runtime, get_models):
             checkpoint = load_json(checkpoint_path) if checkpoint_path.exists() else None
             chunk_key = digest({"key": key, "index": index, "left": left, "right": right, "mapping": mapping})
             if checkpoint and checkpoint.get("key") == chunk_key and checkpoint.get("complete"):
+                performance["cached_chunks"] += 1
                 progress("cached", 1, 1)
                 rows, tags = checkpoint["segments"], checkpoint["windows"]
             else:
+                performance["computed_chunks"] += 1
+                tick = time.monotonic()
                 models = get_models()
+                performance["model_load_seconds"] += time.monotonic() - tick
                 progress("decoding", 0, 1)
+                tick = time.monotonic()
                 audio = decode(outputs["m4a"], left, right - left, args, models.np)
+                performance["decode_seconds"] += time.monotonic() - tick
+                tick = time.monotonic()
                 rows, tags = models.analyze(audio, left, progress)
+                performance["analysis_seconds"] += time.monotonic() - tick
                 del audio
                 for row in rows:
                     row.update(
@@ -935,6 +988,7 @@ def process_file(source, outputs, args, runtime, get_models):
             "source": str(source), "source_signature": signature,
             "policy": POLICY, "timeline": mapping,
             "backend": config["backend"],
+            "device": args.device,
             "asr_capabilities": {
                 "emotion_and_event_tags": config["backend"] == "sensevoice",
                 "token_timestamps": config["backend"] == "sensevoice",
@@ -965,6 +1019,12 @@ def process_file(source, outputs, args, runtime, get_models):
             **metadata, "configuration": config, "outputs": {
                 kind: state["artifacts"][kind] for kind in ["m4a", *publications]
             },
+            "performance": {
+                **performance, "elapsed_seconds": time.monotonic() - started,
+                "media_seconds": mapping["video_duration"],
+                "note": "This invocation only; cached chunks are not inference benchmarks. Excludes setup and final manifest write.",
+            },
+            "execution": models.execution_details() if models is not None and hasattr(models, "execution_details") else None,
         }
         staged = cache / "manifest.publish"
         save_json(staged, manifest)
@@ -979,6 +1039,9 @@ def parse_args(argv=None):
         parser.add_argument("--" + name, required=True)
     parser.add_argument("--language", choices=LANGUAGES, default="auto")
     parser.add_argument("--backend", choices=BACKENDS, default="auto")
+    parser.add_argument("--device", choices=DEVICES, default="cpu")
+    parser.add_argument("--gpu-device-id", type=int, default=-1)
+    parser.add_argument("--accelerator-name", default="CPU")
     parser.add_argument("--threads", type=int, default=4)
     parser.add_argument("--audio-stream", type=int, default=0)
     parser.add_argument("--chunk-seconds", type=int, default=300)
@@ -989,6 +1052,7 @@ def parse_args(argv=None):
         parser.error("threads must be positive, audio-stream nonnegative, chunk-seconds between 1 and 3600")
     try:
         args.backend = resolve_backend(args.backend, args.language)
+        validate_device(args.device, args.backend)
     except ValueError as error:
         parser.error(str(error))
     return args

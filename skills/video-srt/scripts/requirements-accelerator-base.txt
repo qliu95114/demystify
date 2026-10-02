@@ -1,0 +1,2 @@
+onnx==1.23.1
+kaldi-native-fbank==1.22.3

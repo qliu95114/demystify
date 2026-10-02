@@ -26,7 +26,8 @@ class FileTest(unittest.TestCase):
         values = dict(
             ffmpeg="ffmpeg", ffprobe="ffprobe", input=str(self.root),
             output_dir=str(self.root / "output"), model_dir=str(self.root / "models"),
-            language="auto", backend="auto", threads=4, audio_stream=0, chunk_seconds=10,
+            language="auto", backend="auto", device="cpu", gpu_device_id=-1,
+            accelerator_name="CPU", threads=4, audio_stream=0, chunk_seconds=10,
             recurse=False, skip_music=True, force=False, allow_aac_encode=False,
         )
         values.update(updates)
@@ -260,6 +261,7 @@ class SafetyTests(FileTest):
             "m4a_duration": 1, "decode_to_video_offset": 0,
         }
         model = mock.Mock()
+        model.execution_details.return_value = {"asr_device": "CPU"}
         model.analyze.return_value = ([], [])
 
         def fake_run(command, binary=False):
@@ -276,12 +278,19 @@ class SafetyTests(FileTest):
             self.assertEqual(result, "no_speech")
             self.assertEqual(outputs["srt"].read_text(), "")
             self.assertEqual(engine.load_json(outputs["manifest"])["status"], "no_speech")
+            performance = engine.load_json(outputs["manifest"])["performance"]
+            self.assertEqual(performance["computed_chunks"], 1)
+            self.assertEqual(performance["cached_chunks"], 0)
             model.analyze.assert_called_once()
             engine.process_file(source, outputs, args, {"test": 1}, lambda: self.fail("loaded on reuse"))
             self.assertEqual(engine.load_json(outputs["manifest"])["backend"], "sensevoice")
             args.backend = "whisper"
             with self.assertRaisesRegex(engine.EngineError, "settings changed"):
                 engine.process_file(source, outputs, args, {"test": 1}, lambda: self.fail("loaded stale backend"))
+            args.backend = "sensevoice"
+            args.device = "npu"
+            with self.assertRaisesRegex(engine.EngineError, "settings changed"):
+                engine.process_file(source, outputs, args, {"test": 1}, lambda: self.fail("reused CPU results as NPU"))
 
     def test_interrupted_chunk_resumes_without_completed_manifest(self):
         source = self.source()
@@ -291,6 +300,7 @@ class SafetyTests(FileTest):
         mapping = {**engine.timeline(metadata, 0, {"pts_time": "0"}),
                    "m4a_duration": 20, "decode_to_video_offset": 0}
         model = mock.Mock()
+        model.execution_details.return_value = {"asr_device": "CPU"}
         model.analyze.side_effect = [([], []), KeyboardInterrupt()]
 
         def fake_run(command, binary=False):
@@ -313,6 +323,9 @@ class SafetyTests(FileTest):
             engine.process_file(source, outputs, args, {"test": 1}, lambda: model)
             model.analyze.assert_called_once()
             self.assertTrue(outputs["manifest"].exists())
+            performance = engine.load_json(outputs["manifest"])["performance"]
+            self.assertEqual(performance["computed_chunks"], 1)
+            self.assertEqual(performance["cached_chunks"], 1)
 
 
 @unittest.skipUnless(shutil.which("ffmpeg") and shutil.which("ffprobe"), "ffmpeg/ffprobe not installed")
