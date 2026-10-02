@@ -201,6 +201,22 @@ Inspect the recorded timing mapping if synchronization looks wrong.
   coarse evidence, not exact edit points. Do not remove every music-tagged span.
 - Ads and previews are transcribed like other speech; this skill deliberately
   does not call an LLM for semantic classification or edit the program.
+- When cut recommendations are requested, follow the
+  [general opening policy](../SKILL.md#剪切建议通用片头起点): retain an ad-free
+  title or episode-number card before the story. Skip cards containing ads, or
+  cards that would retain an intervening ad in a single continuous cut. Preserve
+  any story/cold open before a card; ordinary channel logos alone are not ads.
+- If the user separately requests cut recommendations for 遮天 or 吞噬星空,
+  follow the [series-specific policy](../SKILL.md#剪切建议遮天吞噬星空):
+  retain ending trivia, Q&A and educational/setting supplements, but exclude
+  advertising and promotional calls to action. This is a recommendation policy,
+  not filtering performed by the transcription scripts; full SRT evidence is preserved.
+- For 兰香如故 opening-cut recommendations, apply the
+  [episode-card policy](../SKILL.md#剪切建议兰香如故): subtract five seconds once
+  from the originally calculated story start as an ad-free card candidate,
+  clamped to zero (`02:08` becomes `02:03`). The general ad-exclusion policy
+  takes precedence; discard an ad-bearing card rather than forcing this offset.
+  Show the original and final values; do not change the ending cut.
 - First test a short representative video before a large batch. Processing speed
   depends on hardware and content, so do not promise a fixed completion time.
 - Silence can legitimately yield zero cues; inspect the explicit no-speech status
