@@ -156,6 +156,15 @@ class TimelineTests(unittest.TestCase):
 
 
 class SafetyTests(FileTest):
+    def test_extraction_offset_uses_fixed_decimal(self):
+        for start in (-4.535147392348282e-08, 4.535147392348282e-08, 12.3456789):
+            with self.subTest(start=start):
+                mapping = {"codec": "aac", "source_audio_audible_start": start}
+                command = engine.extraction_command("input", "output", mapping, self.args())
+                offset = command[command.index("-output_ts_offset") + 1]
+                self.assertNotIn("e", offset.lower())
+                self.assertAlmostEqual(float(offset), -start, places=9)
+
     def test_duplicate_stems_case_insensitive(self):
         self.source("movie.mp4")
         self.source("movie.mkv")
@@ -215,7 +224,7 @@ class SafetyTests(FileTest):
         command = engine.extraction_command("input", "output", mapping, args)
         self.assertIn("copy", command)
         self.assertNotIn("192k", command)
-        self.assertIn("-10", command)
+        self.assertEqual(float(command[command.index("-output_ts_offset") + 1]), -10)
 
     def test_atomic_and_pending_journal(self):
         destination = self.root / "result.srt"

@@ -283,7 +283,7 @@ def extraction_command(source, destination, mapping, args):
     ]
     command += ["-c:a", "copy"] if codec in ("aac", "alac") else ["-c:a", "aac", "-b:a", "192k"]
     command += [
-        "-output_ts_offset", str(-mapping["source_audio_audible_start"]),
+        "-output_ts_offset", f'{-mapping["source_audio_audible_start"]:.9f}',
         "-avoid_negative_ts", "disabled", "-use_editlist", "1",
         "-movflags", "+faststart", "-f", "ipod", destination,
     ]

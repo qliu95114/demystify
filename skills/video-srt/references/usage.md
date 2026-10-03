@@ -188,6 +188,8 @@ A failed process must not be reported as successful NPU inference.
 M4A is an extracted audio artifact; SRT uses **video playback time**, not
 concatenated speech time. Track delay and container timestamp origins matter.
 Inspect the recorded timing mapping if synchronization looks wrong.
+Extraction offsets are passed to FFmpeg as fixed-point decimals because its
+duration parser does not accept scientific notation for near-zero AAC priming residuals.
 
 ## Accuracy and scope
 
