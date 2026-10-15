@@ -33,7 +33,6 @@ param(
 # ============================================================================
 $Catalog = [ordered]@{
     "Browsers" = @(
-        @{ Id = "Google.Chrome";              Name = "Google Chrome" }
         @{ Id = "Mozilla.Firefox";            Name = "Mozilla Firefox" }
     )
     "Azure & Cloud Tools" = @(
@@ -104,6 +103,7 @@ $Catalog = [ordered]@{
 # ----------------------------------------------------------------------------
 $NonAdminCatalog = [ordered]@{
     "Non-Administrator Installers" = @(
+        @{ Id = "Google.Chrome"; Name = "Google Chrome" }
         @{ Id = "Microsoft.Office"; Name = "Microsoft Office" }
     )
 }
