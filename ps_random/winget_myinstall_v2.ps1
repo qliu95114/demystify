@@ -10,6 +10,7 @@
 #      the intended user's shell without -Elevate instead.
 #   c. PowerShell modules install to CurrentUser scope (no admin needed).
 #   d. Microsoft.Entra replaces the retired AzureAD module.
+#   e. Installation start and completion lines include UTC timestamps.
 #
 # v2.1 changes:
 #   a. Self-elevation: re-launches itself as Administrator if not already elevated.
@@ -406,6 +407,11 @@ function Show-CheckboxMenu {
 # ============================================================================
 # Install selected packages
 # ============================================================================
+function Get-UtcTimestamp {
+    return [DateTime]::UtcNow.ToString(
+        'yyyy-MM-dd HH:mm:ss', [Globalization.CultureInfo]::InvariantCulture)
+}
+
 function Install-PSModuleItem {
     param([hashtable]$Module)
     # CurrentUser scope: works without Administrator rights.
@@ -586,14 +592,25 @@ function Install-WingetPackages {
     $ok = 0; $present = 0; $fail = 0
     foreach ($pkg in $Packages) {
         $i = $ok + $present + $fail + 1
-        Write-Host "  [$i/$($Packages.Count)] " -NoNewline -ForegroundColor DarkGray
-        Write-Host "$($pkg.Name) " -NoNewline -ForegroundColor Cyan
+        $mode = switch ($pkg.Source) {
+            'msstore'  { 'msstore' }
+            'psmodule' { 'module' }
+            default {
+                if ($pkg.InstallMode -eq 'NonAdministrator') {
+                    'winget non-admin'
+                } elseif (Test-IsAdmin) {
+                    'winget admin'
+                } else {
+                    'winget user'
+                }
+            }
+        }
+        Write-Host "[$(Get-UtcTimestamp)] UTC [$i/$($Packages.Count)] Installing $($pkg.Name) ($($pkg.Id)) [$mode]" -ForegroundColor Cyan
 
         $code = 0
         switch ($pkg.Source) {
             'msstore' {
                 # Microsoft Store apps: different parameter set, no --ignore-security-hash
-                Write-Host "[msstore] " -NoNewline -ForegroundColor Magenta
                 $args = @(
                     'install', '--id', $pkg.Id, '-e', '--source', 'msstore',
                     '--accept-package-agreements', '--accept-source-agreements'
@@ -602,19 +619,10 @@ function Install-WingetPackages {
             }
             'psmodule' {
                 # PowerShell modules: Install-Module, not winget
-                Write-Host "[module] " -NoNewline -ForegroundColor Magenta
                 if (Install-PSModuleItem -Module $pkg) { $code = 0 } else { $code = 1 }
             }
             default {
                 # Regular winget repo: always allow a stale CDN installer hash
-                $label = if ($pkg.InstallMode -eq 'NonAdministrator') {
-                    '[winget non-admin]'
-                } elseif (Test-IsAdmin) {
-                    '[winget admin]'
-                } else {
-                    '[winget user]'
-                }
-                Write-Host "$label " -NoNewline -ForegroundColor DarkGray
                 $args = @(
                     'install', '--id', $pkg.Id, '-e', '--accept-package-agreements',
                     '--accept-source-agreements', '--silent', '--ignore-security-hash'
@@ -623,13 +631,14 @@ function Install-WingetPackages {
             }
         }
 
+        $completed = "[$(Get-UtcTimestamp)] UTC [$i/$($Packages.Count)] $($pkg.Name):"
         if ($code -eq 0) {
-            Write-Host "OK" -ForegroundColor Green
+            Write-Host "$completed OK" -ForegroundColor Green
             $ok++
         } elseif ($code -eq -1978335189 -or $code -eq -1978335135) {
             # WinGet: 0x8A15002B (no update) and 0x8A150061 (already installed).
             $status = if ($code -eq -1978335189) { "UP TO DATE" } else { "ALREADY INSTALLED" }
-            Write-Host $status -ForegroundColor DarkGreen
+            Write-Host "$completed $status" -ForegroundColor DarkGreen
             $present++
         } else {
             $detail = if ($pkg.Source -eq 'psmodule') {
@@ -637,7 +646,7 @@ function Install-WingetPackages {
             } else {
                 " (winget exit 0x{0:X8})" -f [uint32]([long]$code -band 0xFFFFFFFFL)
             }
-            Write-Host "FAILED$detail" -ForegroundColor Red
+            Write-Host "$completed FAILED$detail" -ForegroundColor Red
             $fail++
         }
     }
