@@ -1,12 +1,14 @@
-# Winget Interactive Installer - TUI Checkbox Menu  (v2.2)
+# Winget Interactive Installer - TUI Checkbox Menu  (v2.3)
 # Navigate: Arrow Keys | Toggle: Space | Select All: A | None: N | Install: Enter | Quit: Esc
 # On a category row, Space toggles all packages in that group.
 #
-# v2.2 changes:
-#   a. No more whole-script self-elevation. The script runs with normal user rights;
-#      only the winget machine-wide configuration is run through a short-lived
-#      elevated child process (one UAC prompt, then it hands control straight back).
-#   b. PowerShell modules install to CurrentUser scope (no admin needed).
+# v2.3 changes:
+#   a. The script relaunches itself as Administrator by default. Use -NoElevation
+#      to skip self-elevation (the winget setting can still prompt for UAC).
+#   b. The Non-Administrator Installers category runs winget with a limited token
+#      of the elevated account. If UAC uses a different account, run Office from
+#      the intended user's shell with -NoElevation instead.
+#   c. PowerShell modules install to CurrentUser scope (no admin needed).
 #
 # v2.1 changes:
 #   a. Self-elevation: re-launches itself as Administrator if not already elevated.
@@ -15,6 +17,13 @@
 #      set: --source msstore --accept-package-agreements --accept-source-agreements
 #   d. All non-msstore installs now append --ignore-security-hash.
 #   e. PowerShell Modules are selectable in the menu (installed via Install-Module).
+
+# ============================================================================
+# Script options
+# ============================================================================
+param(
+    [switch]$NoElevation
+)
 
 # ============================================================================
 # Package Catalog
@@ -67,7 +76,6 @@ $Catalog = [ordered]@{
         @{ Id = "WinSCP.WinSCP";                  Name = "WinSCP" }
         @{ Id = "Microsoft.Sysinternals.Suite";    Name = "Sysinternals Suite" }
         @{ Id = "Microsoft.WindowsApp";            Name = "Windows App" }
-        @{ Id = "Microsoft.Office";                Name = "Microsoft Office" }
     )    
     "Network & Debugging Tools" = @(
         @{ Id = "WiresharkFoundation.Wireshark"; Name = "Wireshark" }
@@ -85,6 +93,15 @@ $Catalog = [ordered]@{
     )
     "VC++ Redistributable" = @(
         @{ Id = "Microsoft.VCRedist.2015+.x64"; Name = "VC++ 2015-2022 x64" }
+    )
+}
+
+# ----------------------------------------------------------------------------
+# Packages that must be installed from a non-administrator process.
+# ----------------------------------------------------------------------------
+$NonAdminCatalog = [ordered]@{
+    "Non-Administrator Installers" = @(
+        @{ Id = "Microsoft.Office"; Name = "Microsoft Office" }
     )
 }
 
@@ -114,10 +131,11 @@ function Build-MenuItems {
     $items = [System.Collections.ArrayList]::new()
     $first = $true
 
-    # Two sources: the regular winget repo, and the Microsoft Store (different CLI args)
+    # Catalog sources: regular winget, explicitly non-admin winget, and Microsoft Store.
     $sources = @(
-        @{ Data = $script:Catalog;        Source = 'winget'  }
-        @{ Data = $script:MsStoreCatalog; Source = 'msstore' }
+        @{ Data = $script:Catalog;        Source = 'winget';  InstallMode = 'Administrator' }
+        @{ Data = $script:NonAdminCatalog; Source = 'winget'; InstallMode = 'NonAdministrator' }
+        @{ Data = $script:MsStoreCatalog; Source = 'msstore'; InstallMode = 'Administrator' }
     )
 
     foreach ($entry in $sources) {
@@ -126,7 +144,9 @@ function Build-MenuItems {
         foreach ($cat in $catData.Keys) {
             if (-not $first) { [void]$items.Add(@{ Type = 'Blank' }) }
             $first = $false
-            [void]$items.Add(@{ Type = 'Category'; Name = $cat; Source = $src })
+            [void]$items.Add(@{
+                Type = 'Category'; Name = $cat; Source = $src; InstallMode = $entry.InstallMode
+            })
             foreach ($pkg in $catData[$cat]) {
                 [void]$items.Add(@{
                     Type     = 'Package'
@@ -134,6 +154,7 @@ function Build-MenuItems {
                     Id       = $pkg.Id
                     Category = $cat
                     Source   = $src
+                    InstallMode = $entry.InstallMode
                     Selected = $false
                 })
             }
@@ -236,7 +257,7 @@ function Render-Menu {
                 $tag = switch ($item.Source) {
                     'msstore'  { " [Store]" }
                     'psmodule' { " [Module]" }
-                    default    { "" }
+                    default    { if ($item.InstallMode -eq 'NonAdministrator') { " [Non-Admin]" } else { "" } }
                 }
                 $lbl = "$ptr$chk $($item.Name)$tag"
                 $id  = if ($item.Source -eq 'psmodule') { $item.Desc } else { $item.Id }
@@ -397,11 +418,132 @@ function Install-PSModuleItem {
     }
 }
 
+function Invoke-WingetNonAdmin {
+    param(
+        [string[]]$Arguments
+    )
+
+    $taskName = "WingetInstaller-{0}" -f [guid]::NewGuid().ToString('N')
+    $resultPath = Join-Path $env:TEMP "$taskName.result"
+    $outputPath = Join-Path $env:TEMP "$taskName.log"
+    $registered = $false
+
+    try {
+        $psExe = (Get-Process -Id $PID).Path
+        $wingetExe = (Get-Command winget.exe -CommandType Application -ErrorAction Stop).Source
+        $exeLiteral = "'$($wingetExe.Replace("'", "''"))'"
+        $resultLiteral = "'$($resultPath.Replace("'", "''"))'"
+        $outputLiteral = "'$($outputPath.Replace("'", "''"))'"
+        $argumentText = ($Arguments | ForEach-Object {
+            "'" + $_.Replace("'", "''") + "'"
+        }) -join ', '
+        $child = @"
+`$ErrorActionPreference = 'Continue'
+`$wingetArguments = @($argumentText)
+try {
+    & $exeLiteral @wingetArguments *>&1 | Out-File -LiteralPath $outputLiteral -Encoding utf8
+    `$code = `$LASTEXITCODE
+    if (`$null -eq `$code) { throw 'winget returned no exit code.' }
+}
+catch {
+    `$_ | Out-File -LiteralPath $outputLiteral -Encoding utf8 -Append
+    `$code = 1
+}
+Set-Content -LiteralPath $resultLiteral -Value `$code -Encoding ascii
+exit `$code
+"@
+        $encoded = [Convert]::ToBase64String(
+            [System.Text.Encoding]::Unicode.GetBytes($child))
+        $taskArguments = "-NoProfile -NoLogo -NonInteractive -ExecutionPolicy Bypass -EncodedCommand $encoded"
+        $userName = [Security.Principal.WindowsIdentity]::GetCurrent().Name
+        $action = New-ScheduledTaskAction -Execute $psExe -Argument $taskArguments
+        $trigger = New-ScheduledTaskTrigger -Once -At (Get-Date).AddMinutes(1)
+        $principal = New-ScheduledTaskPrincipal -UserId $userName `
+            -LogonType Interactive -RunLevel Limited
+        Register-ScheduledTask -TaskName $taskName -Action $action `
+            -Trigger $trigger -Principal $principal -Force -ErrorAction Stop | Out-Null
+        $registered = $true
+        Start-ScheduledTask -TaskName $taskName -ErrorAction Stop
+
+        $startedAt = Get-Date
+        $deadline = $startedAt.AddHours(2)
+        $nextStatus = $startedAt.AddMinutes(1)
+        while (-not (Test-Path -LiteralPath $resultPath)) {
+            $now = Get-Date
+            if ($now -ge $deadline) {
+                throw "Timed out waiting for non-administrator winget task $taskName."
+            }
+            if ($now -ge $startedAt.AddSeconds(15)) {
+                $task = Get-ScheduledTask -TaskName $taskName -ErrorAction Stop
+                if ($task.State -notin @('Running', 'Queued') -and
+                    -not (Test-Path -LiteralPath $resultPath)) {
+                    $info = Get-ScheduledTaskInfo -TaskName $taskName -ErrorAction Stop
+                    throw "Non-administrator task $taskName ended or did not start (state: $($task.State), result: $($info.LastTaskResult))."
+                }
+            }
+            if ($now -ge $nextStatus) {
+                Write-Host "  Still waiting for $taskName..." -ForegroundColor DarkGray
+                $nextStatus = $now.AddMinutes(1)
+            }
+            Start-Sleep -Seconds 2
+        }
+
+        $resultText = (Get-Content -LiteralPath $resultPath -Raw -ErrorAction Stop).Trim()
+        $code = 0
+        if (-not [int]::TryParse($resultText, [ref]$code)) {
+            throw "Non-administrator task $taskName returned an invalid exit code: '$resultText'."
+        }
+        if (Test-Path -LiteralPath $outputPath) {
+            Get-Content -LiteralPath $outputPath | Write-Host
+        }
+        return $code
+    }
+    catch {
+        Write-Host $_.Exception.Message -ForegroundColor DarkRed
+        return 1
+    }
+    finally {
+        $task = if ($registered) { Get-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue }
+        if ($task -and $task.State -in @('Running', 'Queued') -and
+            (Test-Path -LiteralPath $resultPath)) {
+            $exitDeadline = (Get-Date).AddSeconds(15)
+            do {
+                Start-Sleep -Milliseconds 500
+                $task = Get-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue
+            } while ($task -and $task.State -in @('Running', 'Queued') -and
+                (Get-Date) -lt $exitDeadline)
+        }
+        if ($task -and $task.State -in @('Running', 'Queued')) {
+            Write-Host "  Task $taskName is still active; inspect it and $outputPath before retrying." -ForegroundColor Yellow
+        }
+        else {
+            if ($registered) {
+                Unregister-ScheduledTask -TaskName $taskName -Confirm:$false -ErrorAction SilentlyContinue
+            }
+            Remove-Item -LiteralPath $resultPath, $outputPath -Force -ErrorAction SilentlyContinue
+        }
+    }
+}
+
+function Invoke-WingetInstall {
+    param(
+        [hashtable]$Package,
+        [string[]]$Arguments
+    )
+
+    if ($Package.InstallMode -eq 'NonAdministrator' -and (Test-IsAdmin)) {
+        return Invoke-WingetNonAdmin -Arguments $Arguments
+    }
+
+    & winget.exe @Arguments 2>&1 | Out-Host
+    return $LASTEXITCODE
+}
+
 function Install-WingetPackages {
     param([array]$Packages)
     if ($Packages.Count -eq 0) {
         Write-Host "`n  No packages selected." -ForegroundColor DarkGray
-        return
+        return $false
     }
 
     Write-Host "`n  ============================================" -ForegroundColor DarkGray
@@ -423,7 +565,7 @@ function Install-WingetPackages {
     $ans = Read-Host
     if ($ans -match '^[Nn]') {
         Write-Host "  Cancelled." -ForegroundColor DarkGray
-        return
+        return $false
     }
 
     Write-Host ""
@@ -438,8 +580,11 @@ function Install-WingetPackages {
             'msstore' {
                 # Microsoft Store apps: different parameter set, no --ignore-security-hash
                 Write-Host "[msstore] " -NoNewline -ForegroundColor Magenta
-                winget install --id $pkg.Id -e --source msstore --accept-package-agreements --accept-source-agreements 2>$null
-                $code = $LASTEXITCODE
+                $args = @(
+                    'install', '--id', $pkg.Id, '-e', '--source', 'msstore',
+                    '--accept-package-agreements', '--accept-source-agreements'
+                )
+                $code = Invoke-WingetInstall -Package $pkg -Arguments $args
             }
             'psmodule' {
                 # PowerShell modules: Install-Module, not winget
@@ -448,9 +593,19 @@ function Install-WingetPackages {
             }
             default {
                 # Regular winget repo: always allow a stale CDN installer hash
-                Write-Host "[winget] " -NoNewline -ForegroundColor DarkGray
-                winget install --id $pkg.Id -e --accept-package-agreements --accept-source-agreements --silent --ignore-security-hash 2>$null
-                $code = $LASTEXITCODE
+                $label = if ($pkg.InstallMode -eq 'NonAdministrator') {
+                    '[winget non-admin]'
+                } elseif (Test-IsAdmin) {
+                    '[winget admin]'
+                } else {
+                    '[winget user]'
+                }
+                Write-Host "$label " -NoNewline -ForegroundColor DarkGray
+                $args = @(
+                    'install', '--id', $pkg.Id, '-e', '--accept-package-agreements',
+                    '--accept-source-agreements', '--silent', '--ignore-security-hash'
+                )
+                $code = Invoke-WingetInstall -Package $pkg -Arguments $args
             }
         }
 
@@ -465,6 +620,7 @@ function Install-WingetPackages {
 
     $color = if ($fail -gt 0) { "Yellow" } else { "Green" }
     Write-Host "`n  Done: $ok succeeded, $fail failed`n" -ForegroundColor $color
+    return $true
 }
 
 # ============================================================================
@@ -477,7 +633,7 @@ function Show-PostInstall {
     Write-Host ""
     Write-Host "  [1] Enable .NET Framework 3.5 (needs an elevated shell)"
     Write-Host "  [2] Install PowerShell Modules (Az, Graph, AzureAD, MSAL)"
-    Write-Host "  [3] Upgrade all winget packages"
+    Write-Host "  [3] Upgrade all winget packages (may upgrade Office as Administrator)"
     Write-Host "  [4] All of the above"
     Write-Host "  [S] Skip"
     Write-Host ""
@@ -500,22 +656,55 @@ function Show-PostInstall {
         }
     }
     if ($ch -match '[34]') {
-        Write-Host "`n  Upgrading all winget packages..." -ForegroundColor Cyan
-        winget upgrade --all --accept-package-agreements --accept-source-agreements --silent --ignore-security-hash
+        Write-Host "`n  WARNING: winget upgrade --all may include Office and run it as Administrator." -ForegroundColor Yellow
+        $upgradeAnswer = Read-Host "  Proceed with elevated upgrades? [y/N]"
+        if ($upgradeAnswer -match '^[Yy]$') {
+            Write-Host "`n  Upgrading all winget packages..." -ForegroundColor Cyan
+            winget upgrade --all --accept-package-agreements --accept-source-agreements --silent --ignore-security-hash
+        }
+        else {
+            Write-Host "  Skipped upgrades." -ForegroundColor DarkGray
+        }
     }
 }
 
 # ============================================================================
-# Scoped elevation helper
-#
-# The script itself never elevates. This runs ONE command in a short-lived
-# elevated child process (UAC prompt), waits for it, then returns to the
-# non-elevated script. Only used for winget's machine-wide configuration.
+# Elevation helpers
 # ============================================================================
 function Test-IsAdmin {
     $principal = [Security.Principal.WindowsPrincipal]::new(
         [Security.Principal.WindowsIdentity]::GetCurrent())
     return $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+}
+
+function Assert-RunAsAdmin {
+    if (Test-IsAdmin) {
+        Write-Host "  [OK] Running with Administrator privileges." -ForegroundColor Green
+        return
+    }
+
+    if ($script:NoElevation) {
+        Write-Host "  [!] Running without Administrator privileges (-NoElevation)." -ForegroundColor Yellow
+        return
+    }
+
+    if ([string]::IsNullOrWhiteSpace($PSCommandPath)) {
+        Write-Host "  [X] Cannot self-elevate: script path is unavailable." -ForegroundColor Red
+        exit 1
+    }
+
+    Write-Host "  [!] Administrator privileges required - requesting elevation..." -ForegroundColor Yellow
+    $exe = (Get-Process -Id $PID).Path
+    $argList = "-NoProfile -NoLogo -ExecutionPolicy Bypass -NoExit -File `"$PSCommandPath`""
+    try {
+        Start-Process -FilePath $exe -ArgumentList $argList -Verb RunAs `
+            -WorkingDirectory (Get-Location).Path -ErrorAction Stop | Out-Null
+    }
+    catch {
+        Write-Host "  [X] Elevation cancelled or denied: $($_.Exception.Message)" -ForegroundColor Red
+        exit 1
+    }
+    exit 0
 }
 
 function Invoke-AsAdmin {
@@ -557,7 +746,7 @@ exit `$LASTEXITCODE
 }
 
 # ============================================================================
-# winget global configuration (the only part that needs Administrator)
+# Winget InstallerHashOverride configuration
 # ============================================================================
 function Enable-InstallerHashOverride {
     if (-not (Get-Command winget -ErrorAction SilentlyContinue)) {
@@ -577,15 +766,15 @@ function Enable-InstallerHashOverride {
 }
 
 # ============================================================================
-# Entry Point - runs with normal user rights
+# Entry Point
 # ============================================================================
+Assert-RunAsAdmin
 Write-Host "  Running as $([Security.Principal.WindowsIdentity]::GetCurrent().Name) " -NoNewline -ForegroundColor DarkGray
-Write-Host "(no elevation)" -ForegroundColor DarkGray
+Write-Host $(if (Test-IsAdmin) { "(Administrator)" } else { "(standard user)" }) -ForegroundColor DarkGray
 Enable-InstallerHashOverride
 
 $selected = Show-CheckboxMenu
-Install-WingetPackages -Packages $selected
-if ($selected.Count -gt 0) {
+if (Install-WingetPackages -Packages $selected) {
     Show-PostInstall
 }
 
@@ -595,7 +784,7 @@ if ($selected.Count -gt 0) {
 # Store-only app (not in the winget repo):
 #   winget install --id 9MSPC6MP8FM4 --source msstore --accept-package-agreements --accept-source-agreements
 #
-# Repo app whose installer hash on the vendor CDN is stale:
+# Repo app whose installer hash on the vendor CDN is stale (run Office non-admin):
 #   winget install --id Microsoft.Office -e --ignore-security-hash
 #
 # Find a Store product ID:
