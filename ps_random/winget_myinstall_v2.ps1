@@ -557,7 +557,7 @@ function Install-WingetPackages {
     param([array]$Packages)
     if ($Packages.Count -eq 0) {
         Write-Host "`n  No packages selected." -ForegroundColor DarkGray
-        return $false
+        return
     }
 
     Write-Host "`n  ============================================" -ForegroundColor DarkGray
@@ -579,7 +579,7 @@ function Install-WingetPackages {
     $ans = Read-Host
     if ($ans -match '^[Nn]') {
         Write-Host "  Cancelled." -ForegroundColor DarkGray
-        return $false
+        return
     }
 
     Write-Host ""
@@ -644,52 +644,6 @@ function Install-WingetPackages {
 
     $color = if ($fail -gt 0) { "Yellow" } else { "Green" }
     Write-Host "`n  Done: $ok succeeded, $present already present, $fail failed`n" -ForegroundColor $color
-    return $true
-}
-
-# ============================================================================
-# Post-install options
-# ============================================================================
-function Show-PostInstall {
-    Write-Host "  ============================================" -ForegroundColor DarkGray
-    Write-Host "  Post-Install Options" -ForegroundColor Cyan
-    Write-Host "  ============================================" -ForegroundColor DarkGray
-    Write-Host ""
-    Write-Host "  [1] Enable .NET Framework 3.5 (needs an elevated shell)"
-    Write-Host "  [2] Install PowerShell Modules (Az, Graph, Entra, MSAL)"
-    Write-Host "  [3] Upgrade all winget packages (may upgrade Office as Administrator)"
-    Write-Host "  [4] All of the above"
-    Write-Host "  [S] Skip"
-    Write-Host ""
-    Write-Host "  Select: " -NoNewline
-    $ch = Read-Host
-
-    if ($ch -match '[14]') {
-        Write-Host "`n  Enabling .NET Framework 3.5..." -ForegroundColor Cyan
-        Dism /online /enable-feature /featurename:NetFX3 /All /Source:D:\Kuaipan\setup\NetFX /LimitAccess
-    }
-    if ($ch -match '[24]') {
-        Write-Host "`n  Installing PowerShell Modules..." -ForegroundColor Cyan
-        foreach ($mod in $script:PSModules) {
-            Write-Host "    $($mod.Name)... " -NoNewline -ForegroundColor Gray
-            if (Install-PSModuleItem -Module $mod) {
-                Write-Host "OK" -ForegroundColor Green
-            } else {
-                Write-Host "FAILED" -ForegroundColor Red
-            }
-        }
-    }
-    if ($ch -match '[34]') {
-        Write-Host "`n  WARNING: winget upgrade --all may include Office and run it as Administrator." -ForegroundColor Yellow
-        $upgradeAnswer = Read-Host "  Proceed with elevated upgrades? [y/N]"
-        if ($upgradeAnswer -match '^[Yy]$') {
-            Write-Host "`n  Upgrading all winget packages..." -ForegroundColor Cyan
-            winget upgrade --all --accept-package-agreements --accept-source-agreements --silent --ignore-security-hash
-        }
-        else {
-            Write-Host "  Skipped upgrades." -ForegroundColor DarkGray
-        }
-    }
 }
 
 # ============================================================================
@@ -768,9 +722,7 @@ Write-Host $(if (Test-IsAdmin) { "(Administrator)" } else { "(standard user)" })
 Enable-InstallerHashOverride
 
 $selected = Show-CheckboxMenu
-if (Install-WingetPackages -Packages $selected) {
-    Show-PostInstall
-}
+Install-WingetPackages -Packages $selected
 
 # ============================================================================
 # Reference
