@@ -123,7 +123,7 @@ $PSModules = @(
     @{ Name = "Microsoft.Graph"; Desc = "Microsoft Graph" }
     @{ Name = "MSAL.PS";         Desc = "MSAL Authentication" }
     @{ Name = "PowerShellGet";   Desc = "PowerShellGet" }
-    @{ Name = "Az";              Desc = "Azure PowerShell"; Repo = "PSGallery" }
+    @{ Name = "Az";              Desc = "Azure PowerShell"; Repo = "PSGallery"; AllowClobber = $true }
 )
 
 # ============================================================================
