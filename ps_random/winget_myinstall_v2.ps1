@@ -9,6 +9,7 @@
 #      of the elevated account. If UAC uses a different account, run Office from
 #      the intended user's shell without -Elevate instead.
 #   c. PowerShell modules install to CurrentUser scope (no admin needed).
+#   d. Microsoft.Entra replaces the retired AzureAD module.
 #
 # v2.1 changes:
 #   a. Self-elevation: re-launches itself as Administrator if not already elevated.
@@ -118,7 +119,7 @@ $MsStoreCatalog = [ordered]@{
 }
 
 $PSModules = @(
-    @{ Name = "AzureAd";         Desc = "Azure Active Directory" }
+    @{ Name = "Microsoft.Entra"; Desc = "Microsoft Entra PowerShell"; Repo = "PSGallery"; AllowClobber = $true }
     @{ Name = "Microsoft.Graph"; Desc = "Microsoft Graph" }
     @{ Name = "MSAL.PS";         Desc = "MSAL Authentication" }
     @{ Name = "PowerShellGet";   Desc = "PowerShellGet" }
@@ -174,6 +175,7 @@ function Build-MenuItems {
                 Id       = $mod.Name
                 Desc     = $mod.Desc
                 Repo     = $mod.Repo
+                AllowClobber = $mod.AllowClobber
                 Category = $modCat
                 Source   = 'psmodule'
                 Selected = $false
@@ -409,6 +411,7 @@ function Install-PSModuleItem {
     # CurrentUser scope: works without Administrator rights.
     $p = @{ Name = $Module.Name; Force = $true; Scope = 'CurrentUser'; ErrorAction = 'Stop' }
     if ($Module.Repo) { $p.Repository = $Module.Repo }
+    if ($Module.AllowClobber) { $p.AllowClobber = $true }
     try {
         Install-Module @p | Out-Null
         return $true
@@ -536,10 +539,18 @@ function Invoke-WingetInstall {
         return Invoke-WingetNonAdmin -Arguments $Arguments
     }
 
-    # Let winget write directly to the console. Piping native output through
-    # PowerShell can decode its UTF-8 progress characters using the OEM code page.
-    & winget.exe @Arguments
-    return $LASTEXITCODE
+    # Preserve winget's native console output without returning it as a status value.
+    $wingetExe = (Get-Command winget.exe -CommandType Application -ErrorAction Stop).Source
+    $startInfo = [System.Diagnostics.ProcessStartInfo]::new($wingetExe, ($Arguments -join ' '))
+    $startInfo.UseShellExecute = $false
+    $process = [System.Diagnostics.Process]::Start($startInfo)
+    try {
+        $process.WaitForExit()
+        return $process.ExitCode
+    }
+    finally {
+        $process.Dispose()
+    }
 }
 
 function Install-WingetPackages {
@@ -572,9 +583,9 @@ function Install-WingetPackages {
     }
 
     Write-Host ""
-    $ok = 0; $fail = 0
+    $ok = 0; $present = 0; $fail = 0
     foreach ($pkg in $Packages) {
-        $i = $ok + $fail + 1
+        $i = $ok + $present + $fail + 1
         Write-Host "  [$i/$($Packages.Count)] " -NoNewline -ForegroundColor DarkGray
         Write-Host "$($pkg.Name) " -NoNewline -ForegroundColor Cyan
 
@@ -615,14 +626,24 @@ function Install-WingetPackages {
         if ($code -eq 0) {
             Write-Host "OK" -ForegroundColor Green
             $ok++
+        } elseif ($code -eq -1978335189 -or $code -eq -1978335135) {
+            # WinGet: 0x8A15002B (no update) and 0x8A150061 (already installed).
+            $status = if ($code -eq -1978335189) { "UP TO DATE" } else { "ALREADY INSTALLED" }
+            Write-Host $status -ForegroundColor DarkGreen
+            $present++
         } else {
-            Write-Host "FAILED" -ForegroundColor Red
+            $detail = if ($pkg.Source -eq 'psmodule') {
+                ""
+            } else {
+                " (winget exit 0x{0:X8})" -f [uint32]([long]$code -band 0xFFFFFFFFL)
+            }
+            Write-Host "FAILED$detail" -ForegroundColor Red
             $fail++
         }
     }
 
     $color = if ($fail -gt 0) { "Yellow" } else { "Green" }
-    Write-Host "`n  Done: $ok succeeded, $fail failed`n" -ForegroundColor $color
+    Write-Host "`n  Done: $ok succeeded, $present already present, $fail failed`n" -ForegroundColor $color
     return $true
 }
 
@@ -635,7 +656,7 @@ function Show-PostInstall {
     Write-Host "  ============================================" -ForegroundColor DarkGray
     Write-Host ""
     Write-Host "  [1] Enable .NET Framework 3.5 (needs an elevated shell)"
-    Write-Host "  [2] Install PowerShell Modules (Az, Graph, AzureAD, MSAL)"
+    Write-Host "  [2] Install PowerShell Modules (Az, Graph, Entra, MSAL)"
     Write-Host "  [3] Upgrade all winget packages (may upgrade Office as Administrator)"
     Write-Host "  [4] All of the above"
     Write-Host "  [S] Skip"
