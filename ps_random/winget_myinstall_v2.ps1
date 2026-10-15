@@ -2,12 +2,12 @@
 # Navigate: Arrow Keys | Toggle: Space | Select All: A | None: N | Install: Enter | Quit: Esc
 # On a category row, Space toggles all packages in that group.
 #
-# v2.3 changes:
-#   a. The script relaunches itself as Administrator by default. Use -NoElevation
-#      to skip self-elevation (the winget setting can still prompt for UAC).
+# v2.4 changes:
+#   a. The script runs as the current user by default. Use -Elevate when the
+#      whole session must run as Administrator.
 #   b. The Non-Administrator Installers category runs winget with a limited token
 #      of the elevated account. If UAC uses a different account, run Office from
-#      the intended user's shell with -NoElevation instead.
+#      the intended user's shell without -Elevate instead.
 #   c. PowerShell modules install to CurrentUser scope (no admin needed).
 #
 # v2.1 changes:
@@ -22,6 +22,7 @@
 # Script options
 # ============================================================================
 param(
+    [switch]$Elevate,
     [switch]$NoElevation
 )
 
@@ -535,7 +536,9 @@ function Invoke-WingetInstall {
         return Invoke-WingetNonAdmin -Arguments $Arguments
     }
 
-    & winget.exe @Arguments 2>&1 | Out-Host
+    # Let winget write directly to the console. Piping native output through
+    # PowerShell can decode its UTF-8 progress characters using the OEM code page.
+    & winget.exe @Arguments
     return $LASTEXITCODE
 }
 
@@ -683,8 +686,8 @@ function Assert-RunAsAdmin {
         return
     }
 
-    if ($script:NoElevation) {
-        Write-Host "  [!] Running without Administrator privileges (-NoElevation)." -ForegroundColor Yellow
+    if (-not $script:Elevate -or $script:NoElevation) {
+        Write-Host "  [OK] Running as the current user (winget hash override is supported)." -ForegroundColor Green
         return
     }
 
@@ -693,7 +696,7 @@ function Assert-RunAsAdmin {
         exit 1
     }
 
-    Write-Host "  [!] Administrator privileges required - requesting elevation..." -ForegroundColor Yellow
+    Write-Host "  [!] -Elevate specified - requesting Administrator privileges..." -ForegroundColor Yellow
     $exe = (Get-Process -Id $PID).Path
     $argList = "-NoProfile -NoLogo -ExecutionPolicy Bypass -NoExit -File `"$PSCommandPath`""
     try {
@@ -707,44 +710,6 @@ function Assert-RunAsAdmin {
     exit 0
 }
 
-function Invoke-AsAdmin {
-    param([scriptblock]$ScriptBlock)
-
-    # Already elevated (user launched the shell as Administrator): run in place.
-    if (Test-IsAdmin) {
-        $out = & $ScriptBlock 2>&1
-        return @{ ExitCode = $LASTEXITCODE; Output = @($out) }
-    }
-
-    $log = Join-Path $env:TEMP ("wgi-elevated-{0}.log" -f [guid]::NewGuid().ToString('N'))
-    $child = @"
-`$ErrorActionPreference = 'Continue'
-& { $($ScriptBlock.ToString()) } *>&1 | Out-File -LiteralPath '$log' -Encoding utf8
-exit `$LASTEXITCODE
-"@
-    $enc   = [Convert]::ToBase64String([System.Text.Encoding]::Unicode.GetBytes($child))
-    $psExe = (Get-Process -Id $PID).Path
-
-    try {
-        $p = Start-Process -FilePath $psExe -WindowStyle Minimized -Verb RunAs -Wait -PassThru `
-                           -ArgumentList "-NoProfile -NoLogo -ExecutionPolicy Bypass -EncodedCommand $enc" `
-                           -ErrorAction Stop
-        $code = $p.ExitCode
-    }
-    catch {
-        Write-Host "FAILED" -ForegroundColor Yellow
-        Write-Host "       (elevation cancelled or denied: $($_.Exception.Message))" -ForegroundColor DarkGray
-        return @{ ExitCode = 1; Output = $null }
-    }
-
-    $out = $null
-    if (Test-Path -LiteralPath $log) {
-        $out = @(Get-Content -LiteralPath $log)
-        Remove-Item -LiteralPath $log -Force -ErrorAction SilentlyContinue
-    }
-    return @{ ExitCode = $code; Output = $out }
-}
-
 # ============================================================================
 # Winget InstallerHashOverride configuration
 # ============================================================================
@@ -753,17 +718,25 @@ function Enable-InstallerHashOverride {
         Write-Host "  [X] winget not found. Install 'App Installer' from the Microsoft Store." -ForegroundColor Red
         exit 1
     }
-    Write-Host "  Enabling winget setting 'InstallerHashOverride' (elevated)... " -NoNewline -ForegroundColor Gray
-    $r = Invoke-AsAdmin { winget settings --enable InstallerHashOverride }
-    if ($r.ExitCode -eq 0) {
+    Write-Host "  Enabling winget setting 'InstallerHashOverride'... " -NoNewline -ForegroundColor Gray
+    $output = @(winget settings --enable InstallerHashOverride 2>&1)
+    $code = $LASTEXITCODE
+    if ($code -eq 0) {
         Write-Host "OK" -ForegroundColor Green
     }
     else {
         Write-Host "FAILED" -ForegroundColor Yellow
         Write-Host "       (older winget builds lack this setting; --ignore-security-hash is still passed)" -ForegroundColor DarkGray
-        foreach ($line in $r.Output) { Write-Host "       $line" -ForegroundColor DarkGray }
+        foreach ($line in $output) { Write-Host "       $line" -ForegroundColor DarkGray }
     }
 }
+
+# Native winget output is UTF-8. Set the console encoding before launching it
+# so status and progress characters are rendered consistently in pwsh.exe.
+$utf8 = [System.Text.UTF8Encoding]::new($false)
+[Console]::OutputEncoding = $utf8
+[Console]::InputEncoding = $utf8
+$OutputEncoding = $utf8
 
 # ============================================================================
 # Entry Point

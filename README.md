@@ -189,11 +189,11 @@ Other media tools provide profile-based batch encoding, multilingual speech-to-t
 
 | Script | Description |
 |--------|-------------|
-| `winget_myinstall_v2.ps1` | Interactive checkbox installer for winget packages, Microsoft Store apps, and CurrentUser PowerShell modules; v2.2 avoids whole-script elevation |
+| `winget_myinstall_v2.ps1` | Interactive checkbox installer for winget packages, Microsoft Store apps, and CurrentUser PowerShell modules; runs unelevated by default so winget hash overrides work |
 | `get_sysinfo.ps1` | System information collection |
 | `filename_cleanup.ps1` | Batch file renaming utility |
 
-The winget installer enables `InstallerHashOverride` and passes `--ignore-security-hash` for non-Store installs. Review this security tradeoff and the package catalog before use; individual installers may still request elevation.
+The winget installer enables `InstallerHashOverride` and passes `--ignore-security-hash` for non-Store installs. It runs as the current user by default because winget does not allow installer-hash overrides in an elevated process; use `.\ps_random\winget_myinstall_v2.ps1 -Elevate` only when the whole session must be elevated. Review this security tradeoff and the package catalog before use; individual installers may still request elevation.
 
 **Windows image conversion:** [`convert-wimtovhdx.ps1`](./ps_wim/convert-wimtovhdx.ps1) supports WIM/ESD/ISO input, image selection by index or edition, metadata-based output naming, dynamic/fixed VHD or VHDX, UEFI/GPT or BIOS/MBR layouts, and optional drivers, unattended setup, recovery partition, and native boot configuration. Run elevated with the Hyper-V management module installed and use a local output path. `-NativeBoot` changes the running machine's boot configuration.
 
