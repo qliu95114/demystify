@@ -2,6 +2,8 @@
 #Author: Qing Liu,
 
 #Usage: Send Payload to UDP port and read return data , timeout setting is 1 s
+#Replies may prefix the echoed payload with colon-delimited metadata such as hostname:IP:.
+#The complete payload must still match exactly; CSV logging preserves the full reply.
 #Output: 
 
 <#
@@ -166,8 +168,9 @@ function Send-UdpDatagram
             $ReceMessage = [text.encoding]::ascii.getstring($Socket.Receive([ref]$EndPoints))
             $endTime = get-date
             $totalSeconds = "{0:N4}" -f ($endTime-$startTime).TotalSeconds
-            # compare $ReceMessage with $Message, write output to log file
-            if ($ReceMessage -ne $Message) {
+            $payloadMatches = ($ReceMessage -ceq $Message) -or
+                  ($Message -ne "STUN" -and $ReceMessage.EndsWith(":" + $Message, [StringComparison]::Ordinal))
+            if (-not $payloadMatches) {
                   if ($Message -eq "STUN") {
                         $ReceMessage = "STUN FAKE MESSAGE"; $status="CompareSkip"
                   }
@@ -247,6 +250,7 @@ if ($n -eq 0)
             $message=""
       }
 }
+
 else {
       for ($i=1;$i -le $n; $i++) {
         if ($payloadsize -eq 1314)
@@ -262,4 +266,3 @@ else {
         $message=""
       }
 }
-
