@@ -191,6 +191,35 @@ Inspect the recorded timing mapping if synchronization looks wrong.
 Extraction offsets are passed to FFmpeg as fixed-point decimals because its
 duration parser does not accept scientific notation for near-zero AAC priming residuals.
 
+## Human-readable cut reports
+
+When a user requests cut recommendations or a "剪切依据与截图" report, deliver
+a UTF-8 HTML file such as `cut-report.html`, not Markdown alone. This is a
+cut-review deliverable; `transcribe.py` does not automatically generate semantic
+cut recommendations. Updating the report format does not require rerunning ASR
+or changing the original media, full SRT, or encoding queue.
+
+Follow the [report policy](../SKILL.md#剪切建议报告格式与时间表示):
+include per-series reasoning, parameter tables, navigation, and actual embedded
+screenshots/contact sheets with captions and an enlargement option. Prefer
+self-contained images and local styling so the report works offline without
+CDNs or external services. Explicitly flag missing images.
+
+Show every referenced cut time or duration in **both decimal seconds and
+`hh:mm:ss.sss`**, including narrative evidence, screenshot captions, interval
+endpoints, total durations, and multi-stage command parameters:
+`99.400 s (00:01:39.400)`. Generate both representations from the same numeric
+value, round the display to milliseconds with correct carry, and retain the
+original precision for calculations. Hours must not wrap at 24. Preserve
+confirmed parameters when converting an existing report.
+
+Label original-video versus intermediate-file timelines, points versus
+durations, retained versus removed intervals, and stage dependencies.
+For `-revert`, `lastsecs` is a **retained tail duration**, not a normal tail cut;
+also display the actual removed interval in both formats. Verify conversions,
+image loading and offline browser readability before delivery. Link the HTML
+in the final response and use both formats for any cut times shown there.
+
 ## Accuracy and scope
 
 - Timestamped ASR is not manual transcription or forced alignment. Names,

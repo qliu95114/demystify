@@ -12,8 +12,10 @@ function Get-StreamInfo {
         # File redirection avoids console-codepage decoding of Chinese metadata in PowerShell 5.1.
         $process = Start-Process -FilePath "ffprobe" `
             -ArgumentList (ConvertTo-NativeArgumentString -Arguments @("-v", "error", "-print_format", "json", "-show_streams", $FilePath)) `
-            -NoNewWindow -Wait -PassThru `
+            -NoNewWindow -PassThru `
             -RedirectStandardOutput $tempJsonFile -RedirectStandardError $tempErrFile -ErrorAction Stop
+        $processHandle = $process.Handle
+        $process.WaitForExit()
         if ($process.ExitCode -ne 0) {
             $details = Get-Content -LiteralPath $tempErrFile -Raw -Encoding UTF8 -ErrorAction Stop
             throw "ffprobe failed with exit code $($process.ExitCode): $details"

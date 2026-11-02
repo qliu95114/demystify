@@ -50,6 +50,12 @@ Preferred source channel count for automatic selection (default 2). Does not dow
 Preferred source language tag for automatic selection (default no language preference).
 Preferences are scored: codec 100, channels 50, language 30, bitrate up to 10.
 
+.PARAMETER AudioBitrateKbps
+Explicit AAC output bitrate in kbps. When omitted, retain the existing source-aware 96 kbps cap.
+
+.PARAMETER PreserveHDR
+Keep a BT.2020 PQ or HLG HDR source in 10-bit HEVC, retaining its color tags instead of the default 8-bit output.
+
 .PARAMETER outputfolder
 The Target folder we will save the cutted file, Default \\192.168.3.17\g$\DOWNLOADS\transfer\ffmpeg
 
@@ -88,7 +94,9 @@ Param (
     [ValidateRange(-1, [int]::MaxValue)][int]$AudioStreamIndex = -1,
     [ValidateNotNullOrEmpty()][string]$AudioCodec = "aac",
     [ValidateRange(1, [int]::MaxValue)][int]$AudioChannels = 2,
-    [string]$AudioLanguage = ""
+    [string]$AudioLanguage = "",
+    [ValidateRange(1, 512)][int]$AudioBitrateKbps,
+    [switch]$PreserveHDR
 )
 
 . (Join-Path $PSScriptRoot "help_class.ps1")
@@ -223,6 +231,39 @@ Function Format-CutTime ([double]$seconds)
     return ([TimeSpan]::FromSeconds($seconds)).ToString("hh\:mm\:ss\.fff")
 }
 
+Function Get-CutVideoFormat ([switch]$preserveHDR, [string]$encoder, $sourceVideo)
+{
+    if (-not $preserveHDR)
+    {
+        return [pscustomobject]@{ PixelFormat = 'nv12'; Options = @() }
+    }
+    if ($encoder -notmatch '^hevc_')
+    {
+        throw 'PreserveHDR requires a HEVC encoder.'
+    }
+    if (!$sourceVideo -or $sourceVideo.color_primaries -ne 'bt2020' -or
+        $sourceVideo.color_transfer -notin @('smpte2084', 'arib-std-b67') -or
+        $sourceVideo.color_space -notin @('bt2020nc', 'bt2020c'))
+    {
+        throw 'PreserveHDR requires explicit BT.2020 HDR source color metadata.'
+    }
+    return [pscustomobject]@{
+        PixelFormat = 'p010le'
+        Options = @('-profile:v', 'main10', '-color_primaries', $sourceVideo.color_primaries,
+            '-color_trc', $sourceVideo.color_transfer, '-colorspace', $sourceVideo.color_space)
+    }
+}
+
+Function Get-CutAudioBitrate ([long]$sourceBitrate, [int]$requestedBitrate = 0)
+{
+    if ($requestedBitrate -gt 0) { return $requestedBitrate }
+    if ($sourceBitrate -gt 0)
+    {
+        return [math]::Min(96, [math]::Max(1, [int]($sourceBitrate / 1000)))
+    }
+    return 96
+}
+
 Function Select-CutAudioStream (
     [array]$streams, [int]$streamIndex = -1, [switch]$autoSelect,
     [string]$codec = "aac", [int]$channels = 2, [string]$language = ""
@@ -255,9 +296,7 @@ Function Invoke-CutFFmpeg ([string[]]$arguments, [string]$logPath, [string]$desc
 
 Function Assert-CutVideo ([string]$path, [string]$logPath)
 {
-    $probe = & ffprobe -v error -select_streams v:0 -show_entries stream=codec_type,duration -of json "$path"
-    if ($LASTEXITCODE -ne 0) { throw "Cannot read encoded video: $path. See $logPath" }
-    $video = (($probe -join "`n") | ConvertFrom-Json).streams | Select-Object -First 1
+    $video = Get-StreamInfo -FilePath $path | Where-Object { $_.codec_type -eq 'video' } | Select-Object -First 1
     $duration = 0.0
     if (!$video -or ![double]::TryParse($video.duration, [System.Globalization.NumberStyles]::Float,
         [cultureinfo]::InvariantCulture, [ref]$duration) -or $duration -le 0)
@@ -411,14 +450,12 @@ If ((Test-Path $filename) -and (Test-Path $outputfolder))
     $selectedAudio = Select-CutAudioStream -streams $audioStreams -streamIndex $AudioStreamIndex `
         -autoSelect:$autoSelectAudio -codec $AudioCodec -channels $AudioChannels -language $AudioLanguage
     $audiobitrate = 0
-    $bitrate_audio = 96
+    $sourceAudioBitrate = 0L
     if ($selectedAudio)
     {
-        $sourceAudioBitrate = 0L
         if ([long]::TryParse([string]$selectedAudio.bit_rate, [ref]$sourceAudioBitrate) -and $sourceAudioBitrate -gt 0)
         {
             $audiobitrate = [int]($sourceAudioBitrate / 1000)
-            $bitrate_audio = [math]::Min(96, [math]::Max(1, $audiobitrate))
         }
         Write-UTCLog "Selected audio stream $($selectedAudio.index): $($selectedAudio.codec_name), $($selectedAudio.channels) channels, language=$($selectedAudio.tags.language)"
     }
@@ -426,6 +463,7 @@ If ((Test-Path $filename) -and (Test-Path $outputfolder))
     {
         Write-UTCLog "No audio stream found; output will contain no audio." "Yellow"
     }
+    $bitrate_audio = Get-CutAudioBitrate -sourceBitrate $sourceAudioBitrate -requestedBitrate $AudioBitrateKbps
 
     if ($bitrate -eq 0)
     {
@@ -478,18 +516,26 @@ If ((Test-Path $filename) -and (Test-Path $outputfolder))
     {
         $videoEncodeOptions = @("-c:v", $gpu, "-crf", "$crf", "-preset", "slow")
     }
+    $sourceVideo = $null
+    if ($PreserveHDR)
+    {
+        $sourceVideo = Get-StreamInfo -FilePath $filename | Where-Object { $_.codec_type -eq 'video' } | Select-Object -First 1
+    }
+    $videoFormat = Get-CutVideoFormat -preserveHDR:$PreserveHDR -encoder $gpu -sourceVideo $sourceVideo
+    $videoEncodeOptions += $videoFormat.Options
+    $outputPixelFormat = $videoFormat.PixelFormat
 
     $ffmpegArgs = @("-i", $filename)
     if ($revert -and ($startsecsValue -gt 0) -and ($endsecs -lt $videodurationSeconds))
     {
         if (!$selectedAudio)
         {
-            $filterComplex = "[0:v]trim=start=0:end=$($startsecsValue),setpts=PTS-STARTPTS[v0];[0:v]trim=start=$($endsecs):end=$($videodurationSeconds),setpts=PTS-STARTPTS[v1];[v0][v1]concat=n=2:v=1:a=0,scale=1920:-2,format=nv12[vout]"
+            $filterComplex = "[0:v]trim=start=0:end=$($startsecsValue),setpts=PTS-STARTPTS[v0];[0:v]trim=start=$($endsecs):end=$($videodurationSeconds),setpts=PTS-STARTPTS[v1];[v0][v1]concat=n=2:v=1:a=0,scale=1920:-2,format=$($outputPixelFormat)[vout]"
             $ffmpegArgs += @("-filter_complex", $filterComplex, "-map", "[vout]") + $videoEncodeOptions
         }
         else
         {
-            $filterComplex = "[0:v]trim=start=0:end=$($startsecsValue),setpts=PTS-STARTPTS[v0];[0:$($selectedAudio.index)]atrim=start=0:end=$($startsecsValue),asetpts=PTS-STARTPTS[a0];[0:v]trim=start=$($endsecs):end=$($videodurationSeconds),setpts=PTS-STARTPTS[v1];[0:$($selectedAudio.index)]atrim=start=$($endsecs):end=$($videodurationSeconds),asetpts=PTS-STARTPTS[a1];[v0][a0][v1][a1]concat=n=2:v=1:a=1[vcat][acat];[vcat]scale=1920:-2,format=nv12[vout]"
+            $filterComplex = "[0:v]trim=start=0:end=$($startsecsValue),setpts=PTS-STARTPTS[v0];[0:$($selectedAudio.index)]atrim=start=0:end=$($startsecsValue),asetpts=PTS-STARTPTS[a0];[0:v]trim=start=$($endsecs):end=$($videodurationSeconds),setpts=PTS-STARTPTS[v1];[0:$($selectedAudio.index)]atrim=start=$($endsecs):end=$($videodurationSeconds),asetpts=PTS-STARTPTS[a1];[v0][a0][v1][a1]concat=n=2:v=1:a=1[vcat][acat];[vcat]scale=1920:-2,format=$($outputPixelFormat)[vout]"
             $ffmpegArgs += @("-filter_complex", $filterComplex, "-map", "[vout]", "-map", "[acat]") +
                 $videoEncodeOptions + @("-c:a", "aac", "-b:a", "$($bitrate_audio)k")
         }
@@ -508,7 +554,7 @@ If ((Test-Path $filename) -and (Test-Path $outputfolder))
         }
 
         $ffmpegArgs += @("-ss", $startTimestamp, "-to", $endTimestamp) + $videoEncodeOptions +
-            @("-pix_fmt", "nv12", "-vf", "scale=1920:-2", "-map", "0:v:0?")
+            @("-pix_fmt", $outputPixelFormat, "-vf", "scale=1920:-2", "-map", "0:v:0?")
         if ($selectedAudio)
         {
             $ffmpegArgs += @("-map", "0:$($selectedAudio.index)", "-c:a", "aac", "-b:a", "$($bitrate_audio)k")

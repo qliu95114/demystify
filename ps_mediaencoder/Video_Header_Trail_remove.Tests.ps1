@@ -6,7 +6,7 @@ $parseErrors = $null
 $scriptPath = Join-Path $PSScriptRoot "Video_Header_Trail_remove.ps1"
 $ast = [System.Management.Automation.Language.Parser]::ParseFile($scriptPath, [ref]$tokens, [ref]$parseErrors)
 if ($parseErrors.Count) { throw ($parseErrors | Out-String) }
-foreach ($name in @("Convert-CutSubtitle", "Format-CutTime", "Invoke-CutFFmpeg", "Assert-CutVideo", "Select-CutAudioStream"))
+foreach ($name in @("Convert-CutSubtitle", "Format-CutTime", "Invoke-CutFFmpeg", "Assert-CutVideo", "Select-CutAudioStream", "Get-CutAudioBitrate", "Get-CutVideoFormat"))
 {
     $function = $ast.Find({
         param($node)
@@ -155,6 +155,45 @@ Describe "Audio track selection" {
     }
 }
 
+Describe "HDR output format" {
+    It "keeps the existing 8-bit default without HDR preservation" {
+        $settings = Get-CutVideoFormat -encoder hevc_qsv
+        $settings.PixelFormat | Should Be 'nv12'
+        $settings.Options.Count | Should Be 0
+    }
+
+    It "uses Main10 and preserves PQ color metadata when explicitly requested" {
+        $video = [pscustomobject]@{ color_primaries='bt2020'; color_transfer='smpte2084'; color_space='bt2020nc' }
+        $settings = Get-CutVideoFormat -preserveHDR -encoder hevc_qsv -sourceVideo $video
+        $settings.PixelFormat | Should Be 'p010le'
+        ($settings.Options -join ' ') | Should Be '-profile:v main10 -color_primaries bt2020 -color_trc smpte2084 -colorspace bt2020nc'
+    }
+
+    It "rejects non-HEVC encoders rather than silently losing HDR" {
+        $video = [pscustomobject]@{ color_primaries='bt2020'; color_transfer='smpte2084'; color_space='bt2020nc' }
+        { Get-CutVideoFormat -preserveHDR -encoder h264_qsv -sourceVideo $video } | Should Throw 'HEVC encoder'
+    }
+
+    It "rejects missing or SDR color metadata when HDR preservation is requested" {
+        { Get-CutVideoFormat -preserveHDR -encoder hevc_qsv } | Should Throw 'HDR source color metadata'
+        $video = [pscustomobject]@{ color_primaries='bt709'; color_transfer='bt709'; color_space='bt709' }
+        { Get-CutVideoFormat -preserveHDR -encoder hevc_qsv -sourceVideo $video } | Should Throw 'HDR source color metadata'
+    }
+}
+
+Describe "AAC output bitrate" {
+    It "honors an explicit output bitrate even for lower bitrate source audio" {
+        Get-CutAudioBitrate -sourceBitrate 64000 -requestedBitrate 128 | Should Be 128
+        Get-CutAudioBitrate -sourceBitrate 256000 -requestedBitrate 128 | Should Be 128
+    }
+
+    It "retains the source-aware 96 kbps default when no override is requested" {
+        Get-CutAudioBitrate -sourceBitrate 64000 | Should Be 64
+        Get-CutAudioBitrate -sourceBitrate 256000 | Should Be 96
+        Get-CutAudioBitrate -sourceBitrate 0 | Should Be 96
+    }
+}
+
 Describe "FFmpeg process handling" {
     function ffprobe { throw "ffprobe must be mocked in process-handling tests." }
 
@@ -177,13 +216,13 @@ Describe "FFmpeg process handling" {
     }
 
     It "rejects an empty MP4 even when ffprobe reports success" {
-        Mock ffprobe { $global:LASTEXITCODE = 0; '{"streams":[]}' }
+        Mock Get-StreamInfo { @() }
         { Assert-CutVideo -path "TestDrive:\empty.mp4" -logPath "TestDrive:\encode.log" } |
             Should Throw "no video frames"
     }
 
     It "accepts an encoded video stream with a positive duration" {
-        Mock ffprobe { $global:LASTEXITCODE = 0; '{"streams":[{"codec_type":"video","duration":"30.000000"}]}' }
+        Mock Get-StreamInfo { [pscustomobject]@{ codec_type = 'video'; duration = '30.000000' } }
         { Assert-CutVideo -path "TestDrive:\video.mp4" -logPath "TestDrive:\encode.log" } |
             Should Not Throw
     }
